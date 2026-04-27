@@ -36,9 +36,11 @@ docker-compose up -d
 ```
 
 # Estructura del Proyecto
+```bash
 app/
 ├── api/      # Endpoints y rutas
 ├── core/     # Configuración y seguridad
 ├── db/       # Conexión asíncrona
 ├── models/   # Modelos de SQLModel
 └── services/ # Lógica del centinela
+```

@@ -1,0 +1,37 @@
+[project]
+name = "sentinel-api"
+version = "0.1.0"
+description = "Motor de monitoreo y alertas asíncrono"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "sqlmodel",
+    "alembic",
+    "asyncpg",
+    "pwdlib[argon2]",
+    "pyjwt",
+    "python-dotenv",
+    "httpx",
+    "pydantic-settings>=2.14.0",
+]
+
+[dependency-groups]
+dev = [
+    "ruff",
+    "pytest",
+    "pytest-asyncio",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "B", "I"]
+ignore = []
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

@@ -24,12 +24,16 @@ uv sync --group dev
 ```
 ### 3. Configurar variables de entorno
 Crea un archivo .env basado en la configuración necesaria:
+```bash
 - DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/sentinel_db
 - SECRET_KEY: Tu llave secreta para JWT.
 - ALGORITHM: HS256
+```
 
 ### 4. Levantar la infraestructura
+```bash
 docker-compose up -d
+```
 
 # Estructura del Proyecto
 app/

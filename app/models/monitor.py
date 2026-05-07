@@ -1,0 +1,20 @@
+from datetime import datetime, timezone
+from typing import TYPE_CHECKING, Optional
+
+from sqlmodel import Field, Relationship, SQLModel
+
+if TYPE_CHECKING:
+    from .user import User
+    
+class Monitor(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    name: str = Field(index=True)
+    target: str
+    condition: str
+    target_value_num: float | None = Field(default=None)
+    target_value_str: str | None = Field(default=None)
+    frequency: int 
+    state: str | None = Field(default="Active")
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    user_id: int | None = Field(default=None, foreign_key="user.id")
+    user: Optional["User"] | None = Relationship(back_populates="monitors")

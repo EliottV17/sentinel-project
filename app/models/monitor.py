@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Optional
 from sqlmodel import Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
+    from .alert import Alert
     from .user import User
     
 class Monitor(SQLModel, table=True):
@@ -17,4 +18,5 @@ class Monitor(SQLModel, table=True):
     state: str | None = Field(default="Active")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     user_id: int | None = Field(default=None, foreign_key="user.id")
-    user: Optional["User"] | None = Relationship(back_populates="monitors")
+    user: Optional["User"] = Relationship(back_populates="monitors")
+    alerts: list["Alert"] = Relationship(back_populates="monitor")

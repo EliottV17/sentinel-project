@@ -8,15 +8,17 @@ if TYPE_CHECKING:
     
 class User(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
-    name: str | None = Field(index=True)
-    lastname: str 
-    email: str | None = Field(unique=True, index=True)
+    name: str = Field(index=True)
+    last_name: str = Field(index=True)
+    username: str = Field(unique=True, index=True)
+    email: str = Field(unique=True, index=True)
     password: str
-    phonenumber: str | None
+    phonenumber: str | None = Field(default=None)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         sa_column_kwargs={"onupdate": lambda: datetime.now(timezone.utc)}
         )
     status: str | None = Field(default="Active")
+    is_active: bool = Field(default=True)
     monitors: list["Monitor"] = Relationship(back_populates="user")

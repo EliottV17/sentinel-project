@@ -6,7 +6,7 @@ from pydantic import BaseModel, EmailStr, Field, field_validator
 
 class UserBase(BaseModel):
     name: str
-    lastname: str
+    last_name: str
     username: str = Field(..., min_length=3, max_length=20)
     email: EmailStr
     phonenumber: str | None = None

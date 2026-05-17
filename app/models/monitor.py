@@ -17,6 +17,6 @@ class Monitor(SQLModel, table=True):
     frequency: int 
     state: str = Field(default="Active")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    user_id: int = Field(default=None, foreign_key="user.id")
+    user_id: int = Field(default=None, foreign_key="users.id")
     user: Optional["User"] = Relationship(back_populates="monitors")
     alerts: list["Alert"] = Relationship(back_populates="monitor")

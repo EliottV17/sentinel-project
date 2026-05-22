@@ -6,6 +6,7 @@ from sqlmodel import Field, Relationship, SQLModel
 if TYPE_CHECKING:
     from .monitor import Monitor
 
+
 class Alert(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     message: str

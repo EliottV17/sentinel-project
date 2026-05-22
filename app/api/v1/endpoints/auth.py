@@ -13,12 +13,15 @@ from app.services.auth_service import AuthService
 
 router = APIRouter()
 
+
 @router.post("/login", response_model=Token)
 async def login(
-    form_data: Annotated[OAuth2PasswordRequestForm, Depends()], 
-    db: Annotated[AsyncSession, Depends(get_db)]
+    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+    db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    user = await AuthService(db).authenticate_user(form_data.username, form_data.password)  # noqa: E501
+    user = await AuthService(db).authenticate_user(
+        form_data.username, form_data.password
+    )
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -30,4 +33,3 @@ async def login(
         data={"sub": user.email}, expires_delta=access_token_expires
     )
     return Token(access_token=access_token, token_type="bearer")
-    

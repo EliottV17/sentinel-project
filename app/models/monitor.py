@@ -6,7 +6,8 @@ from sqlmodel import Field, Relationship, SQLModel
 if TYPE_CHECKING:
     from .alert import Alert
     from .user import User
-    
+
+
 class Monitor(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     name: str = Field(index=True)
@@ -14,7 +15,7 @@ class Monitor(SQLModel, table=True):
     condition: str
     target_value_num: float | None = Field(default=None)
     target_value_str: str | None = Field(default=None)
-    frequency: int 
+    frequency: int
     state: str = Field(default="Active")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     user_id: int = Field(default=None, foreign_key="users.id")

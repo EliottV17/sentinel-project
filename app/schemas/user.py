@@ -25,7 +25,7 @@ class UserCreate(UserBase):
     @field_validator("password")
     @classmethod
     def password_complexity(cls, value):
-        if not re.search(r"[A-Za-z]", value) or not re.search(r"[0-9]", value):  # noqa: E501
+        if not re.search(r"[A-Za-z]", value) or not re.search(r"[0-9]", value):
             raise ValueError("Password must contain both letters and numbers")
         return value
 

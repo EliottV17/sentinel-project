@@ -28,17 +28,16 @@ async def get_current_user(
         payload = jwt.decode(
             token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
         )
-        email: str = payload.get("sub")
+        email: str | None = payload.get("sub")
 
         if email is None:
             raise credentials_exception
-        token_data = TokenData(email=email)
 
     except InvalidTokenError:
         raise credentials_exception from None
 
     user_service = UserService(db)
-    user = await user_service.get_user_by_email(token_data.email)
+    user = await user_service.get_user_by_email(email)
 
     if user is None:
         raise credentials_exception

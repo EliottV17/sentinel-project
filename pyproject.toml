@@ -18,6 +18,7 @@ dependencies = [
     "argon2-cffi>=25.1.0",
     "email-validator>=2.3.0",
     "python-multipart>=0.0.28",
+    "apscheduler>=3.11.2",
 ]
 
 [dependency-groups]

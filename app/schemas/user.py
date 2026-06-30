@@ -38,5 +38,3 @@ class UserRead(UserBase):
     status: str
 
     model_config = {"from_attributes": True}
-
-    model_config = {"from_attributes": True}

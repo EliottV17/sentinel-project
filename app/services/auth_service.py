@@ -1,4 +1,5 @@
 from app.core.security import verify_password
+from app.models.user import User
 from app.services.user_service import UserService
 
 
@@ -6,7 +7,9 @@ class AuthService:
     def __init__(self, db):
         self.db = db
 
-    async def authenticate_user(self, login_identifier: str, password: str):
+    async def authenticate_user(
+        self, login_identifier: str, password: str
+    ) -> User | None:
         user_service = UserService(self.db)
         user = await user_service.get_user_by_email(login_identifier)
 
@@ -14,9 +17,9 @@ class AuthService:
             user = await user_service.get_user_by_username(login_identifier)
 
         if not user:
-            return False
+            return None
 
         if not verify_password(user.password, password):
-            return False
+            return None
 
         return user

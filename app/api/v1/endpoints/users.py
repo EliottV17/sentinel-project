@@ -4,7 +4,6 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_active_user, get_db
-from app.models.user import User
 from app.schemas.user import UserCreate, UserRead
 from app.services.user_service import UserService
 
@@ -19,6 +18,8 @@ async def register_user(
     return await user_service.create_user(user_create)
 
 
-@router.get("/me", response_model=User)
-async def read_user_me(current_user: Annotated[User, Depends(get_current_active_user)]):
+@router.get("/me", response_model=UserRead)
+async def read_user_me(
+    current_user: Annotated[UserRead, Depends(get_current_active_user)],
+):
     return current_user

@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class User(SQLModel, table=True):
-    __tablename__ = "users"
+    __tablename__ = "users"  # type: ignore
     id: int | None = Field(default=None, primary_key=True)
     name: str = Field(index=True)
     last_name: str = Field(index=True)

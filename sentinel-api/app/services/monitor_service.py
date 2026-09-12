@@ -1,7 +1,9 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select
+from sqlmodel import col, delete, select
 
 from app.core.checkers.registry import _checker_registry
+from app.models.alert import Alert
+from app.models.check_result import CheckResult
 from app.models.monitor import Monitor
 from app.schemas.monitor import MonitorCreate, MonitorUpdate
 
@@ -66,6 +68,15 @@ class MonitorService:
 
         if not monitor:
             return False
+
+        # Delete child rows first: check_result and alert hold an FK to
+        # monitor.id without ON DELETE CASCADE, and the ORM would otherwise try
+        # to NULL their monitor_id (violating NOT NULL) instead of removing
+        # them. Bulk DELETE is deterministic and engine-agnostic.
+        await self.db.execute(
+            delete(CheckResult).where(col(CheckResult.monitor_id) == monitor_id)
+        )
+        await self.db.execute(delete(Alert).where(col(Alert.monitor_id) == monitor_id))
 
         await self.db.delete(monitor)
         await self.db.commit()

@@ -3,10 +3,10 @@ import { AuthProvider } from "./app/auth/AuthProvider";
 import { RequireAuth } from "./app/auth/guards";
 import { AppShell } from "./app/AppShell";
 import { LoginPage } from "./features/login/LoginPage";
+import { MonitorsPage } from "./features/monitors/MonitorsPage";
 
-// Route tree. `/` is guarded (inside the AppShell) and renders a placeholder for
-// the monitors feature; `/login` is wired to LoginPage; `*` falls back to `/`.
-// PR 3 swaps the placeholder for the real monitors feature.
+// Route tree. `/` is guarded (inside the AppShell) and renders the monitors
+// feature; `/login` is wired to LoginPage; `*` falls back to `/`.
 export const router = createBrowserRouter([
   {
     element: (
@@ -20,7 +20,7 @@ export const router = createBrowserRouter([
         element: (
           <RequireAuth>
             <AppShell>
-              <div>Monitors — PR 3</div>
+              <MonitorsPage />
             </AppShell>
           </RequireAuth>
         ),

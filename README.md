@@ -12,7 +12,8 @@ An asynchronous uptime monitoring and alerting engine designed as a polyglot mon
 ```text
 sentinel/
 ├── sentinel-api/      # Python / FastAPI — REST API, auth & in-process scheduler
-└── sentinel-worker/   # Go — High-frequency independent polling worker
+├── sentinel-worker/   # Go — High-frequency independent polling worker
+└── frontend/          # React + Vite (TypeScript) SPA — login & monitors dashboard
 ```
 
 ## Architecture Overview
@@ -60,6 +61,28 @@ docker compose up -d --build
 
 * **API Docs (Swagger UI):** http://localhost:8000/docs
 * **PostgreSQL:** `localhost:5432`
+
+## Frontend (React SPA)
+
+The UI lives in `frontend/` (Vite + React 19 + TypeScript + Tailwind v4). In dev it
+proxies `/api` to the API on `http://localhost:8000` (no CORS involved locally);
+for a separated prod origin set `VITE_API_BASE_URL` (see `frontend/.env.example`).
+
+```bash
+cd frontend
+npm install                # install deps (or: npm ci for a clean/reproducible install)
+npm run dev                # dev server with HMR on http://localhost:5173
+npm run build              # typecheck (tsc -b) + production build to dist/
+npm run test               # vitest run (unit/component tests, MSW-mocked API)
+npm run test:watch         # vitest watch mode
+npm run lint               # eslint (flat config)
+npm run typecheck          # tsc -b only
+npm run gen:api            # regenerate src/lib/api/schema.ts from a running API's /openapi.json
+```
+
+Prerequisites for `gen:api`: a running dev API (`cd sentinel-api && uv run uvicorn
+app.main:app`). Regenerate only when the API contract changes; the generated
+schema is committed.
 
 ## Sub-Packages Documentation
 

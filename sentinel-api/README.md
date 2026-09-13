@@ -4,10 +4,10 @@ Asynchronous monitoring and alerting engine built with **FastAPI** and **Postgre
 
 ## Tech Stack
 
-- **FastAPI** — fully async REST API with lifespan-managed background scheduler
+- **FastAPI** — fully async REST API
 - **SQLModel + Alembic** — ORM and async migrations
 - **PostgreSQL 17** — persistent storage with JSONB for per-checker configuration
-- **APScheduler** — interval-based job execution within the FastAPI process
+- **sentinel-worker (Go)** — official polling engine: the only component that checks monitors and the only one honoring `monitor.frequency` (required — without it, no monitor is ever checked and no alerts fire)
 - **Docker Compose** — local infrastructure (Postgres, API, worker)
 - **uv** — package and environment management
 - **Ruff & Pyright** — static analysis, linting, formatting, and strict type checking
@@ -16,7 +16,7 @@ Asynchronous monitoring and alerting engine built with **FastAPI** and **Postgre
 
 ### Strategy + Registry pattern for pluggable checkers
 
-The monitoring engine is abstracted behind a `BaseChecker` interface. Each checker type (HTTP, scraping, ping, etc.) implements `async check(monitor) -> CheckResult` and self-registers via the `@register` decorator. Adding a new check type requires no changes to the scheduler or API layer.
+The monitoring engine is abstracted behind a `BaseChecker` interface. Each checker type (HTTP, scraping, ping, etc.) implements `async check(monitor) -> CheckResult` and self-registers via the `@register` decorator. Adding a new check type requires no changes to the checking engine or API layer.
 
 ```text
 app/core/checkers/
@@ -27,7 +27,7 @@ app/core/checkers/
 
 ### State machine for alerting
 
-Each check produces a `CheckResult` persisted in the `check_result` table. The scheduler compares `monitor.last_state` against the new result — alerts fire **only on transitions** (`healthy → unhealthy` or vice versa), not on every failed ping.
+Each check produces a `CheckResult` persisted in the `check_result` table. The worker compares `monitor.last_state` against the new result — alerts fire **only on transitions** (`healthy → unhealthy` or vice versa), not on every failed ping.
 
 ```text
 healthy   ──(check fails)──► unhealthy  →  INSERT alert (type: "down")
@@ -51,7 +51,7 @@ user    ──1:N──► monitor
 
 ### Go worker
 
-The companion [sentinel-worker](../sentinel-worker/README.md) is an independent Go poller against the same database and schema. It mirrors this scheduler's logic; running both simultaneously double-checks every monitor — there is no locking/claiming.
+The companion [sentinel-worker](../sentinel-worker/README.md) is an independent Go poller against the same database and schema. It is the sole polling engine and is required — the API performs no checks itself.
 
 ## Setup (local development)
 
@@ -92,7 +92,7 @@ uv run alembic upgrade head
 uv run uvicorn app.main:app --reload
 ```
 
-The scheduler (APScheduler) starts automatically inside the FastAPI lifespan — no separate worker process needed.
+The API is REST-only. Monitoring requires the Go worker (`sentinel-worker`) — without it, no monitor is ever checked.
 
 ## Docker (full stack)
 
@@ -129,7 +129,6 @@ app/
 ├── core/
 │   ├── checkers/        # BaseChecker ABC, registry, and concrete implementations
 │   ├── config.py        # pydantic-settings from .env
-│   ├── scheduler.py     # APScheduler lifespan + check loop with state detection
 │   └── security.py      # Argon2 password hashing + JWT
 ├── db/database.py       # asyncpg engine and session factory
 ├── models/              # SQLModel table definitions (User, Monitor, CheckResult, Alert)

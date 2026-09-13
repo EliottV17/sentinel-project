@@ -11,7 +11,7 @@ An asynchronous uptime monitoring and alerting engine designed as a polyglot mon
 
 ```text
 sentinel/
-├── sentinel-api/      # Python / FastAPI — REST API, auth & in-process scheduler
+├── sentinel-api/      # Python / FastAPI — REST API + auth (checking runs in the Go worker)
 ├── sentinel-worker/   # Go — High-frequency independent polling worker
 └── frontend/          # React + Vite (TypeScript) SPA — login & monitors dashboard
 ```
@@ -27,7 +27,6 @@ sentinel/
                      +-----------------------+
                      |  sentinel-api (Py)    |
                      |  - REST Endpoints     |
-                     |  - In-process Cron    |
                      +-----------+-----------+
                                  |
                                  v
@@ -43,7 +42,7 @@ sentinel/
 
 ## Core Highlights
 
-* **Strategy & Registry Pattern:** Plug-and-play checkers (`BaseChecker`) extending ping/HTTP checks without touching the core scheduler.
+* **Strategy & Registry Pattern:** Plug-and-play checkers (`BaseChecker`) extending ping/HTTP checks without touching the polling engine.
 * **State Machine for Alerts:** Emits alerts only on transitions (`healthy -> unhealthy = DOWN` / `unhealthy -> healthy = RECOVERY`), preventing notification floods while storing immutable audit logs.
 * **Zero MQ Overhead:** Multi-language concurrency synchronization directly backed by PostgreSQL query filtering on `last_checked_at + frequency`.
 

@@ -1,5 +1,6 @@
 // Package worker implements the polling loop that checks due monitors and
-// persists the results alongside the API scheduler.
+// persists the results to the shared PostgreSQL database; it is the sole polling
+// engine (the API is REST-only).
 package worker
 
 import (

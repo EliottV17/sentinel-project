@@ -4,9 +4,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.api import api_router
 from app.core.checkers import http_checker  # noqa: F401
 from app.core.config import settings
-from app.core.scheduler import lifespan
 
-app = FastAPI(title="Sentinel API", lifespan=lifespan)
+app = FastAPI(title="Sentinel API")
 
 app.add_middleware(
     CORSMiddleware,

@@ -18,7 +18,7 @@ From `sentinel-api/`:
 uv sync --group dev          # install deps
 docker compose up -d         # start PostgreSQL 17 (compose file is at repo root, not here)
 alembic upgrade head         # run migrations (requires .env with DATABASE_URL)
-uv run uvicorn app.main:app --reload   # dev server (APScheduler starts in-process)
+uv run uvicorn app.main:app --reload   # dev server (REST API; checking runs in the Go worker)
 
 uv run ruff check .          # lint
 uv run ruff format .         # format
@@ -57,14 +57,14 @@ Alembic's `migrations/env.py` imports `app.core.config.Settings`, which reads `.
 
 ## Architecture
 
-- **Checker registry**: New check types implement `BaseChecker` and self-register with `@register`; the scheduler discovers them via `get_checker(check_type)`. No API/scheduler changes needed. New checker modules must be imported somewhere (e.g. `main.py` imports `app.core.checkers.http_checker`) or they never register.
+- **Checker registry**: New check types implement `BaseChecker` and self-register with `@register`; `get_checker(check_type)` resolves them. This API-side registry is a preserved extension point with no production caller (the Go worker has its own registry). New checker modules must be imported somewhere (e.g. `main.py` imports `app.core.checkers.http_checker`) or they never register.
 - **State machine**: Alerts fire **only on transitions** (healthy→unhealthy = "down", unhealthy→healthy = "recovery"). Every check writes a `check_result` row; `alert` rows only on state changes.
-- **Two independent engines, one schema**: the API's APScheduler checks all `state = "Active"` monitors every 10 s in-process; the Go worker polls every 2 s for monitors that are *due* by `frequency` (seconds). Both write `check_result` + `alert` and update `monitor.last_state`. Running both simultaneously double-checks every monitor — there's no locking/claiming.
+- **Single engine, one schema**: since `remove-api-apscheduler` the Go worker is the sole polling engine — it polls every 2 s for monitors that are *due* by `frequency` (seconds), checks all `state = "Active"` monitors, and is the only writer of `check_result` + `alert` and `monitor.last_state`. The API is REST-only. If the worker is not running, nothing is checked.
 - **All DB access is async** (asyncpg, async SQLAlchemy sessions, async Alembic).
 
 ## sentinel-worker (Go)
 
-Functional (not a stub). `cmd/worker/main.go` loads config, connects via pgx pool, registers the http checker, and runs the loop in `internal/worker/loop.go`: every 2 s it fetches Active monitors whose `last_checked_at + frequency` has passed, runs the checker, inserts `check_result`, updates `monitor`, and inserts `alert` on transition. Mirrors the Python scheduler's logic.
+Functional (not a stub). `cmd/worker/main.go` loads config, connects via pgx pool, registers the http checker, and runs the loop in `internal/worker/loop.go`: every 2 s it fetches Active monitors whose `last_checked_at + frequency` has passed, runs the checker, inserts `check_result`, updates `monitor`, and inserts `alert` on transition. It is the sole polling engine and is required — the API performs no checks.
 
 Gotchas:
 - `Dockerfile` is a multi-stage build (`golang:1.25-alpine` → `alpine:3.20`) with `CGO_ENABLED=0`.

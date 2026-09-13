@@ -79,10 +79,12 @@ func checkAndPersist(ctx context.Context, pool *pgxpool.Pool, m checker.Monitor)
 		return
 	}
 
+	now := time.Now().UTC()
+
 	_, err = pool.Exec(ctx, `
-		INSERT INTO check_result (monitor_id, state, status_code, latency_ms, response_sample, error_message)
-		VALUES ($1, $2, $3, $4, $5, $6)
-	`, m.ID, result.State, result.StatusCode, result.LatencyMs, result.ResponseSample, result.ErrorMessage)
+		INSERT INTO check_result (monitor_id, state, status_code, latency_ms, response_sample, error_message, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`, m.ID, result.State, result.StatusCode, result.LatencyMs, result.ResponseSample, result.ErrorMessage, now)
 	if err != nil {
 		log.Printf("insert check_result error for monitor %d: %v", m.ID, err)
 		return
@@ -103,9 +105,9 @@ func checkAndPersist(ctx context.Context, pool *pgxpool.Pool, m checker.Monitor)
 
 	_, err = pool.Exec(ctx, `
 		UPDATE monitor
-		SET last_state = $1, last_checked_at = NOW(), consecutive_failures = $2
+		SET last_state = $1, last_checked_at = $4, consecutive_failures = $2
 		WHERE id = $3
-	`, newState, consecutiveFailures, m.ID)
+	`, newState, consecutiveFailures, m.ID, now)
 	if err != nil {
 		log.Printf("update monitor error for %d: %v", m.ID, err)
 	}
@@ -119,9 +121,9 @@ func checkAndPersist(ctx context.Context, pool *pgxpool.Pool, m checker.Monitor)
 		}
 
 		_, err = pool.Exec(ctx, `
-			INSERT INTO alert (monitor_id, alert_type, message)
-			VALUES ($1, $2, $3)
-		`, m.ID, alertType, message)
+			INSERT INTO alert (monitor_id, alert_type, message, created_at)
+			VALUES ($1, $2, $3, $4)
+		`, m.ID, alertType, message, now)
 		if err != nil {
 			log.Printf("insert alert error for monitor %d: %v", m.ID, err)
 		}

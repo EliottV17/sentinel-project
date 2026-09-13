@@ -2,9 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchMonitors } from "../../app/api/endpoints";
 
 /**
- * Poll cadence for the monitors list: 10 s by default, aligning with the
- * in-process APScheduler engine tick. Overridable via VITE_POLL_INTERVAL_MS
- * (read once at module load).
+ * Poll cadence for the monitors list: 10 s by default, chosen for UI freshness;
+ * the underlying checks run on each monitor's own `frequency` in the Go worker.
+ * Overridable via VITE_POLL_INTERVAL_MS (read once at module load).
  */
 const ENV_POLL_INTERVAL_MS = Number(import.meta.env.VITE_POLL_INTERVAL_MS);
 export const REFETCH_INTERVAL_MS =

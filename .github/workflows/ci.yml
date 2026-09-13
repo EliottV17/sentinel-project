@@ -87,7 +87,7 @@ jobs:
 
       - name: Run Govulncheck (Go Security Scanner)
         run: |
-          go install golang.org/x/vuln/cmd/govulncheck@latest
+          go install golang.org/x/vuln/cmd/govulncheck@v1.7.0
           govulncheck ./...
 
   frontend:

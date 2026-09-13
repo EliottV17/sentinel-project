@@ -32,7 +32,7 @@ export async function login(
   username: string,
   password: string,
 ): Promise<LoginResponse> {
-  const body = new URLSearchParams({ username, password });
+  const body = new URLSearchParams({ username, password }).toString();
   return apiFetch<LoginResponse>(
     "/api/v1/auth/login",
     {

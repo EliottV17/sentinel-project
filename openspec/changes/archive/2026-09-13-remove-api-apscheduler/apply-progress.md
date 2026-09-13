@@ -4,6 +4,12 @@ Phase: sdd-apply (executor, strict TDD). Status: implementation complete (28/29
 tasks checked; the single-commit task is delegated to the orchestrator, which
 owns commits per the apply prompt).
 
+**Closure (sdd-archive, 2026-09-13):** the orchestrator-delegated single commit
+landed as `e68e55a` ("feat(api): remove in-process APScheduler — API is
+REST-only; Go worker is the sole polling engine") and its task checkbox was
+closed user-authorized → final state **29/29 tasks complete**. Verified and
+synced; archived at `openspec/changes/archive/2026-09-13-remove-api-apscheduler/`.
+
 ## TDD Cycle Evidence
 
 | # | Cycle | Command (cwd) | Result |

@@ -14,6 +14,13 @@ build_exit_code: 0
 build_output_hash: sha256:895bc7411740100a005fefe2a307fac6fc9655f7e43fd9456a94af3bad563637
 ```
 
+**Archive closure (sdd-archive, 2026-09-13):** the sole warning above is RESOLVED.
+The orchestrator-delegated single commit landed as `e68e55a` and the commit task
+checkbox was closed (user-authorized) → `tasks.md` now shows 29/29 checked with
+zero `- [ ]` implementation markers. The verdict `pass_with_warnings` stands;
+final state: 7/7 requirements, 16/16 scenarios verified against the committed
+tree. Archived at `openspec/changes/archive/2026-09-13-remove-api-apscheduler/`.
+
 # Verify Report — `remove-api-apscheduler`
 
 Phase: sdd-verify (executor). Verified against the **live working tree** (no commit

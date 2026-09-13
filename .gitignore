@@ -1,0 +1,5 @@
+# Local Pi runtime state
+.atl/
+.pi/
+.codegraph/
+sentinel-worker/worker

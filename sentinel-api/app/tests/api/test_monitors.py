@@ -102,6 +102,73 @@ async def test_delete_monitor_success(
 
 
 @pytest.mark.asyncio
+async def test_delete_monitor_with_children_deletes_referencing_rows(
+    override_session_db, db_engine, auth_headers, monitor_payload
+):
+    """Deleting a monitor must also remove its check_result and alert children
+    (which hold an FK to monitor.id), not raise a ForeignKeyViolationError."""
+    from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+    from sqlmodel import select
+
+    from app.models.alert import Alert
+    from app.models.check_result import CheckResult
+    from app.models.monitor import Monitor
+
+    headers = await auth_headers()
+
+    create_response = await override_session_db.post(
+        "/api/v1/monitors/",
+        json=monitor_payload,
+        headers=headers,
+    )
+    assert create_response.status_code == 201
+    monitor_id = create_response.json()["id"]
+
+    # Simulate engine-written children referencing the monitor.
+    SessionMaker = async_sessionmaker(
+        bind=db_engine, class_=AsyncSession, expire_on_commit=False
+    )
+    async with SessionMaker() as session:
+        session.add(
+            CheckResult(monitor_id=monitor_id, state="healthy", status_code=200)
+        )
+        session.add(Alert(monitor_id=monitor_id, alert_type="down", message="down"))
+        await session.commit()
+
+    delete_response = await override_session_db.delete(
+        f"/api/v1/monitors/{monitor_id}",
+        headers=headers,
+    )
+    assert delete_response.status_code == 200
+    assert delete_response.json()["message"] == "Monitor deleted successfully"
+
+    async with SessionMaker() as session:
+        checks = (
+            (
+                await session.execute(
+                    select(CheckResult).where(CheckResult.monitor_id == monitor_id)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        alerts = (
+            (await session.execute(select(Alert).where(Alert.monitor_id == monitor_id)))
+            .scalars()
+            .all()
+        )
+        monitor = (
+            (await session.execute(select(Monitor).where(Monitor.id == monitor_id)))
+            .scalars()
+            .all()
+        )
+
+    assert checks == []
+    assert alerts == []
+    assert monitor == []
+
+
+@pytest.mark.asyncio
 async def test_delete_monitor_cross_access_forbidden(
     override_session_db, auth_headers, monitor_payload
 ):

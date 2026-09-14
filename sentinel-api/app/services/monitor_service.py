@@ -8,6 +8,7 @@ from app.schemas.monitor import MonitorCreate, MonitorUpdate
 
 VALID_CHECK_TYPES = ["http"]
 
+
 class MonitorService:
     def __init__(self, db: AsyncSession):
         self.db = db

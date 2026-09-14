@@ -42,5 +42,19 @@ services:
     environment:
       DATABASE_URL: postgres://postgres:postgres@db:5432/sentinel_db
 
+  frontend:
+    build:
+      context: ./frontend
+      # Leave empty for same-origin /api (nginx proxies to the api service), or
+      # set e.g. VITE_API_BASE_URL=https://api.example.com for a split origin.
+      args:
+        VITE_API_BASE_URL: ""
+    container_name: sentinel_frontend
+    restart: always
+    depends_on:
+      - api
+    ports:
+      - "5173:80"
+
 volumes:
   postgres_data:

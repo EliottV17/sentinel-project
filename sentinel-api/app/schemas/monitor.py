@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 
 class MonitorBase(BaseModel):
@@ -8,15 +8,7 @@ class MonitorBase(BaseModel):
     target: str
     check_type: str = "http"
     check_config: dict = {}
-    frequency: int = Field(..., ge=10)
-
-    @field_validator("frequency")
-    @classmethod
-    def validate_frequency(cls, value: int | None) -> int | None:
-        if value is not None and value < 10:
-            raise ValueError("Frequency must be at least 10 seconds")
-        return value
-
+    frequency: int = Field(default=60, ge=10)
 
 class MonitorCreate(MonitorBase):
     pass

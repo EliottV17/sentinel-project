@@ -1,5 +1,6 @@
 import asyncio
 from datetime import datetime, timezone
+
 import asyncpg
 
 DATABASE_URL = "postgresql://postgres:postgres@127.0.0.1:5432/sentinel_db"
@@ -27,7 +28,8 @@ async def seed_monitors(total: int = 5000):
 
         await conn.executemany(
             """
-                INSERT INTO monitor (name, target, frequency, state, check_type, check_config, user_id, created_at, consecutive_failures)
+                INSERT INTO monitor (name, target, frequency, state, check_type,
+                check_config, user_id, created_at, consecutive_failures)
                 VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9)
             """,
             records,

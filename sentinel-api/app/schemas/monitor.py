@@ -10,6 +10,7 @@ class MonitorBase(BaseModel):
     check_config: dict = {}
     frequency: int = Field(default=60, ge=10)
 
+
 class MonitorCreate(MonitorBase):
     pass
 

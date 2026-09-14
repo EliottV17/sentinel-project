@@ -13,7 +13,6 @@ dependencies = [
     "pwdlib[argon2]",
     "pyjwt>=2.13.0",
     "python-dotenv",
-    "httpx",
     "pydantic-settings>=2.14.2",
     "argon2-cffi>=25.1.0",
     "email-validator>=2.3.0",
@@ -22,6 +21,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "httpx",
     "ruff",
     "pytest",
     "pytest-asyncio",

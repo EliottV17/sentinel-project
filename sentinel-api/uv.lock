@@ -1198,7 +1198,6 @@ dependencies = [
     { name = "asyncpg" },
     { name = "email-validator" },
     { name = "fastapi" },
-    { name = "httpx" },
     { name = "pwdlib", extra = ["argon2"] },
     { name = "pydantic-settings" },
     { name = "pyjwt" },
@@ -1210,6 +1209,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "httpx" },
     { name = "pip-audit" },
     { name = "pyright" },
     { name = "pytest" },
@@ -1224,7 +1224,6 @@ requires-dist = [
     { name = "asyncpg" },
     { name = "email-validator", specifier = ">=2.3.0" },
     { name = "fastapi" },
-    { name = "httpx" },
     { name = "pwdlib", extras = ["argon2"] },
     { name = "pydantic-settings", specifier = ">=2.14.2" },
     { name = "pyjwt", specifier = ">=2.13.0" },
@@ -1236,6 +1235,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "httpx" },
     { name = "pip-audit" },
     { name = "pyright" },
     { name = "pytest" },

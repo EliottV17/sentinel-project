@@ -42,7 +42,7 @@ sentinel/
 
 ## Core Highlights
 
-* **Strategy & Registry Pattern:** Plug-and-play checkers (`BaseChecker`) extending ping/HTTP checks without touching the polling engine.
+* **Strategy & Registry Pattern:** Plug-and-play checkers (`BaseChecker`) — currently an HTTP checker — registered by type name without touching the polling engine.
 * **State Machine for Alerts:** Emits alerts only on transitions (`healthy -> unhealthy = DOWN` / `unhealthy -> healthy = RECOVERY`), preventing notification floods while storing immutable audit logs.
 * **Zero MQ Overhead:** Multi-language concurrency synchronization directly backed by PostgreSQL query filtering on `last_checked_at + frequency`.
 
@@ -52,7 +52,7 @@ Clone the repository and spin up all services (PostgreSQL 17, FastAPI API, Go Wo
 
 ```bash
 git clone https://github.com/EliottV17/sentinel-project.git
-cd sentinel
+cd sentinel-project
 
 # Build and start all services
 docker compose up -d --build

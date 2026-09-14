@@ -5,6 +5,7 @@ Independent Go poller for the Sentinel monitoring engine. It shares the same Pos
 ```text
 sentinel/
 ├── sentinel-api/      # Python/FastAPI (REST API)
+├── frontend/          # React + Vite SPA (login & monitors dashboard)
 └── sentinel-worker/   # This package — Go poller
 ```
 
@@ -17,7 +18,7 @@ Every 2 seconds the worker loop queries `monitor` for rows where `state = 'Activ
 3. Updates `monitor.last_state`, `last_checked_at`, and `consecutive_failures`.
 4. Inserts an `alert` row **only on state transitions** (`healthy → unhealthy` = "down", `unhealthy → healthy` = "recovery").
 
-This is the only checking engine; the API performs no checks. The state machine (alerts on transitions only) is unchanged.
+This is the only checking engine; the API performs no checks. Alerts fire only on state transitions.
 
 ## Project Layout
 
@@ -39,7 +40,7 @@ From `sentinel-worker/`:
 go build ./cmd/worker/
 
 # Run with custom DB URL (or omit to use default sentinel_db)
-DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/sentinel_db go run ./cmd/worker/
+DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/sentinel_db?sslmode=disable go run ./cmd/worker/
 ```
 
 Without `DATABASE_URL`, it defaults to `postgres://postgres:postgres@127.0.0.1:5432/sentinel_db`. Concurrency is set to 10 workers.

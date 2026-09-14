@@ -1,12 +1,12 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import col, delete, select
 
-from app.core.checkers.registry import _checker_registry
 from app.models.alert import Alert
 from app.models.check_result import CheckResult
 from app.models.monitor import Monitor
 from app.schemas.monitor import MonitorCreate, MonitorUpdate
 
+VALID_CHECK_TYPES = ["http"]
 
 class MonitorService:
     def __init__(self, db: AsyncSession):
@@ -16,7 +16,8 @@ class MonitorService:
         self, monitor_create: MonitorCreate, user_id: int
     ) -> Monitor:
 
-        if monitor_create.check_type not in _checker_registry:
+        # Nueva validación sin usar el antiguo registry
+        if monitor_create.check_type not in VALID_CHECK_TYPES:
             raise ValueError(f"Unknown checker type: {monitor_create.check_type}")
 
         monitor_data = monitor_create.model_dump()
@@ -69,10 +70,6 @@ class MonitorService:
         if not monitor:
             return False
 
-        # Delete child rows first: check_result and alert hold an FK to
-        # monitor.id without ON DELETE CASCADE, and the ORM would otherwise try
-        # to NULL their monitor_id (violating NOT NULL) instead of removing
-        # them. Bulk DELETE is deterministic and engine-agnostic.
         await self.db.execute(
             delete(CheckResult).where(col(CheckResult.monitor_id) == monitor_id)
         )

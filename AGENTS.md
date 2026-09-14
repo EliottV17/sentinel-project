@@ -57,7 +57,7 @@ Alembic's `migrations/env.py` imports `app.core.config.Settings`, which reads `.
 
 ## Architecture
 
-- **Checker registry**: New check types implement `BaseChecker` and self-register with `@register`; `get_checker(check_type)` resolves them. This API-side registry is a preserved extension point with no production caller (the Go worker has its own registry). New checker modules must be imported somewhere (e.g. `main.py` imports `app.core.checkers.http_checker`) or they never register.
+- **Checker registry (Go worker)**: The strategy + registry pattern for checkers lives in `sentinel-worker/internal/checker/` — a `Checker` interface (`checker.go`), an HTTP implementation (`http.go`), and a type-name registry (`registry.go` with `Register`/`Get`) wired up in `cmd/worker/main.go`. The old `app/core/checkers` Python module was deleted; the API has no checker registry, so new check types are added in Go only.
 - **State machine**: Alerts fire **only on transitions** (healthy→unhealthy = "down", unhealthy→healthy = "recovery"). Every check writes a `check_result` row; `alert` rows only on state changes.
 - **Single engine, one schema**: since `remove-api-apscheduler` the Go worker is the sole polling engine — it polls every 2 s for monitors that are *due* by `frequency` (seconds), checks all `state = "Active"` monitors, and is the only writer of `check_result` + `alert` and `monitor.last_state`. The API is REST-only. If the worker is not running, nothing is checked.
 - **All DB access is async** (asyncpg, async SQLAlchemy sessions, async Alembic).

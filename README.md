@@ -33,22 +33,23 @@ sentinel/
 +-----------------------+   (Asyncpg / SQLModel)   +-----------------------+
 |  sentinel-worker (Go) +------------------------->+      PostgreSQL       |
 |  - 2s Polling Loop    |     (pgx pool)           |  - Monitors           |
-|  - State Transitions  |<-------------------------+  - Check Results (Log)|
-+-----------+-----------+                          |  - Alerts             |
-            |                                      +-----------------------+
+|  - Checker Registry   |    (Strategy Pattern)    |  - Check Results (Log)|
+|  - State Transitions  |<-------------------------+  - Alerts             |
++-----------+-----------+                          +-----------------------+
+            |
             v
      [External Targets] (HTTP Checkers)
 ```
 
 ## Core Highlights
 
-* **Strategy & Registry Pattern:** Plug-and-play checkers (`BaseChecker`) — currently an HTTP checker — registered by type name without touching the polling engine.
+* **Strategy & Registry Pattern (Go):** Pluggable `Checker` implementations — currently an HTTP checker — registered by type name (`sentinel-worker/internal/checker/registry.go`), so new check types never touch the polling loop or the API.
 * **State Machine for Alerts:** Emits alerts only on transitions (`healthy -> unhealthy = DOWN` / `unhealthy -> healthy = RECOVERY`), preventing notification floods while storing immutable audit logs.
 * **Zero MQ Overhead:** Multi-language concurrency synchronization directly backed by PostgreSQL query filtering on `last_checked_at + frequency`.
 
 ## Quick Start (Full Stack with Docker)
 
-Clone the repository and spin up all services (PostgreSQL 17, FastAPI API, Go Worker):
+Clone the repository and spin up the full stack (PostgreSQL 17, FastAPI API, Go Worker, and the React frontend served by nginx):
 
 ```bash
 git clone https://github.com/EliottV17/sentinel-project.git
@@ -58,25 +59,29 @@ cd sentinel-project
 docker compose up -d --build
 ```
 
+* **Frontend (React SPA):** http://localhost:5173
 * **API Docs (Swagger UI):** http://localhost:8000/docs
 * **PostgreSQL:** `localhost:5432`
 
 ## Frontend (React SPA)
 
-The UI lives in `frontend/` (Vite + React 19 + TypeScript + Tailwind v4). In dev it
-proxies `/api` to the API on `http://localhost:8000` (no CORS involved locally);
-for a separated prod origin set `VITE_API_BASE_URL` (see `frontend/.env.example`).
+The UI lives in `frontend/` (Vite + React 19 + TypeScript + Tailwind v4) and uses
+**bun** as its package manager (`package.json` pins `bun@1.4.0` and `bun.lock` is
+committed). In dev it proxies `/api` to the API on `http://localhost:8000` (no
+CORS involved locally); for a separated prod origin set `VITE_API_BASE_URL` (see
+`frontend/.env.example`). In Docker Compose the frontend is served from an nginx
+image (`frontend/Dockerfile` + `nginx.conf`) on port 5173.
 
 ```bash
 cd frontend
-npm install                # install deps (or: npm ci for a clean/reproducible install)
-npm run dev                # dev server with HMR on http://localhost:5173
-npm run build              # typecheck (tsc -b) + production build to dist/
-npm run test               # vitest run (unit/component tests, MSW-mocked API)
-npm run test:watch         # vitest watch mode
-npm run lint               # eslint (flat config)
-npm run typecheck          # tsc -b only
-npm run gen:api            # regenerate src/lib/api/schema.ts from a running API's /openapi.json
+bun install                # install deps (or: bun install --frozen-lockfile for a clean/reproducible install)
+bun run dev                # dev server with HMR on http://localhost:5173
+bun run build              # typecheck (tsc -b) + production build to dist/
+bun run test               # vitest run (unit/component tests, MSW-mocked API)
+bun run test:watch         # vitest watch mode
+bun run lint               # eslint (flat config)
+bun run typecheck          # tsc -b only
+bun run gen:api            # regenerate src/lib/api/schema.ts from a running API's /openapi.json
 ```
 
 Prerequisites for `gen:api`: a running dev API (`cd sentinel-api && uv run uvicorn

@@ -1,6 +1,6 @@
 # Sentinel API
 
-Asynchronous monitoring and alerting engine built with **FastAPI** and **PostgreSQL**. Periodically checks external targets, detects state transitions, and records a full audit trail — designed for extensibility via a pluggable checker architecture.
+REST API of the Sentinel monitoring and alerting engine, built with **FastAPI** and **PostgreSQL**. It exposes auth, monitor CRUD, and monitoring history while all checking (external targets, state transitions, audit trail) is performed by the Go worker against the same database.
 
 ## Tech Stack
 
@@ -8,7 +8,7 @@ Asynchronous monitoring and alerting engine built with **FastAPI** and **Postgre
 - **SQLModel + Alembic** — ORM and async migrations
 - **PostgreSQL 17** — persistent storage with JSON columns for per-checker configuration
 - **sentinel-worker (Go)** — official polling engine: the only component that checks monitors and the only one honoring `monitor.frequency` (required — without it, no monitor is ever checked and no alerts fire)
-- **Docker Compose** — local infrastructure (Postgres, API, worker)
+- **Docker Compose** — local infrastructure (Postgres, API, worker, frontend)
 - **uv** — package and environment management
 - **Ruff & Pyright** — linting, formatting, and type checking
 
@@ -40,7 +40,7 @@ user    ──1:N──► monitor
 
 ### Go worker
 
-The companion [sentinel-worker](../sentinel-worker/README.md) is an independent Go poller against the same database and schema. It is the sole polling engine and is required — the API performs no checks itself.
+The companion [sentinel-worker](../sentinel-worker/README.md) is an independent Go poller against the same database and schema. It is the sole polling engine and is required — the API performs no checks itself. It also hosts the pluggable checker registry (strategy pattern) that replaced the old `app/core/checkers` module.
 
 ## Setup (local development)
 
@@ -86,7 +86,7 @@ The API is REST-only. Monitoring requires the Go worker (`sentinel-worker`) — 
 
 ## Docker (full stack)
 
-From the repo root, build and start the whole stack (Postgres + API + worker):
+From the repo root, build and start the whole stack (Postgres + API + worker + frontend):
 
 ```bash
 docker compose up -d --build

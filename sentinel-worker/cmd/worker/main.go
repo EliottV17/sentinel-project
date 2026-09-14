@@ -3,7 +3,7 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -17,6 +17,9 @@ import (
 )
 
 func main() {
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	slog.SetDefault(logger)
+	
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
@@ -24,13 +27,14 @@ func main() {
 
 	pool, err := db.Connect(ctx, cfg.DatabaseURL)
 	if err != nil {
-		log.Fatalf("Database connection failed: %v", err)
+		slog.Error("Database connection failed", "err", err)
+		os.Exit(1)
 	}
 	defer pool.Close()
 
 	checker.Register("http", &checker.HTTPChecker{Client: &http.Client{Timeout: 10 * time.Second}})
 
-	log.Println("Sentinel worker started")
+	slog.Info("Sentinel worker started")
 	worker.Run(ctx, pool, cfg.Concurrency)
-	log.Println("Sentinel worker stopped")
+	slog.Info("Sentinel worker stopped")
 }

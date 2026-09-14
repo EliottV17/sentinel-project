@@ -5,51 +5,61 @@
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
 ![Go](https://img.shields.io/badge/Go-1.25-00ADD8?logo=go&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-4169E1?logo=postgresql&logoColor=white)
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
 
-An asynchronous uptime monitoring and alerting engine designed as a polyglot monorepo. It couples a REST API built with **FastAPI** with a high-throughput background polling worker written in **Go**, both operating over a shared PostgreSQL database.
+An asynchronous uptime monitoring and alerting engine designed as a polyglot monorepo. It couples a REST API built with **FastAPI**, a high-throughput polling worker written in **Go**, a **React** dashboard, and a shared **PostgreSQL 17** schema — no message broker anywhere in the data path.
 
 ```text
 sentinel/
-├── sentinel-api/      # Python / FastAPI — REST API + auth (checking runs in the Go worker)
-├── sentinel-worker/   # Go — High-frequency independent polling worker
-└── frontend/          # React + Vite (TypeScript) SPA — login & monitors dashboard
+├── sentinel-api/      # Python / FastAPI — REST API, auth, monitor CRUD, history
+├── sentinel-worker/   # Go — concurrent polling engine & checker registry
+└── frontend/          # React 19 + Vite + TypeScript SPA — dashboard (Nginx-served)
 ```
 
-## Architecture Overview
+## Architecture & Data Flow
 
 ```text
-               +----------------------------------+
-               |        Client / Dashboard        |
-               +-----------------+----------------+
-                                 | (HTTP / REST)
-                                 v
-                     +-----------------------+
-                     |  sentinel-api (Py)    |
-                     |  - REST Endpoints     |
-                     +-----------+-----------+
-                                 |
-                                 v
-+-----------------------+   (Asyncpg / SQLModel)   +-----------------------+
-|  sentinel-worker (Go) +------------------------->+      PostgreSQL       |
-|  - 2s Polling Loop    |     (pgx pool)           |  - Monitors           |
-|  - Checker Registry   |    (Strategy Pattern)    |  - Check Results (Log)|
-|  - State Transitions  |<-------------------------+  - Alerts             |
-+-----------+-----------+                          +-----------------------+
-            |
-            v
-     [External Targets] (HTTP Checkers)
+                 +--------------------------------------------------+
+                 |  Browser — React SPA (Nginx :5173)               |
+                 |  login · monitors dashboard · history / alerts   |
+                 +-------------------------+------------------------+
+                                           |  REST /api (JSON + JWT)
+                                           v
+                 +--------------------------------------------------+
+                 |  sentinel-api  (FastAPI, Python)                 |
+                 |  auth (JWT/Argon2) · monitor CRUD · queries      |
+                 +-------------------------+------------------------+
+                                           |  asyncpg / SQLModel
+                                           v
+                 +--------------------------------------------------+
+                 |  PostgreSQL 17  (shared schema)                  |
+                 |  monitor ─1:N─ check_result  (every ping)        |
+                 |  monitor ─1:N─ alert         (transitions only)  |
+                 +-------------------------+------------------------+
+                 ^                         |
+                 |   2 s due-monitor scan   | pgx pool (MaxConns = 25)
+                 |   (indexed, no MQ)       v
+                 +-------------------------+------------------------+
+                 |  sentinel-worker (Go) — concurrency = 10         |
+                 |  checker registry (Strategy) · log/slog (JSON)   |
+                 +-------------------------+------------------------+
+                                           |
+                                           |  HTTP checks (per monitor.frequency)
+                                           v
+                                    [ External targets ]
 ```
 
 ## Core Highlights
 
-* **Strategy & Registry Pattern (Go):** Pluggable `Checker` implementations — currently an HTTP checker — registered by type name (`sentinel-worker/internal/checker/registry.go`), so new check types never touch the polling loop or the API.
-* **State Machine for Alerts:** Emits alerts only on transitions (`healthy -> unhealthy = DOWN` / `unhealthy -> healthy = RECOVERY`), preventing notification floods while storing immutable audit logs.
-* **Zero MQ Overhead:** Multi-language concurrency synchronization directly backed by PostgreSQL query filtering on `last_checked_at + frequency`.
+* **Strategy & Registry Pattern (Go):** Pluggable `Checker` implementations registered by type name (`sentinel-worker/internal/checker/registry.go`) — currently an HTTP checker (`http.go`). Adding a check type touches neither the polling loop nor the API.
+* **State-Machine Alerting (transitions only):** Alerts fire exclusively on state transitions (`healthy → unhealthy` = "down", `unhealthy → healthy` = "recovery"), never on every failed ping. Every check is still persisted as a `check_result` row — full audit trail without notification floods.
+* **Database-Driven Scheduling, Zero MQ:** No message broker. The worker's 2 s loop scans for due monitors with an indexed predicate (`state = 'Active'` AND `last_checked_at + frequency <= NOW()`) and runs them through a bounded semaphore (concurrency = 10). The database is both the source of truth and the scheduler.
 
-## Quick Start (Full Stack with Docker)
+## Quick Start (Docker Compose)
 
-Clone the repository and spin up the full stack (PostgreSQL 17, FastAPI API, Go Worker, and the React frontend served by nginx):
+Clone the repository and spin up the full stack (PostgreSQL 17, FastAPI API, Go worker, and the React frontend served by nginx):
 
 ```bash
 git clone https://github.com/EliottV17/sentinel-project.git
@@ -59,38 +69,76 @@ cd sentinel-project
 docker compose up -d --build
 ```
 
+The API runs `alembic upgrade head` automatically on startup.
+
 * **Frontend (React SPA):** http://localhost:5173
 * **API Docs (Swagger UI):** http://localhost:8000/docs
 * **PostgreSQL:** `localhost:5432`
+* **Worker logs:** `docker logs -f sentinel_worker` (structured JSON)
 
-## Frontend (React SPA)
+## Structured Logging & Observability
 
-The UI lives in `frontend/` (Vite + React 19 + TypeScript + Tailwind v4) and uses
-**bun** as its package manager (`package.json` pins `bun@1.4.0` and `bun.lock` is
-committed). In dev it proxies `/api` to the API on `http://localhost:8000` (no
-CORS involved locally); for a separated prod origin set `VITE_API_BASE_URL` (see
-`frontend/.env.example`). In Docker Compose the frontend is served from an nginx
-image (`frontend/Dockerfile` + `nginx.conf`) on port 5173.
+The Go worker emits structured **JSON** logs to `stdout` using the standard library's `log/slog` with a JSON handler (`sentinel-worker/cmd/worker/main.go`), giving machine-readable, pipeline-indexable output with near-zero overhead.
 
-```bash
-cd frontend
-bun install                # install deps (or: bun install --frozen-lockfile for a clean/reproducible install)
-bun run dev                # dev server with HMR on http://localhost:5173
-bun run build              # typecheck (tsc -b) + production build to dist/
-bun run test               # vitest run (unit/component tests, MSW-mocked API)
-bun run test:watch         # vitest watch mode
-bun run lint               # eslint (flat config)
-bun run typecheck          # tsc -b only
-bun run gen:api            # regenerate src/lib/api/schema.ts from a running API's /openapi.json
+Example — a completed check (`msg: "check completed"` from `internal/worker/loop.go`):
+
+```json
+{
+  "time": "2026-09-14T02:38:29.65770987Z",
+  "level": "INFO",
+  "msg": "check completed",
+  "monitor_id": 4,
+  "target": "https://github.com/",
+  "state": "healthy",
+  "status_code": 200,
+  "latency_ms": 289.045
+}
 ```
 
-Prerequisites for `gen:api`: a running dev API (`cd sentinel-api && uv run uvicorn
-app.main:app`). Regenerate only when the API contract changes; the generated
-schema is committed.
+State transitions are logged as a separate event, e.g. `"msg": "state transition alert emitted"` with `alertType`, `old_state`, and `new_state`.
+
+Filtering with `jq` (worker runs as container `sentinel_worker`):
+
+```bash
+# Follow the log stream live
+docker logs -f sentinel_worker
+
+# Errors and warnings only
+docker logs sentinel_worker | jq 'select(.level == "ERROR" or .level == "WARN")'
+
+# Slow checks only (latency > 500 ms)
+docker logs sentinel_worker | jq 'select(.msg == "check completed" and .latency_ms > 500)'
+
+# Top 10 slowest checks
+docker logs sentinel_worker | jq -s '[.[] | select(.msg == "check completed")] | sort_by(.latency_ms) | reverse | .[:10]'
+
+# One readable line per completed check
+docker logs sentinel_worker | jq -r 'select(.msg == "check completed") | "\(.time) monitor=\(.monitor_id) state=\(.state) status=\(.status_code) latency=\(.latency_ms)ms"'
+
+# Full check history for a single monitor
+docker logs sentinel_worker | jq -c 'select(.monitor_id == 42)'
+```
+
+## Load Testing & Benchmarks
+
+The worker and pool were validated under saturation using [`sentinel-api/seed.py`](./sentinel-api/seed.py), which bulk-inserts mock monitors directly into the database via asyncpg (bypassing the API):
+
+```bash
+# Requires PostgreSQL running (docker compose up -d db)
+cd sentinel-api
+uv run python seed.py              # inserts 5,000 monitors (frequency 60 s, HTTP checker)
+```
+
+Results of the run:
+
+* **5,000 monitors concurrently `Active`**, each with `frequency = 60 s` and `check_type = http` (target `https://httpbin.org/status/200`).
+* **17,000+ rows persisted in `check_result`** — every ping recorded as an immutable audit row while only genuine state transitions emitted alerts.
+* **Connection saturation mitigated via `pgxpool.MaxConns = 25`** (`sentinel-worker/internal/db/postgres.go`): the cap keeps PostgreSQL from being flooded as the 2 s loop fans out across thousands of due monitors, while the 10-worker semaphore bounds in-flight checks.
 
 ## Sub-Packages Documentation
 
-For detailed local development instructions, testing requirements, and service architecture:
+For detailed per-service docs — local development, testing requirements, and internal architecture:
 
 * [Sentinel API (Python / FastAPI)](./sentinel-api/README.md)
 * [Sentinel Worker (Go)](./sentinel-worker/README.md)
+* [Frontend (React SPA)](./frontend/README.md)

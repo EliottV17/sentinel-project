@@ -18,3 +18,5 @@ wheels/
 
 # Docker
 .docker_data/
+# Local Pi runtime state
+.atl/

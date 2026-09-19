@@ -46,6 +46,9 @@ jobs:
       - name: Generate Prisma client
         run: bunx prisma generate
 
+      - name: Push database schema
+        run: bunx prisma db push
+
       - name: Build
         run: bun run build
 

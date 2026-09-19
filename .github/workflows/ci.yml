@@ -29,39 +29,31 @@ jobs:
         working-directory: sentinel-api
 
     env:
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@127.0.0.1:5432/sentinel_tests_db
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/sentinel_tests_db
       SECRET_KEY: "super-secret-key-para-tests-ci"
 
     steps:
       - uses: actions/checkout@v5
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v7
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          enable-cache: true
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
+          bun-version: "1.4.0"
 
       - name: Install dependencies
-        run: uv sync --group dev
+        run: bun install --frozen-lockfile
 
-      - name: Lint
-        run: uv run ruff check .
+      - name: Generate Prisma client
+        run: bunx prisma generate
 
-      - name: Format check
-        run: uv run ruff format --check .
+      - name: Build
+        run: bun run build
 
-      - name: Typecheck
-        run: uv run pyright
+      - name: Unit Tests
+        run: bun run test
 
-      - name: Test
-        run: uv run pytest
-
-      - name: Audit Python dependencies
-        run: uv run pip-audit
+      - name: End-to-End Tests
+        run: bun run test:e2e
 
   worker:
     name: Worker (build, vet)
@@ -87,7 +79,7 @@ jobs:
 
       - name: Run Govulncheck (Go Security Scanner)
         run: |
-          go install golang.org/x/vuln/cmd/govulncheck@latest
+          go install golang.org/x/vuln/cmd/govulncheck@v1.7.0
           govulncheck ./...
 
   frontend:
@@ -100,24 +92,22 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Set up Node
-        uses: actions/setup-node@v6
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: "22"
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          bun-version: "1.4.0"
 
       - name: Install dependencies
-        run: npm ci
+        run: bun install --frozen-lockfile
 
       - name: Lint
-        run: npm run lint
+        run: bun run lint
 
       - name: Typecheck
-        run: npm run typecheck
+        run: bun run typecheck
 
       - name: Test
-        run: npm run test
+        run: bun run test
 
       - name: Build
-        run: npm run build
+        run: bun run build

@@ -1,22 +1,4 @@
-# Python-generated files
-__pycache__/
-*.py[oc]
-build/
+node_modules/
 dist/
-wheels/
-*.egg-info
-
-# Virtual environments
-.venv
-
 .env
-
-# Cache
-.ruff_cache/
-.pytest_cache/
-.mypy_cache/
-
-# Docker
-.docker_data/
-# Local Pi runtime state
-.atl/
+*.log

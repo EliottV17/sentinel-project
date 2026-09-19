@@ -1,125 +1,36 @@
-# Sentinel API
+# Sentinel API (NestJS + Bun)
 
-REST API of the Sentinel monitoring and alerting engine, built with **FastAPI** and **PostgreSQL**. It exposes auth, monitor CRUD, and monitoring history while all checking (external targets, state transitions, audit trail) is performed by the Go worker against the same database.
+REST API de Sentinel construida con [NestJS](https://nestjs.com/), [Prisma ORM](https://www.prisma.io/) y [Bun](https://bun.sh/), encargada de la autenticación de usuarios, administración de monitores y consulta de métricas e historial.
 
-## Tech Stack
+El motor de ejecución y polling pesado es ejecutado de manera concurrente por `sentinel-worker` (Go).
 
-- **FastAPI** — fully async REST API
-- **SQLModel + Alembic** — ORM and async migrations
-- **PostgreSQL 17** — persistent storage with JSON columns for per-checker configuration
-- **sentinel-worker (Go)** — official polling engine: the only component that checks monitors and the only one honoring `monitor.frequency` (required — without it, no monitor is ever checked and no alerts fire)
-- **Docker Compose** — local infrastructure (Postgres, API, worker, frontend)
-- **uv** — package and environment management
-- **Ruff & Pyright** — linting, formatting, and type checking
+## Requisitos
 
-## Architecture
+- [Bun](https://bun.sh/) >= 1.2
+- Docker y Docker Compose (PostgreSQL 17)
 
-### State machine for alerting
-
-Each check produces a `CheckResult` persisted in the `check_result` table. The worker compares `monitor.last_state` against the new result — alerts fire **only on transitions** (`healthy → unhealthy` or vice versa), not on every failed ping.
-
-```text
-healthy   ──(check fails)──► unhealthy  →  INSERT alert (type: "down")
-unhealthy ──(check passes)─► healthy    →  INSERT alert (type: "recovery")
-```
-
-### Data model
-
-```text
-monitor ──1:N──► check_result    (every ping, full audit trail)
-monitor ──1:N──► alert           (state transitions only)
-user    ──1:N──► monitor
-```
-
-| Table | Purpose |
-|---|---|
-| `users` | JWT-authenticated accounts |
-| `monitor` | Target configuration (`check_type`, `check_config` as JSON, frequency, ownership) |
-| `check_result` | Immutable log of every check (state, latency, status code, error) |
-| `alert` | State transition events (`down` / `recovery`) |
-
-### Go worker
-
-The companion [sentinel-worker](../sentinel-worker/README.md) is an independent Go poller against the same database and schema. It is the sole polling engine and is required — the API performs no checks itself. It also hosts the pluggable checker registry (strategy pattern) that replaced the old `app/core/checkers` module.
-
-## Setup (local development)
-
-### 1. Clone and install dependencies
+## Setup Local
 
 ```bash
-git clone https://github.com/EliottV17/sentinel-project.git
-cd sentinel-project/sentinel-api
-uv sync --group dev
+# 1. Instalar dependencias
+bun install
+
+# 2. Generar cliente de Prisma
+bunx prisma generate
+
+# 3. Iniciar servidor en modo desarrollo
+bun run start:dev
 ```
 
-### 2. Environment
-
-Create a `.env` file inside `sentinel-api/`:
-
-```env
-DATABASE_URL=postgresql+asyncpg://postgres:postgres@127.0.0.1:5432/sentinel_db
-SECRET_KEY=your-secret-key
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30
-CORS_ORIGINS=  # empty disables cross-origin access; SPA origins here (comma-separated)
-```
-
-### 3. Start infrastructure and run migrations
-
-The `docker-compose.yml` lives at the **repo root**. Start PostgreSQL from there, then apply migrations:
+## Tests y Build
 
 ```bash
-# Start Postgres from repo root
-docker compose up -d db
+# Compilar TypeScript
+bun run build
 
-# Run migrations from sentinel-api/
-uv run alembic upgrade head
+# Tests unitarios
+bun run test
+
+# Tests end-to-end
+bun run test:e2e
 ```
-
-### 4. Run the server
-
-```bash
-uv run uvicorn app.main:app --reload
-```
-
-The API is REST-only. Monitoring requires the Go worker (`sentinel-worker`) — without it, no monitor is ever checked.
-
-## Docker (full stack)
-
-From the repo root, build and start the whole stack (Postgres + API + worker + frontend):
-
-```bash
-docker compose up -d --build
-```
-
-- API exposed on `http://localhost:8000`, runs `alembic upgrade head` automatically on startup.
-- Postgres only listens on localhost. `SECRET_KEY` is read from the host env (defaults to `change-me`).
-- The Go worker service is built too — see its [README](../sentinel-worker/README.md).
-
-## Commands
-
-```bash
-uv run ruff check .                     # lint
-uv run ruff format .                    # format
-uv run pyright                          # type-check
-uv run pytest                           # run tests (requires sentinel_tests_db)
-uv run pytest app/tests/api/test_monitors.py::test_create_monitor   # single test
-```
-
-### Tests
-
-Tests require a real PostgreSQL database (`sentinel_tests_db` must exist on the same server). Tables are created and dropped per test function via `SQLModel.metadata`. Authentication flows use the async test client from `conftest.py`.
-
-## Project structure
-
-```text
-app/
-├── api/v1/endpoints/   # REST route handlers (auth, users, monitors; history/alerts live under /monitors)
-├── api/deps.py          # FastAPI dependency injection (get_db, get_current_user)
-├── core/
-│   ├── config.py        # pydantic-settings from .env
-│   └── security.py      # Argon2 password hashing + JWT
-├── db/database.py       # asyncpg engine and session factory
-├── models/              # SQLModel table definitions (User, Monitor, CheckResult, Alert)
-├── schemas/             # Pydantic request/response models
-├── services/            # Business logic layer (UserService, MonitorService, AuthService)

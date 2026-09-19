@@ -1,16 +1,35 @@
-FROM python:3.12-slim
-
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+# Stage 1: Build
+FROM oven/bun:alpine AS builder
 
 WORKDIR /app
 
-COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen --no-group dev
+# Install build dependencies for native modules (e.g. argon2)
+RUN apk add --no-cache python3 make g++
 
-COPY alembic.ini ./
-COPY migrations ./migrations
-COPY app ./app
+COPY package.json bun.lock ./
+COPY prisma ./prisma/
+
+RUN bun install --frozen-lockfile
+
+COPY tsconfig.json nest-cli.json ./
+COPY src ./src
+
+RUN bunx prisma generate
+RUN bun run build
+
+# Stage 2: Production runner
+FROM oven/bun:alpine AS runner
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV PORT=8000
+
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/prisma ./prisma
+COPY package.json ./
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "uv run --no-sync alembic upgrade head && uv run --no-sync uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+CMD ["bun", "dist/main.js"]

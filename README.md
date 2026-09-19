@@ -1,19 +1,20 @@
 # Sentinel
 
 [![CI](https://github.com/EliottV17/sentinel-project/actions/workflows/ci.yml/badge.svg)](https://github.com/EliottV17/sentinel-project/actions/workflows/ci.yml)
-![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
+![NestJS](https://img.shields.io/badge/NestJS-E0234E?logo=nestjs&logoColor=white)
+![Bun](https://img.shields.io/badge/Bun-000000?logo=bun&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white)
+![Prisma](https://img.shields.io/badge/Prisma-2D3748?logo=prisma&logoColor=white)
 ![Go](https://img.shields.io/badge/Go-1.25-00ADD8?logo=go&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-4169E1?logo=postgresql&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
 
-An asynchronous uptime monitoring and alerting engine designed as a polyglot monorepo. It couples a REST API built with **FastAPI**, a high-throughput polling worker written in **Go**, a **React** dashboard, and a shared **PostgreSQL 17** schema — no message broker anywhere in the data path.
+An asynchronous uptime monitoring and alerting engine designed as a polyglot monorepo. It couples a REST API built with **NestJS (TypeScript/Bun)** and **Prisma ORM**, a high-throughput polling worker written in **Go**, a **React** dashboard, and a shared **PostgreSQL 17** schema — no message broker anywhere in the data path.
 
 ```text
 sentinel/
-├── sentinel-api/      # Python / FastAPI — REST API, auth, monitor CRUD, history
+├── sentinel-api/      # TypeScript / NestJS + Bun — REST API, auth, monitor CRUD, history
 ├── sentinel-worker/   # Go — concurrent polling engine & checker registry
 └── frontend/          # React 19 + Vite + TypeScript SPA — dashboard (Nginx-served)
 ```
@@ -28,10 +29,10 @@ sentinel/
                                            |  REST /api (JSON + JWT)
                                            v
                  +--------------------------------------------------+
-                 |  sentinel-api  (FastAPI, Python)                 |
+                 |  sentinel-api  (NestJS, TypeScript / Bun)        |
                  |  auth (JWT/Argon2) · monitor CRUD · queries      |
                  +-------------------------+------------------------+
-                                           |  asyncpg / SQLModel
+                                           |  Prisma ORM
                                            v
                  +--------------------------------------------------+
                  |  PostgreSQL 17  (shared schema)                  |
@@ -59,7 +60,7 @@ sentinel/
 
 ## Quick Start (Docker Compose)
 
-Clone the repository and spin up the full stack (PostgreSQL 17, FastAPI API, Go worker, and the React frontend served by nginx):
+Clone the repository and spin up the full stack (PostgreSQL 17, NestJS API, Go worker, and the React frontend served by nginx):
 
 ```bash
 git clone https://github.com/EliottV17/sentinel-project.git
@@ -69,10 +70,8 @@ cd sentinel-project
 docker compose up -d --build
 ```
 
-The API runs `alembic upgrade head` automatically on startup.
-
 * **Frontend (React SPA):** http://localhost:5173
-* **API Docs (Swagger UI):** http://localhost:8000/docs
+* **API:** http://localhost:8000
 * **PostgreSQL:** `localhost:5432`
 * **Worker logs:** `docker logs -f sentinel_worker` (structured JSON)
 
@@ -139,6 +138,6 @@ Results of the run:
 
 For detailed per-service docs — local development, testing requirements, and internal architecture:
 
-* [Sentinel API (Python / FastAPI)](./sentinel-api/README.md)
+* [Sentinel API (NestJS / Bun)](./sentinel-api/README.md)
 * [Sentinel Worker (Go)](./sentinel-worker/README.md)
 * [Frontend (React SPA)](./frontend/README.md)

@@ -4,7 +4,7 @@ Independent Go poller for the Sentinel monitoring engine. It shares the same Pos
 
 ```text
 sentinel/
-├── sentinel-api/      # Python/FastAPI (REST API)
+├── sentinel-api/      # TypeScript / NestJS + Bun (REST API, Prisma ORM)
 ├── frontend/          # React + Vite SPA (login & monitors dashboard)
 └── sentinel-worker/   # This package — Go poller
 ```
@@ -61,4 +61,4 @@ docker build -t sentinel-worker ./sentinel-worker
 
 ## Gotchas
 
-- **Schema dependency:** Requires the database schema created by `sentinel-api` migrations (`alembic upgrade head`) — the worker does not create or migrate tables.
+- **Schema dependency:** Requires the database schema created by `sentinel-api` (`bunx prisma db push`) — the worker does not create or migrate tables.

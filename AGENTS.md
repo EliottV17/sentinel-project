@@ -4,28 +4,25 @@
 
 ```
 sentinel/                    # Git root
-├── sentinel-api/            # Python/FastAPI — full app, primary
+├── sentinel-api/            # TypeScript/NestJS — REST API, primary
 └── sentinel-worker/         # Go — independent poller writing to the same DB
 ```
 
-No root-level tooling. All Python commands run inside `sentinel-api/`.
+No root-level tooling. All API commands run inside `sentinel-api/`.
 
 ## Commands
 
 From `sentinel-api/`:
 
 ```bash
-uv sync --group dev          # install deps
+bun install                  # install deps
 docker compose up -d         # start PostgreSQL 17 (compose file is at repo root, not here)
-alembic upgrade head         # run migrations (requires .env with DATABASE_URL)
-uv run uvicorn app.main:app --reload   # dev server (REST API; checking runs in the Go worker)
+bunx prisma generate         # generate Prisma client
+bun run start:dev            # dev server (REST API; checking runs in the Go worker)
 
-uv run ruff check .          # lint
-uv run ruff format .         # format
-uv run pyright               # type-check (installed via dev group)
-
-uv run pytest                # all tests
-uv run pytest app/tests/api/test_monitors.py::test_create_monitor  # single test
+bun run build                # build TypeScript
+bun run test                 # unit tests (Jest)
+bun run test:e2e             # end-to-end tests (Supertest + Jest)
 ```
 
 From `sentinel-worker/`:
@@ -40,13 +37,13 @@ DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/sentinel_db go run ./cm
 Copy `.env.example` or create `.env` inside `sentinel-api/`:
 
 ```
-DATABASE_URL=postgresql+asyncpg://postgres:postgres@127.0.0.1:5432/sentinel_db
+DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/sentinel_db
 SECRET_KEY=...
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
+CORS_ORIGINS=http://localhost:5173
+PORT=8000
 ```
-
-Alembic's `migrations/env.py` imports `app.core.config.Settings`, which reads `.env` relative to CWD — so `alembic` and `uv run` must run from `sentinel-api/`.
 
 ## Test prerequisites
 

@@ -2,17 +2,17 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select, col
+from sqlmodel import col, select
 
 from app.api.deps import get_current_active_user, get_db
+from app.models.alert import Alert
 from app.models.check_result import CheckResult
 from app.models.monitor import Monitor
 from app.models.user import User
+from app.schemas.alert import AlertRead
 from app.schemas.check_result import CheckResultRead
 from app.schemas.monitor import MonitorCreate, MonitorRead, MonitorUpdate
 from app.services.monitor_service import MonitorService
-from app.models.alert import Alert
-from app.schemas.alert import AlertRead
 
 router = APIRouter()
 
@@ -28,9 +28,12 @@ async def create_new_monitor(
     if current_user.id is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Invalid user state")
 
-    new_monitor = await monitor_service.create_monitor(
-        monitor_create=monitor_create, user_id=current_user.id
-    )
+    try:
+        new_monitor = await monitor_service.create_monitor(
+            monitor_create=monitor_create, user_id=current_user.id
+        )
+    except ValueError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
     return new_monitor
 
@@ -49,7 +52,7 @@ async def get_user_monitors(
     return monitors
 
 
-@router.delete("/{monitor_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{monitor_id}", status_code=status.HTTP_200_OK)
 async def delete_monitor_by_id(
     db: Annotated[AsyncSession, Depends(get_db)],
     monitor_id: int,
@@ -91,7 +94,7 @@ async def update_monitor_by_id(
 
     if not updated_monitor:
         raise HTTPException(
-            status_code=status.HTTP_404_BAD_REQUEST,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Monitor not found or you do not have permission to modify it.",
         )
 

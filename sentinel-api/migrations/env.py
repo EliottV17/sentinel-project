@@ -6,8 +6,12 @@ from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 from sqlmodel import SQLModel
-
 import app.models
+from app.models import User
+from app.models import Monitor
+from app.models import Alert
+from app.models import CheckResult
+
 from app.core.config import settings
 
 # this is the Alembic Config object, which provides

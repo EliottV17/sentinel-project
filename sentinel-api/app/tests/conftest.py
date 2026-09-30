@@ -5,8 +5,8 @@ from sqlmodel import SQLModel
 
 from app.db.database import get_session as get_db
 from app.main import app
-from app.models.check_result import CheckResult  # noqa: F401
 from app.models.alert import Alert  # noqa: F401
+from app.models.check_result import CheckResult  # noqa: F401
 
 transport = ASGITransport(app=app)
 

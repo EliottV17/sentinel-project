@@ -1,21 +1,19 @@
 import asyncio
 import logging
+import sys
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
 import httpx
-from sqlmodel import select
-import sys
-from contextlib import asynccontextmanager
-
-from app.core.checkers.registry import get_checker
-from app.models.monitor import Monitor
-from app.models.alert import Alert
-from app.models.check_result import CheckResult
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI
-from app.db.database import async_session_factory
-
 from sqlmodel import select
+
+from app.core.checkers.registry import get_checker
+from app.db.database import async_session_factory
+from app.models.alert import Alert
+from app.models.check_result import CheckResult
+from app.models.monitor import Monitor
 
 logger = logging.getLogger(__name__)
 handler = logging.StreamHandler(sys.stdout)
@@ -30,7 +28,7 @@ SEMAPHORE = asyncio.Semaphore(10)
 async def _check_and_persist(monitor: Monitor, client: httpx.AsyncClient):
     async with SEMAPHORE:
         checker = get_checker(monitor.check_type)
-        result = await checker.check(monitor)
+        result = await checker.check(monitor, client=client)
 
     assert monitor.id is not None, "El monitor recuperado de la BD no tiene ID"
 

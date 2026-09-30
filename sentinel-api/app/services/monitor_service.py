@@ -1,6 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
+from app.core.checkers.registry import _checker_registry
 from app.models.monitor import Monitor
 from app.schemas.monitor import MonitorCreate, MonitorUpdate
 
@@ -12,6 +13,9 @@ class MonitorService:
     async def create_monitor(
         self, monitor_create: MonitorCreate, user_id: int
     ) -> Monitor:
+
+        if monitor_create.check_type not in _checker_registry:
+            raise ValueError(f"Unknown checker type: {monitor_create.check_type}")
 
         monitor_data = monitor_create.model_dump()
         monitor_model = Monitor(**monitor_data, user_id=user_id)

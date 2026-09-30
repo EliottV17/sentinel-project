@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import StrEnum
 from typing import TYPE_CHECKING
+
+import httpx
 
 if TYPE_CHECKING:
     from app.models.monitor import Monitor
@@ -24,6 +26,6 @@ class CheckResult:
 
 class BaseChecker(ABC):
     @abstractmethod
-    async def check(self, monitor: "Monitor") -> CheckResult:
-        """Ejecuta la verificación y devuelve el resultado"""
-        ...
+    async def check(
+        self, monitor: "Monitor", client: httpx.AsyncClient | None = None
+    ) -> CheckResult: ...

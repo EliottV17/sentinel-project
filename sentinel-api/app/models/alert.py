@@ -15,5 +15,4 @@ class Alert(SQLModel, table=True):
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
     )
-    monitor_id: int = Field(default=None, foreign_key="monitor.id")
     monitor: Optional["Monitor"] = Relationship(back_populates="alerts")

@@ -69,9 +69,7 @@ async def test_get_all_monitors_success(
     )
     assert response_beta.status_code == 201
 
-    get_response = await override_session_db.get(
-        "/api/v1/monitors/", headers=headers
-    )
+    get_response = await override_session_db.get("/api/v1/monitors/", headers=headers)
 
     assert get_response.status_code == 200
     data = get_response.json()
@@ -99,7 +97,8 @@ async def test_delete_monitor_success(
         headers=headers,
     )
 
-    assert delete_response.status_code == 204
+    assert delete_response.status_code == 200
+    assert delete_response.json()["message"] == "Monitor deleted successfully"
 
 
 @pytest.mark.asyncio

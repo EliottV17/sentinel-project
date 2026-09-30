@@ -1,6 +1,5 @@
 from app.core.checkers.base import BaseChecker
 
-
 _checker_registry: dict[str, type["BaseChecker"]] = {}
 
 

@@ -1,6 +1,6 @@
 from .alert import Alert
+from .check_result import CheckResult
 from .monitor import Monitor
 from .user import User
-from .check_result import CheckResult
 
 __all__ = ["User", "Monitor", "Alert", "CheckResult"]

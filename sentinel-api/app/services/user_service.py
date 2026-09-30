@@ -1,7 +1,7 @@
 from fastapi import HTTPException, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
-from sqlalchemy.exc import IntegrityError
 
 from app.core.security import hash_password
 from app.models.user import User
@@ -50,9 +50,9 @@ class UserService:
             await self.db.commit()
             await self.db.refresh(user_model)
             return user_model
-        except IntegrityError:
+        except IntegrityError as err:
             await self.db.rollback()
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email or username already taken",
-            )
+            ) from err

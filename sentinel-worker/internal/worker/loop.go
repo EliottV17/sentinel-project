@@ -1,10 +1,11 @@
 // Package worker implements the polling loop that checks due monitors and
-// persists the results alongside the API scheduler.
+// persists the results to the shared PostgreSQL database; it is the sole polling
+// engine (the API is REST-only).
 package worker
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"time"
 
 	"github.com/EliottV17/sentinel-worker/internal/checker"
@@ -26,7 +27,7 @@ func Run(ctx context.Context, pool *pgxpool.Pool, concurrency int) {
 		case <-ticker.C:
 			monitors, err := fetchDueMonitors(ctx, pool)
 			if err != nil {
-				log.Printf("fetchDueMonitors error: %v", err)
+				slog.Error("fetchDueMonitors error", "err", err)
 				continue
 			}
 			for _, m := range monitors {
@@ -68,24 +69,33 @@ func fetchDueMonitors(ctx context.Context, pool *pgxpool.Pool) ([]checker.Monito
 func checkAndPersist(ctx context.Context, pool *pgxpool.Pool, m checker.Monitor) {
 	c, err := checker.Get(m.CheckType)
 	if err != nil {
-		log.Printf("unknown checker type %q for monitor %d", m.CheckType, m.ID)
+		slog.Error("unknown checker type", "check_type", m.CheckType, "monitor_id", m.ID)
 		return
 	}
 
 	result, err := c.Check(ctx, m)
 	if err != nil {
-		log.Printf("check error for monitor %d: %v", m.ID, err)
+		slog.Error("check error", "monitor_id", m.ID, "target", m.Target, "err", err)
 		return
 	}
 
+	now := time.Now().UTC()
+
 	_, err = pool.Exec(ctx, `
-		INSERT INTO check_result (monitor_id, state, status_code, latency_ms, response_sample, error_message)
-		VALUES ($1, $2, $3, $4, $5, $6)
-	`, m.ID, result.State, result.StatusCode, result.LatencyMs, result.ResponseSample, result.ErrorMessage)
+		INSERT INTO check_result (monitor_id, state, status_code, latency_ms, response_sample, error_message, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`, m.ID, result.State, result.StatusCode, result.LatencyMs, result.ResponseSample, result.ErrorMessage, now)
 	if err != nil {
-		log.Printf("insert check_result error for monitor %d: %v", m.ID, err)
+		slog.Error("insert check_result error", "monitor_id", m.ID, "err", err)
 		return
 	}
+
+	slog.Info("check completed",
+		"monitor_id", m.ID,
+		"target", m.Target,
+		"state", result.State,
+		"status_code", result.StatusCode,
+		"latency_ms", result.LatencyMs,)
 
 	newState := result.State
 	var oldState *string
@@ -102,11 +112,11 @@ func checkAndPersist(ctx context.Context, pool *pgxpool.Pool, m checker.Monitor)
 
 	_, err = pool.Exec(ctx, `
 		UPDATE monitor
-		SET last_state = $1, last_checked_at = NOW(), consecutive_failures = $2
+		SET last_state = $1, last_checked_at = $4, consecutive_failures = $2
 		WHERE id = $3
-	`, newState, consecutiveFailures, m.ID)
+	`, newState, consecutiveFailures, m.ID, now)
 	if err != nil {
-		log.Printf("update monitor error for %d: %v", m.ID, err)
+		slog.Error("update monitor error", "monitor_id", m.ID, "err", err)
 	}
 
 	if oldState != nil && *oldState != newState {
@@ -118,11 +128,18 @@ func checkAndPersist(ctx context.Context, pool *pgxpool.Pool, m checker.Monitor)
 		}
 
 		_, err = pool.Exec(ctx, `
-			INSERT INTO alert (monitor_id, alert_type, message)
-			VALUES ($1, $2, $3)
-		`, m.ID, alertType, message)
+			INSERT INTO alert (monitor_id, alert_type, message, created_at)
+			VALUES ($1, $2, $3, $4)
+		`, m.ID, alertType, message, now)
 		if err != nil {
-			log.Printf("insert alert error for monitor %d: %v", m.ID, err)
+			slog.Error("insert alert error", "monitor_id", m.ID, "err", err)
+		} else {
+			slog.Info("state transition alert emitted",
+				"monitor_id", m.ID,
+				"alertType", alertType,
+				"old_state", *oldState,
+				"new_state", newState,
+			)
 		}
 	}
 }

@@ -14,7 +14,7 @@ class Monitor(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     name: str = Field(index=True)
     target: str
-    frequency: int
+    frequency: int = Field(default=60, ge=10)
     state: str = Field(default="Active")
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None)

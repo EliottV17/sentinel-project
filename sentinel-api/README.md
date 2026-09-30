@@ -1,33 +1,22 @@
 # Sentinel API
 
-Asynchronous monitoring and alerting engine built with **FastAPI** and **PostgreSQL**. Periodically checks external targets, detects state transitions, and records a full audit trail — designed for extensibility via a pluggable checker architecture.
+REST API of the Sentinel monitoring and alerting engine, built with **FastAPI** and **PostgreSQL**. It exposes auth, monitor CRUD, and monitoring history while all checking (external targets, state transitions, audit trail) is performed by the Go worker against the same database.
 
 ## Tech Stack
 
-- **FastAPI** — fully async REST API with lifespan-managed background scheduler
+- **FastAPI** — fully async REST API
 - **SQLModel + Alembic** — ORM and async migrations
-- **PostgreSQL 17** — persistent storage with JSONB for per-checker configuration
-- **APScheduler** — interval-based job execution within the FastAPI process
-- **Docker Compose** — local infrastructure (Postgres, API, worker)
+- **PostgreSQL 17** — persistent storage with JSON columns for per-checker configuration
+- **sentinel-worker (Go)** — official polling engine: the only component that checks monitors and the only one honoring `monitor.frequency` (required — without it, no monitor is ever checked and no alerts fire)
+- **Docker Compose** — local infrastructure (Postgres, API, worker, frontend)
 - **uv** — package and environment management
-- **Ruff & Pyright** — static analysis, linting, formatting, and strict type checking
+- **Ruff & Pyright** — linting, formatting, and type checking
 
 ## Architecture
 
-### Strategy + Registry pattern for pluggable checkers
-
-The monitoring engine is abstracted behind a `BaseChecker` interface. Each checker type (HTTP, scraping, ping, etc.) implements `async check(monitor) -> CheckResult` and self-registers via the `@register` decorator. Adding a new check type requires no changes to the scheduler or API layer.
-
-```text
-app/core/checkers/
-├── base.py          # BaseChecker ABC + CheckResult dataclass
-├── registry.py      # @register decorator + get_checker() factory
-└── http_checker.py  # HTTP status/latency checks
-```
-
 ### State machine for alerting
 
-Each check produces a `CheckResult` persisted in the `check_result` table. The scheduler compares `monitor.last_state` against the new result — alerts fire **only on transitions** (`healthy → unhealthy` or vice versa), not on every failed ping.
+Each check produces a `CheckResult` persisted in the `check_result` table. The worker compares `monitor.last_state` against the new result — alerts fire **only on transitions** (`healthy → unhealthy` or vice versa), not on every failed ping.
 
 ```text
 healthy   ──(check fails)──► unhealthy  →  INSERT alert (type: "down")
@@ -45,13 +34,13 @@ user    ──1:N──► monitor
 | Table | Purpose |
 |---|---|
 | `users` | JWT-authenticated accounts |
-| `monitor` | Target configuration (`check_type`, `check_config` as JSONB, frequency, ownership) |
+| `monitor` | Target configuration (`check_type`, `check_config` as JSON, frequency, ownership) |
 | `check_result` | Immutable log of every check (state, latency, status code, error) |
 | `alert` | State transition events (`down` / `recovery`) |
 
 ### Go worker
 
-The companion [sentinel-worker](../sentinel-worker/README.md) is an independent Go poller against the same database and schema. It mirrors this scheduler's logic; running both simultaneously double-checks every monitor — there is no locking/claiming.
+The companion [sentinel-worker](../sentinel-worker/README.md) is an independent Go poller against the same database and schema. It is the sole polling engine and is required — the API performs no checks itself. It also hosts the pluggable checker registry (strategy pattern) that replaced the old `app/core/checkers` module.
 
 ## Setup (local development)
 
@@ -59,7 +48,7 @@ The companion [sentinel-worker](../sentinel-worker/README.md) is an independent 
 
 ```bash
 git clone https://github.com/EliottV17/sentinel-project.git
-cd sentinel/sentinel-api
+cd sentinel-project/sentinel-api
 uv sync --group dev
 ```
 
@@ -72,6 +61,7 @@ DATABASE_URL=postgresql+asyncpg://postgres:postgres@127.0.0.1:5432/sentinel_db
 SECRET_KEY=your-secret-key
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
+CORS_ORIGINS=  # empty disables cross-origin access; SPA origins here (comma-separated)
 ```
 
 ### 3. Start infrastructure and run migrations
@@ -92,11 +82,11 @@ uv run alembic upgrade head
 uv run uvicorn app.main:app --reload
 ```
 
-The scheduler (APScheduler) starts automatically inside the FastAPI lifespan — no separate worker process needed.
+The API is REST-only. Monitoring requires the Go worker (`sentinel-worker`) — without it, no monitor is ever checked.
 
 ## Docker (full stack)
 
-From the repo root, build and start the whole stack (Postgres + API + worker):
+From the repo root, build and start the whole stack (Postgres + API + worker + frontend):
 
 ```bash
 docker compose up -d --build
@@ -111,9 +101,9 @@ docker compose up -d --build
 ```bash
 uv run ruff check .                     # lint
 uv run ruff format .                    # format
-uv run pyright                          # strict type-check
+uv run pyright                          # type-check
 uv run pytest                           # run tests (requires sentinel_tests_db)
-uv run pytest app/tests/...::test_name  # single test
+uv run pytest app/tests/api/test_monitors.py::test_create_monitor   # single test
 ```
 
 ### Tests
@@ -124,16 +114,12 @@ Tests require a real PostgreSQL database (`sentinel_tests_db` must exist on the 
 
 ```text
 app/
-├── api/v1/endpoints/   # REST route handlers (users, auth, monitors, history, alerts)
+├── api/v1/endpoints/   # REST route handlers (auth, users, monitors; history/alerts live under /monitors)
 ├── api/deps.py          # FastAPI dependency injection (get_db, get_current_user)
 ├── core/
-│   ├── checkers/        # BaseChecker ABC, registry, and concrete implementations
 │   ├── config.py        # pydantic-settings from .env
-│   ├── scheduler.py     # APScheduler lifespan + check loop with state detection
 │   └── security.py      # Argon2 password hashing + JWT
 ├── db/database.py       # asyncpg engine and session factory
 ├── models/              # SQLModel table definitions (User, Monitor, CheckResult, Alert)
 ├── schemas/             # Pydantic request/response models
 ├── services/            # Business logic layer (UserService, MonitorService, AuthService)
-└── main.py              # FastAPI app factory
-```

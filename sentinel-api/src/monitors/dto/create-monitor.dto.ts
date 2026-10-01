@@ -8,6 +8,7 @@ import {
   Min,
   MinLength,
 } from 'class-validator';
+import { IsValidTarget } from '../validators/is-valid-target.validator';
 
 export class CreateMonitorDto {
   @IsString()
@@ -18,6 +19,7 @@ export class CreateMonitorDto {
 
   @IsString()
   @IsNotEmpty()
+  @IsValidTarget()
   target: string;
 
   @IsOptional()

@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateMonitorDto } from './dto/create-monitor.dto';
 import { UpdateMonitorDto } from './dto/update-monitor.dto';
@@ -17,7 +18,10 @@ const VALID_CHECK_TYPES = ['http'];
 
 @Injectable()
 export class MonitorsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly configService: ConfigService,
+  ) {}
 
   async createMonitor(
     dto: CreateMonitorDto,
@@ -28,11 +32,33 @@ export class MonitorsService {
       throw new BadRequestException(`Unknown checker type: ${checkType}`);
     }
 
+    const minFrequency = Number(
+      this.configService.get<number>('MIN_MONITOR_FREQUENCY_SECONDS', 60),
+    );
+    const frequency = dto.frequency ?? 60;
+    if (frequency < minFrequency) {
+      throw new BadRequestException(
+        `Monitor frequency cannot be less than ${minFrequency} seconds`,
+      );
+    }
+
+    const maxMonitors = Number(
+      this.configService.get<number>('MAX_MONITORS_PER_USER', 10),
+    );
+    const currentCount = await this.prisma.monitor.count({
+      where: { user_id: userId },
+    });
+    if (currentCount >= maxMonitors) {
+      throw new BadRequestException(
+        `Monitor limit reached. Maximum allowed: ${maxMonitors} monitors`,
+      );
+    }
+
     const monitor = await this.prisma.monitor.create({
       data: {
         name: dto.name,
         target: dto.target,
-        frequency: dto.frequency ?? 60,
+        frequency: frequency,
         state: 'Active',
         check_type: checkType,
         check_config: dto.check_config ?? {},
@@ -75,6 +101,17 @@ export class MonitorsService {
 
     if (dto.check_type && !VALID_CHECK_TYPES.includes(dto.check_type)) {
       throw new BadRequestException(`Unknown checker type: ${dto.check_type}`);
+    }
+
+    if (dto.frequency !== undefined) {
+      const minFrequency = Number(
+        this.configService.get<number>('MIN_MONITOR_FREQUENCY_SECONDS', 60),
+      );
+      if (dto.frequency < minFrequency) {
+        throw new BadRequestException(
+          `Monitor frequency cannot be less than ${minFrequency} seconds`,
+        );
+      }
     }
 
     const dataToUpdate: any = {};

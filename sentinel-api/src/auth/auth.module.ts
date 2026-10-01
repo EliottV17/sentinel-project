@@ -6,6 +6,7 @@ import { UsersModule } from '../users/users.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { validateSecretKey } from './utils/secret-validator';
 
 @Module({
   imports: [
@@ -15,7 +16,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        const secret = configService.get<string>('SECRET_KEY', 'default-secret-key');
+        const secret = validateSecretKey(configService);
         const expireMinutes = configService.get<number>(
           'ACCESS_TOKEN_EXPIRE_MINUTES',
           30,

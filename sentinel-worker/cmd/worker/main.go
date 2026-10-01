@@ -4,11 +4,9 @@ package main
 import (
 	"context"
 	"log/slog"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/EliottV17/sentinel-worker/internal/checker"
 	"github.com/EliottV17/sentinel-worker/internal/config"
@@ -32,7 +30,8 @@ func main() {
 	}
 	defer pool.Close()
 
-	checker.Register("http", &checker.HTTPChecker{Client: &http.Client{Timeout: 10 * time.Second}})
+	allowedPorts := checker.ParseAllowedPorts(cfg.AllowedPorts)
+	checker.Register("http", checker.NewHTTPChecker(allowedPorts))
 
 	slog.Info("Sentinel worker started")
 	worker.Run(ctx, pool, cfg.Concurrency)

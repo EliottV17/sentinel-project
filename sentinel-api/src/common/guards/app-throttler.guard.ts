@@ -3,6 +3,27 @@ import { ThrottlerGuard, ThrottlerLimitDetail } from '@nestjs/throttler';
 
 @Injectable()
 export class AppThrottlerGuard extends ThrottlerGuard {
+  async handleRequest(requestProps: any): Promise<boolean> {
+    const { context, throttler } = requestProps;
+
+    // Strict named throttlers ('auth', 'monitors') must only execute on routes
+    // that are explicitly decorated with @Throttle for that specific throttler.
+    // Standard reads (such as GET /monitors polling) only run against the generous 'default' baseline.
+    if (throttler.name !== 'default') {
+      const handler = context.getHandler();
+      const classRef = context.getClass();
+      const routeLimit = this.reflector.getAllAndOverride(
+        `THROTTLER:LIMIT${throttler.name}`,
+        [handler, classRef],
+      );
+      if (routeLimit === undefined) {
+        return true;
+      }
+    }
+
+    return super.handleRequest(requestProps);
+  }
+
   protected async getTracker(req: Record<string, any>): Promise<string> {
     // If the request has an authenticated user, rate limit per user ID
     if (req.user && req.user.id) {

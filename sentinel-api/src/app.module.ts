@@ -22,7 +22,7 @@ import { AppThrottlerGuard } from './common/guards/app-throttler.guard';
         {
           name: 'default',
           ttl: configService.get<number>('THROTTLE_DEFAULT_TTL', 60000),
-          limit: configService.get<number>('THROTTLE_DEFAULT_LIMIT', 60),
+          limit: configService.get<number>('THROTTLE_DEFAULT_LIMIT', 100),
         },
         {
           name: 'auth',

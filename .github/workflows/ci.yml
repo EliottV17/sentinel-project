@@ -59,7 +59,7 @@ jobs:
         run: bun run test:e2e
 
   worker:
-    name: Worker (build, vet)
+    name: Worker (build, vet, tests)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -76,6 +76,9 @@ jobs:
 
       - name: Vet
         run: go vet ./...
+
+      - name: Tests
+        run: go test -v ./...
 
       - name: Build
         run: go build ./cmd/worker/

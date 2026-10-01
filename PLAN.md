@@ -2,6 +2,14 @@
 
 Contexto: Sentinel (sentinel-api en NestJS 10 + Prisma + PostgreSQL 17, sentinel-worker en Go 1.25 con pgx, frontend React 19 + Vite + Tailwind + TanStack Query + React Router). Se despliega públicamente como proyecto de portfolio, con presupuesto mínimo. Los reclutadores lo prueban sin conocerme: debe ser seguro y fácil de probar. Sin Redis, sin dependencias innecesarias, sin romper los tests existentes. Cada ítem va como casilla [ ].
 
+## Reglas de trabajo
+- PLAN.md es la fuente de verdad: leerlo completo al empezar cualquier sesión o fase. No inventar tareas que no estén aquí; si falta algo, proponerlo antes de agregarlo. Avisar antes de cualquier cambio grande de arquitectura.
+- Una rama por fase, creada desde main solo cuando la fase anterior esté fusionada: feat/phase-1-security, feat/phase-2-demo-account, feat/phase-3-public-status, chore/phase-4-deployment.
+- Commits pequeños con Conventional Commits. No mezclar fases en un commit.
+- Nunca hacer push ni merge a main sin confirmación explícita del usuario.
+- Marcar las casillas de cada fase dentro de su misma rama.
+- Una fase está terminada cuando: todos sus ítems están marcados, los tests (nuevos y existentes) pasan, el CI está en verde y se entregó un resumen de qué cambió y cómo probarlo.
+
 ## FASE 1: Seguridad (obligatoria antes de exponerlo)
 Worker (sentinel-worker/internal/checker/http.go):
 - [ ] Solo esquemas http/https.

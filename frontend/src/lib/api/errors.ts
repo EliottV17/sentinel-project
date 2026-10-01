@@ -1,10 +1,9 @@
 /**
- * FastAPI error-detail normalization.
+ * API error-detail normalization supporting both NestJS and FastAPI schemas.
  *
- * FastAPI error bodies are `{"detail": string | [{loc, msg, type}, ...]}`.
- * String details are form-level messages; list details are field-validation
- * errors whose last `loc` segment names the offending form field (e.g.
- * `frequency`). Shared by the login form (PR 2) and the create form (PR 3).
+ * NestJS validation errors: `{"message": ["target must be a valid URL...", ...]}`
+ * NestJS exception errors: `{"statusCode": 400|429, "message": "..."}`
+ * FastAPI error bodies: `{"detail": string | [{loc, msg, type}, ...]}`
  */
 
 export interface NormalizedDetail {
@@ -19,8 +18,16 @@ export function normalizeDetail(detail: unknown): NormalizedDetail {
 
   if (Array.isArray(detail)) {
     const fields: Record<string, string> = {};
+    const messages: string[] = [];
+
     for (const item of detail) {
-      if (item !== null && typeof item === "object" && "msg" in item) {
+      if (typeof item === "string") {
+        messages.push(item);
+        const lower = item.toLowerCase();
+        if (lower.includes("target")) fields.target = item;
+        if (lower.includes("frequency")) fields.frequency = item;
+        if (lower.includes("name")) fields.name = item;
+      } else if (item !== null && typeof item === "object" && "msg" in item) {
         const loc = (item as { loc?: unknown }).loc;
         const field = Array.isArray(loc)
           ? loc.length
@@ -30,7 +37,11 @@ export function normalizeDetail(detail: unknown): NormalizedDetail {
         fields[field] = String((item as { msg: unknown }).msg);
       }
     }
-    return { fields };
+
+    return {
+      message: messages.length > 0 ? messages.join(". ") : undefined,
+      fields,
+    };
   }
 
   return { fields: {} };

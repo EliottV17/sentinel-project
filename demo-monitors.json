@@ -1,5 +1,6 @@
 [
   {
+    "seed_key": "example-website",
     "name": "Example Website",
     "target": "https://example.com",
     "frequency": 60,
@@ -7,6 +8,7 @@
     "check_config": {}
   },
   {
+    "seed_key": "github-api",
     "name": "GitHub API",
     "target": "https://api.github.com",
     "frequency": 60,

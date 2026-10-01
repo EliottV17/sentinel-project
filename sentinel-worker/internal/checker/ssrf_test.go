@@ -2,7 +2,14 @@ package checker
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"fmt"
+	"math/big"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -270,5 +277,123 @@ func TestDNSRebindingDefense(t *testing.T) {
 	_, err := client.Do(req)
 	if err == nil {
 		t.Fatalf("expected DNS rebinding mixed response to be blocked, but request succeeded")
+	}
+}
+
+func generateTestTLSCert(t *testing.T, dnsName string) (tls.Certificate, *x509.CertPool) {
+	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatalf("failed to generate private key: %v", err)
+	}
+
+	template := x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject: pkix.Name{
+			Organization: []string{"Sentinel Test CA"},
+		},
+		NotBefore: time.Now().Add(-1 * time.Hour),
+		NotAfter:  time.Now().Add(1 * time.Hour),
+
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+		DNSNames:              []string{dnsName},
+	}
+
+	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
+	if err != nil {
+		t.Fatalf("failed to create certificate: %v", err)
+	}
+
+	cert, err := x509.ParseCertificate(derBytes)
+	if err != nil {
+		t.Fatalf("failed to parse certificate: %v", err)
+	}
+
+	pool := x509.NewCertPool()
+	pool.AddCert(cert)
+
+	tlsCert := tls.Certificate{
+		Certificate: [][]byte{derBytes},
+		PrivateKey:  priv,
+	}
+
+	return tlsCert, pool
+}
+
+func TestLegitimateHTTPSProbeWithTLSVerification(t *testing.T) {
+	const legitimateHost = "api.legitimate-public-service.org"
+	tlsCert, certPool := generateTestTLSCert(t, legitimateHost)
+
+	// Create test TLS server serving valid response
+	ts := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"status":"operational"}`))
+	}))
+	ts.TLS = &tls.Config{
+		Certificates: []tls.Certificate{tlsCert},
+	}
+	ts.StartTLS()
+	defer ts.Close()
+
+	// Extract port from test server
+	_, portStr, err := net.SplitHostPort(ts.Listener.Addr().String())
+	if err != nil {
+		t.Fatalf("failed to parse test server address: %v", err)
+	}
+	var serverPort int
+	fmt.Sscanf(portStr, "%d", &serverPort)
+
+	// Mock resolver resolving legitimate public host to legitimate public IP (93.184.216.34)
+	publicIP := net.ParseIP("93.184.216.34")
+	mockRes := &mockResolver{
+		hosts: map[string][]net.IP{
+			legitimateHost: {publicIP},
+		},
+	}
+
+	allowedPorts := map[int]bool{
+		443:        true,
+		serverPort: true,
+	}
+
+	// DialContext redirects the dialed pinned IP to the local TLS test listener socket
+	dialContext := func(ctx context.Context, network, addr string) (net.Conn, error) {
+		return net.Dial(network, ts.Listener.Addr().String())
+	}
+
+	safeClient := NewSafeHTTPClient(SafeTransportConfig{
+		AllowedPorts: allowedPorts,
+		Resolver:     mockRes,
+		DialTimeout:  1 * time.Second,
+		TLSConfig: &tls.Config{
+			RootCAs: certPool, // Strict TLS verification with test CA
+		},
+		DialContext: dialContext,
+	})
+
+	checker := &HTTPChecker{
+		Client:       safeClient,
+		AllowedPorts: allowedPorts,
+	}
+
+	targetURL := fmt.Sprintf("https://%s:%d/health", legitimateHost, serverPort)
+	res, err := checker.Check(context.Background(), Monitor{
+		Target: targetURL,
+	})
+	if err != nil {
+		t.Fatalf("checker returned unexpected error: %v", err)
+	}
+
+	if res.State != "healthy" {
+		t.Fatalf("expected state 'healthy', got '%s', error: %v", res.State, res.ErrorMessage)
+	}
+	if res.StatusCode == nil || *res.StatusCode != 200 {
+		t.Fatalf("expected status code 200, got %v", res.StatusCode)
+	}
+	if res.ResponseSample == nil || *res.ResponseSample != `{"status":"operational"}` {
+		t.Fatalf("expected response sample '{\"status\":\"operational\"}', got %v", res.ResponseSample)
 	}
 }

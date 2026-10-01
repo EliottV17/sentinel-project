@@ -109,4 +109,21 @@ describe("MonitorsPage", () => {
     await settle();
     expect(screen.getByRole("button", { name: /delete/i })).toBeInTheDocument();
   });
+
+  it("shows clear error alert when API returns 429 or 400", async () => {
+    server.use(
+      http.get("*/api/v1/monitors/", () => {
+        return HttpResponse.json(
+          { statusCode: 429, message: "ThrottlerException: Too Many Requests" },
+          { status: 429 },
+        );
+      }),
+    );
+
+    renderPage();
+    await settle();
+    await advance(15_000);
+
+    expect(screen.getByRole("alert")).toBeInTheDocument();
+  });
 });

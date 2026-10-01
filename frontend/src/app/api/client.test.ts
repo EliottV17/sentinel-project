@@ -129,4 +129,40 @@ describe("apiFetch", () => {
     expect(tokenStore.get()).toBeNull();
     expect(unauthorized).toHaveBeenCalledTimes(1);
   });
+
+  it("normalizes NestJS error with message string into ApiError.message", async () => {
+    server.use(
+      http.get("/api/v1/ping", () =>
+        HttpResponse.json(
+          { statusCode: 400, message: "Monitor limit reached. Maximum allowed: 10 monitors" },
+          { status: 400 },
+        ),
+      ),
+    );
+
+    const err = await catchError(apiFetch("/api/v1/ping"));
+
+    expect(err).toBeInstanceOf(ApiError);
+    const apiErr = err as ApiError;
+    expect(apiErr.status).toBe(400);
+    expect(apiErr.message).toBe("Monitor limit reached. Maximum allowed: 10 monitors");
+  });
+
+  it("normalizes NestJS 429 throttler response with user friendly message", async () => {
+    server.use(
+      http.get("/api/v1/ping", () =>
+        HttpResponse.json(
+          { statusCode: 429, message: "ThrottlerException: Too Many Requests" },
+          { status: 429 },
+        ),
+      ),
+    );
+
+    const err = await catchError(apiFetch("/api/v1/ping"));
+
+    expect(err).toBeInstanceOf(ApiError);
+    const apiErr = err as ApiError;
+    expect(apiErr.status).toBe(429);
+    expect(apiErr.message).toContain("Too many requests");
+  });
 });

@@ -76,8 +76,14 @@ export async function apiFetch<T>(
   let detail: unknown = null;
   try {
     const parsed: unknown = text ? JSON.parse(text) : null;
-    if (parsed !== null && typeof parsed === "object" && "detail" in parsed) {
-      detail = (parsed as { detail: unknown }).detail;
+    if (parsed !== null && typeof parsed === "object") {
+      if ("message" in parsed) {
+        detail = (parsed as { message: unknown }).message;
+      } else if ("detail" in parsed) {
+        detail = (parsed as { detail: unknown }).detail;
+      } else if ("error" in parsed) {
+        detail = (parsed as { error: unknown }).error;
+      }
     }
   } catch {
     // non-JSON body: degrade to a form-level message below
@@ -88,6 +94,13 @@ export async function apiFetch<T>(
     unauthorizedHandler?.();
   }
 
-  const { message, fields } = normalizeDetail(detail);
+  let { message, fields } = normalizeDetail(detail);
+
+  if (response.status === 429) {
+    if (!message || message.includes("ThrottlerException")) {
+      message = "Too many requests. Please wait a moment before trying again.";
+    }
+  }
+
   throw new ApiError(response.status, message, fields);
 }

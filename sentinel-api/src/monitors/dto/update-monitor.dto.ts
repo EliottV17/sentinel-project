@@ -7,6 +7,7 @@ import {
   Min,
   MinLength,
 } from 'class-validator';
+import { IsValidTarget } from '../validators/is-valid-target.validator';
 
 export class UpdateMonitorDto {
   @IsOptional()
@@ -17,6 +18,7 @@ export class UpdateMonitorDto {
 
   @IsOptional()
   @IsString()
+  @IsValidTarget()
   target?: string;
 
   @IsOptional()

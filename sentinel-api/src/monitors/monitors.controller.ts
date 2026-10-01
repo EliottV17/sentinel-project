@@ -13,6 +13,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateMonitorDto } from './dto/create-monitor.dto';
@@ -30,6 +31,7 @@ export class MonitorsController {
   constructor(private readonly monitorsService: MonitorsService) {}
 
   @Post()
+  @Throttle({ monitors: { limit: 20, ttl: 60000 } })
   @HttpCode(HttpStatus.CREATED)
   async create(
     @Body() createMonitorDto: CreateMonitorDto,
@@ -44,6 +46,7 @@ export class MonitorsController {
   }
 
   @Patch(':id')
+  @Throttle({ monitors: { limit: 20, ttl: 60000 } })
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateMonitorDto: UpdateMonitorDto,

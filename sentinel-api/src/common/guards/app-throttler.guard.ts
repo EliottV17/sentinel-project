@@ -10,13 +10,10 @@ export class AppThrottlerGuard extends ThrottlerGuard {
     }
 
     // Unauthenticated (or auth routes): track by real client IP.
-    // When Express has 'trust proxy' enabled, req.ips contains the chain of client IPs.
-    // req.ips[0] is the original client IP before downstream proxies.
-    const clientIp =
-      (Array.isArray(req.ips) && req.ips.length > 0 ? req.ips[0] : null) ||
-      req.ip ||
-      req.socket?.remoteAddress ||
-      '127.0.0.1';
+    // With Express 'trust proxy: 1', req.ip is computed via proxy-addr to evaluate
+    // exactly one trusted hop from the reverse proxy (Nginx / Caddy), safely ignoring
+    // any spoofed upstream IPs injected into X-Forwarded-For by the client.
+    const clientIp = req.ip || req.socket?.remoteAddress || '127.0.0.1';
 
     return `ip_${clientIp}`;
   }

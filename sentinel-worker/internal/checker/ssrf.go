@@ -80,6 +80,8 @@ type SafeTransportConfig struct {
 	AllowedPorts map[int]bool
 	Resolver     IPResolver
 	DialTimeout  time.Duration
+	TLSConfig    *tls.Config
+	DialContext  func(ctx context.Context, network, addr string) (net.Conn, error)
 }
 
 // ParseAllowedPorts parses a comma-separated list of port numbers.
@@ -198,9 +200,22 @@ func NewSafeHTTPClient(cfg SafeTransportConfig) *http.Client {
 		cfg.DialTimeout = 5 * time.Second
 	}
 
-	dialer := &net.Dialer{
-		Timeout:   cfg.DialTimeout,
-		KeepAlive: 30 * time.Second,
+	baseDialer := cfg.DialContext
+	if baseDialer == nil {
+		netDialer := &net.Dialer{
+			Timeout:   cfg.DialTimeout,
+			KeepAlive: 30 * time.Second,
+		}
+		baseDialer = netDialer.DialContext
+	}
+
+	tlsClientConfig := cfg.TLSConfig
+	if tlsClientConfig == nil {
+		tlsClientConfig = &tls.Config{
+			MinVersion: tls.VersionTLS12,
+		}
+	} else if tlsClientConfig.MinVersion == 0 {
+		tlsClientConfig.MinVersion = tls.VersionTLS12
 	}
 
 	transport := &http.Transport{
@@ -228,7 +243,7 @@ func NewSafeHTTPClient(cfg SafeTransportConfig) *http.Client {
 					return nil, fmt.Errorf("%w: %s", ErrBlockedIP, parsedIP.String())
 				}
 				// Pin socket connection to this validated IP
-				return dialer.DialContext(ctx, network, net.JoinHostPort(parsedIP.String(), portStr))
+				return baseDialer(ctx, network, net.JoinHostPort(parsedIP.String(), portStr))
 			}
 
 			// Hostname: resolve DNS and validate all resolved IPs
@@ -249,12 +264,10 @@ func NewSafeHTTPClient(cfg SafeTransportConfig) *http.Client {
 
 			// Socket pinning: dial the first validated IP directly to prevent DNS rebinding
 			pinnedIP := ips[0]
-			return dialer.DialContext(ctx, network, net.JoinHostPort(pinnedIP.String(), portStr))
+			return baseDialer(ctx, network, net.JoinHostPort(pinnedIP.String(), portStr))
 		},
 
-		TLSClientConfig: &tls.Config{
-			MinVersion: tls.VersionTLS12,
-		},
+		TLSClientConfig:       tlsClientConfig,
 		TLSHandshakeTimeout:   5 * time.Second,
 		ResponseHeaderTimeout: 10 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,

@@ -13,8 +13,9 @@ async function bootstrap() {
   // Validate that a secure SECRET_KEY is set (enforces mandatory non-default key in production)
   validateSecretKey(configService);
 
-  // Trust reverse proxy (Nginx / Caddy) headers so req.ip and req.ips reflect real client IP
-  app.set('trust proxy', true);
+  // Trust 1 hop (reverse proxy like Nginx or Caddy) so req.ip reflects the real client IP
+  // and prevents spoofing via forged upstream X-Forwarded-For headers
+  app.set('trust proxy', 1);
 
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));

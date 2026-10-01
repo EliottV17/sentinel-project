@@ -12,20 +12,20 @@ Contexto: Sentinel (sentinel-api en NestJS 10 + Prisma + PostgreSQL 17, sentinel
 
 ## FASE 1: Seguridad (obligatoria antes de exponerlo)
 Worker (sentinel-worker/internal/checker/http.go):
-- [ ] Solo esquemas http/https.
-- [ ] Puertos permitidos configurables por ALLOWED_PORTS (por defecto 80, 443, 8080, 8443).
-- [ ] http.Transport con DialContext propio: resolver DNS, validar la IP y conectar directamente a la IP validada (pinning) para evitar DNS rebinding.
-- [ ] Bloquear: loopback, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16 (incluye metadata de la nube), 0.0.0.0/8, 100.64.0.0/10 (CGNAT), multicast, ::1, fc00::/7, fe80::/10 e IPv4-mapped IPv6 (::ffff:0:0/96).
-- [ ] Transport con Proxy: nil, para que HTTP_PROXY/HTTPS_PROXY no se salten el filtro.
-- [ ] CheckRedirect que revalide cada destino (IP y puerto) y limite a máximo 3 redirects.
-- [ ] Timeout estricto y límite de lectura con io.LimitReader.
-- [ ] Tests en Go: 127.0.0.1, localhost, 10.x, 192.168.x, 169.254.169.254, redirect a IP interna, hostname que resuelve a IP privada, DNS rebinding, IPv4-mapped IPv6, y los hostnames internos de Docker Compose (http://db:5432, http://api:8000) deben quedar bloqueados.
+- [x] Solo esquemas http/https.
+- [x] Puertos permitidos configurables por ALLOWED_PORTS (por defecto 80, 443, 8080, 8443).
+- [x] http.Transport con DialContext propio: resolver DNS, validar la IP y conectar directamente a la IP validada (pinning) para evitar DNS rebinding.
+- [x] Bloquear: loopback, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16 (incluye metadata de la nube), 0.0.0.0/8, 100.64.0.0/10 (CGNAT), multicast, ::1, fc00::/7, fe80::/10 e IPv4-mapped IPv6 (::ffff:0:0/96).
+- [x] Transport con Proxy: nil, para que HTTP_PROXY/HTTPS_PROXY no se salten el filtro.
+- [x] CheckRedirect que revalide cada destino (IP y puerto) y limite a máximo 3 redirects.
+- [x] Timeout estricto y límite de lectura con io.LimitReader.
+- [x] Tests en Go: 127.0.0.1, localhost, 10.x, 192.168.x, 169.254.169.254, redirect a IP interna, hostname que resuelve a IP privada, DNS rebinding, IPv4-mapped IPv6, y los hostnames internos de Docker Compose (http://db:5432, http://api:8000) deben quedar bloqueados.
 API (sentinel-api):
-- [ ] En CreateMonitorDto/UpdateMonitorDto: validar URL real, solo http/https, rechazar hostnames obvios (localhost, 127.0.0.1, etc.). Es solo un primer filtro: la defensa real está en el worker, que también cubre monitores ya existentes en la base.
-- [ ] @nestjs/throttler en memoria (sin Redis): login y registro con límite estricto por IP; POST/PATCH de monitores por usuario autenticado; respuesta 429 con Retry-After.
-- [ ] Configurar trust proxy en Express para que el rate limit use la IP real del cliente detrás de Nginx/Caddy, y probar que no se agrupen todos los visitantes bajo la IP del proxy.
-- [ ] Cuotas por entorno: MAX_MONITORS_PER_USER (10 por defecto) y MIN_MONITOR_FREQUENCY_SECONDS (60 por defecto), validadas en monitors.service.ts.
-- [ ] SECRET_KEY obligatorio: que la app falle al iniciar en producción si usa el valor por defecto. Revisar que no haya secretos hardcodeados.
+- [x] En CreateMonitorDto/UpdateMonitorDto: validar URL real, solo http/https, rechazar hostnames obvios (localhost, 127.0.0.1, etc.). Es solo un primer filtro: la defensa real está en el worker, que también cubre monitores ya existentes en la base.
+- [x] @nestjs/throttler en memoria (sin Redis): login y registro con límite estricto por IP; POST/PATCH de monitores por usuario autenticado; respuesta 429 con Retry-After.
+- [x] Configurar trust proxy en Express para que el rate limit use la IP real del cliente detrás de Nginx/Caddy, y probar que no se agrupen todos los visitantes bajo la IP del proxy.
+- [x] Cuotas por entorno: MAX_MONITORS_PER_USER (10 por defecto) y MIN_MONITOR_FREQUENCY_SECONDS (60 por defecto), validadas en monitors.service.ts.
+- [x] SECRET_KEY obligatorio: que la app falle al iniciar en producción si usa el valor por defecto. Revisar que no haya secretos hardcodeados.
 
 ## FASE 2: Cuenta demo
 - [ ] Campo is_demo en el usuario (o detección por DEMO_USER_EMAIL) y cuotas propias: DEMO_MAX_MONITORS (3) y DEMO_MIN_FREQUENCY_SECONDS (60), por entorno.

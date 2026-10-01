@@ -94,7 +94,9 @@ export async function apiFetch<T>(
     unauthorizedHandler?.();
   }
 
-  let { message, fields } = normalizeDetail(detail);
+  const normalized = normalizeDetail(detail);
+  let message = normalized.message;
+  const fields = normalized.fields;
 
   if (response.status === 429) {
     if (!message || message.includes("ThrottlerException")) {

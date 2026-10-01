@@ -125,11 +125,35 @@ describe('Monitors (e2e)', () => {
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({
         name: 'TCP Monitor',
-        target: '127.0.0.1:80',
+        target: 'https://example.com',
         check_type: 'tcp',
       });
     expect(res.status).toBe(400);
     expect(res.body.message).toContain('Unknown checker type');
+  });
+
+  it('POST /api/v1/monitors should reject private, loopback and cloud metadata targets with 400', async () => {
+    const maliciousTargets = [
+      'http://localhost:8000',
+      'http://127.0.0.1:8000',
+      'http://169.254.169.254/latest/meta-data',
+      'http://10.0.0.1/status',
+      'http://192.168.1.1',
+      'http://db:5432',
+    ];
+
+    for (const target of maliciousTargets) {
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/monitors')
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({
+          name: 'Malicious Monitor',
+          target,
+          frequency: 60,
+        });
+      expect(res.status).toBe(400);
+      expect(JSON.stringify(res.body)).toContain('target');
+    }
   });
 
   it('POST /api/v1/monitors should create monitor successfully', async () => {
@@ -138,18 +162,54 @@ describe('Monitors (e2e)', () => {
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({
         name: 'Production API',
-        target: 'https://httpbin.org/status/200',
+        target: 'https://example.com',
         check_type: 'http',
-        frequency: 30,
+        frequency: 60,
       });
 
     expect(res.status).toBe(201);
     expect(res.body.id).toBeDefined();
     expect(res.body.name).toBe('Production API');
     expect(res.body.check_type).toBe('http');
-    expect(res.body.frequency).toBe(30);
+    expect(res.body.frequency).toBe(60);
     expect(res.body.user_id).toBe(ownerId);
     createdMonitorId = res.body.id;
+  });
+
+  it('POST /api/v1/monitors should reject creation when exceeding MAX_MONITORS_PER_USER with 400', async () => {
+    // Owner currently has 1 monitor created above.
+    // Default MAX_MONITORS_PER_USER is 10.
+    // Fill up to quota:
+    const extraIds: number[] = [];
+    for (let i = 2; i <= 10; i++) {
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/monitors')
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({
+          name: `Quota Monitor ${i}`,
+          target: `https://example${i}.com`,
+          frequency: 60,
+        });
+      expect(res.status).toBe(201);
+      extraIds.push(res.body.id);
+    }
+
+    // 11th monitor should be rejected with 400
+    const excessRes = await request(app.getHttpServer())
+      .post('/api/v1/monitors')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({
+        name: 'Excess Monitor 11',
+        target: 'https://example11.com',
+        frequency: 60,
+      });
+    expect(excessRes.status).toBe(400);
+    expect(excessRes.body.message).toContain('Monitor limit reached');
+
+    // Clean up extra monitors so subsequent tests are unaffected
+    await prisma.monitor.deleteMany({
+      where: { id: { in: extraIds } },
+    });
   });
 
   it('GET /api/v1/monitors should list user monitors', async () => {
@@ -170,12 +230,12 @@ describe('Monitors (e2e)', () => {
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({
         name: 'Updated Production API',
-        frequency: 45,
+        frequency: 120,
       });
 
     expect(res.status).toBe(200);
     expect(res.body.name).toBe('Updated Production API');
-    expect(res.body.frequency).toBe(45);
+    expect(res.body.frequency).toBe(120);
   });
 
   it('GET /api/v1/monitors/:id/history should return checks', async () => {

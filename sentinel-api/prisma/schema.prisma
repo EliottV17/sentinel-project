@@ -48,11 +48,13 @@ model monitor {
   last_checked_at      DateTime?      @db.Timestamp(6)
   consecutive_failures Int
   user_id              Int
+  seed_key             String?        @db.VarChar
   alert                alert[]
   check_result         check_result[]
   users                users          @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([name], map: "ix_monitor_name")
+  @@unique([user_id, seed_key], map: "uq_monitor_user_seed_key")
 }
 
 model users {
@@ -67,6 +69,7 @@ model users {
   updated_at  DateTime  @db.Timestamp(6)
   status      String?   @db.VarChar
   is_active   Boolean
+  is_demo     Boolean   @default(false)
   monitor     monitor[]
 
   @@index([last_name], map: "ix_users_last_name")

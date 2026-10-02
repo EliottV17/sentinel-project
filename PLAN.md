@@ -28,17 +28,17 @@ API (sentinel-api):
 - [x] SECRET_KEY obligatorio: que la app falle al iniciar en producción si usa el valor por defecto. Revisar que no haya secretos hardcodeados.
 
 ## FASE 2: Cuenta demo
-- [ ] Campo `is_demo` en el usuario; cuenta identificada por `DEMO_USER_EMAIL`.
-- [ ] Cuotas configurables de demo: `DEMO_MAX_MONITORS` (3) y `DEMO_MIN_FREQUENCY_SECONDS` (60), aplicadas al crear y actualizar (`PATCH`) monitores.
-- [ ] La cuenta demo no puede cambiar contraseña, email ni borrar la cuenta; proteger todas las mutaciones de usuario actuales y futuras.
-- [ ] JWT de demo con `is_demo` y expiración corta dedicada y configurable, independiente de la expiración ordinaria.
-- [ ] `POST /api/v1/auth/demo-login` sin parámetros; límite de 30 solicitudes/minuto por IP, sin relajar el límite de 5/minuto por IP para login y registro ordinarios.
+- [x] Campo `is_demo` en el usuario; cuenta identificada por `DEMO_USER_EMAIL`.
+- [x] Cuotas configurables de demo: `DEMO_MAX_MONITORS` (3) y `DEMO_MIN_FREQUENCY_SECONDS` (60), aplicadas al crear y actualizar (`PATCH`) monitores.
+- [x] La cuenta demo no puede cambiar contraseña, email ni borrar la cuenta; proteger todas las mutaciones de usuario actuales y futuras.
+- [x] JWT de demo con `is_demo` y expiración corta dedicada y configurable, independiente de la expiración ordinaria.
+- [x] `POST /api/v1/auth/demo-login` sin parámetros; límite de 30 solicitudes/minuto por IP, sin relajar el límite de 5/minuto por IP para login y registro ordinarios.
 - [ ] Si falta la cuenta demo, el login devuelve 503 y el reset periódico es un no-op.
 - [ ] Botón "Probar demo" en `LoginPage.tsx` y credenciales de respaldo visibles como texto.
-- [ ] Seed idempotente de la cuenta demo y monitores de ejemplo; el demo no puede activar monitores públicos.
+- [x] Seed idempotente de la cuenta demo y monitores de ejemplo; el demo no puede activar monitores públicos.
 - [ ] El único origen/lista de monitores demo es el manifiesto raíz `demo-monitors.json` (solo definiciones de monitores, sin credenciales), compartido por el seed de API y el reset del worker; no duplicar la lista.
-- [ ] `docker-compose.yml` monta ese manifiesto exacto, de solo lectura, en `/app/demo-monitors.json` para API y worker; mantener los contextos de build existentes.
-- [ ] Los targets del manifiesto son destinos públicos SSRF-safe, como `https://example.com` y `https://api.github.com`; omitir campos de publicación o fijarlos en `false`, nunca crear monitores demo públicos.
+- [x] `docker-compose.yml` monta ese manifiesto exacto, de solo lectura, en `/app/demo-monitors.json` para API y worker; mantener los contextos de build existentes.
+- [x] Los targets del manifiesto son destinos públicos SSRF-safe, como `https://example.com` y `https://api.github.com`; omitir campos de publicación o fijarlos en `false`, nunca crear monitores demo públicos.
 - [ ] Reset periódico con `DEMO_RESET_INTERVAL_MINUTES` configurable, default 60; restaurar monitores desde el manifiesto y purgar idempotentemente el historial de checks y alertas del usuario demo.
 - [ ] Un reset no elimina datos de otros usuarios y sobrevive al reinicio del worker.
 - [ ] El worker trata una violación FK por borrado concurrente del monitor durante un check como carrera esperada: la registra, sigue ejecutándose y tiene pruebas deterministas del caso.

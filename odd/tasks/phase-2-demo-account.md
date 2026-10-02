@@ -29,10 +29,11 @@ Delivery strategy: ask-on-risk. Use small Conventional Commits separated by migr
 - Do not access or modify any `.env.example`; the final handoff must include a copy-ready example-only block with every new environment variable. Keep the PLAN checkbox open until the user confirms manual paste.
 - Checks: strict TDD; focused seed tests and Prisma/migration validation, including repeat/restore/extra-preservation behavior.
 - Route: delegated direct; multi-file implementation.
-- Status: implementation and tests complete; pending parent layer-separated commits and final task transition.
-- Strict TDD evidence: RED was a behavior-level assertion failure that the matched manifest monitor was not upserted (not a compilation failure); GREEN passed after implementation; the test was extended to run the seed twice and assert no deletion, then passed again.
-- Verification: focused seed test passed (1 test); `bunx prisma validate` and `bunx prisma generate` passed; `git diff --check` passed. Independent verifier confirmed stable-key matching, add/update only, extra preservation, quota free slot, additive migration, and SSRF validation.
-- Commit evidence: pending; parent will separate test, migration, and API work units.
+- Status: done. Added baseline migration `0_init` before the demo delta; preserved the existing data and did not drop/reset the Compose DB.
+- Verification: focused seed test passed (1 test); `bunx prisma validate` and `bunx prisma generate` passed; `git diff --check` passed. Independent verifiers confirmed behavior and migration shape.
+- Commit evidence: `145b117 test: cover demo seed restoration semantics`; `1dc9088 feat(db): add demo flags and monitor seed keys`; `4e0543b feat(api): seed demo account from shared manifest`; `38d2e1a feat(db): baseline existing prisma schema`.
+- RDD assessment: unavailable for these candidates (untracked files/schema-incompatible failure); independent verifier passed the focused test/schema/migration checks.
+- Baseline diagnosis/resolution: existing Compose DB had legacy tables and no Prisma history; the first `migrate deploy` stopped with P3005 before mutation. Added `0_init` for the pre-demo schema (including legacy `alembic_version`), marked it applied on the existing DB with `prisma migrate resolve --applied 0_init`, then applied the demo delta with `prisma migrate deploy`. Both migrations now show applied and `prisma migrate diff` reports empty schema diff. Fresh DB uses `migrate deploy` for both migrations.
 - Environment-variable docs: intentionally deferred to user paste; no `.env.example` access.
 - Seed acceptance: run twice without duplicates, restore an edited manifest monitor by stable `seed_key`, preserve an extra user-created monitor, enforce at least one free slot (2 manifest entries / default max 3), and never delete in the seeder; only reset job may delete by demo user ID.
 
@@ -43,8 +44,12 @@ Delivery strategy: ask-on-risk. Use small Conventional Commits separated by migr
 - Protect all current and future user mutation routes from demo users; test the route inventory invariant for password/email/delete operations.
 - Checks: strict TDD plus API unit/e2e tests.
 - Route: delegated direct; multi-file API change.
-- Status: pending.
-- Commit evidence: pending.
+- Status: done.
+- Strict TDD: RED/GREEN for demo-login claim, create quota, exact frequency variable, and password-login demo expiry; e2e proxy harness corrected to match application trust-proxy setting.
+- Verification: focused API unit tests passed (4 suites, 38 tests); API build passed; `bun run test:e2e` against real Compose PostgreSQL passed (2 suites, 31 tests). Initial E2E failures (demo password expiry 30m; forwarded-IP harness ECONNRESET/429; monitor rate-limit interference) were fixed without weakening assertions.
+- Commit evidence: `0e341d0 test: cover demo auth quotas and boundaries`; `6273470 feat(api): enforce demo auth and quotas`.
+- RDD: native review start/assessment unavailable because the package-local binary is missing; independent verifier passed unit tests/build and Compose e2e 31/31. No installation was attempted.
+- Environment-variable docs remain pending user paste; no `.env.example` access.
 
 ### T4 — Implement worker reset and deletion-race resilience
 - Reset only monitors selected by `user.id` found via `DEMO_USER_EMAIL`; absent demo user is a no-op.
@@ -53,7 +58,7 @@ Delivery strategy: ask-on-risk. Use small Conventional Commits separated by migr
 - Add deterministic worker tests for reset and concurrent deletion behavior.
 - Checks: strict TDD plus `go test -count=1 ./...`.
 - Route: delegated direct; worker-specific multi-file change.
-- Status: pending.
+- Status: in progress.
 - Commit evidence: pending.
 
 ### T5 — Add demo login and reset notice to frontend

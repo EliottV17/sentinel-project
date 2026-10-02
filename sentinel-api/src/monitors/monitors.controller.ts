@@ -37,7 +37,7 @@ export class MonitorsController {
     @Body() createMonitorDto: CreateMonitorDto,
     @CurrentUser() user: any,
   ): Promise<MonitorResponseDto> {
-    return this.monitorsService.createMonitor(createMonitorDto, user.id);
+    return this.monitorsService.createMonitor(createMonitorDto, user);
   }
 
   @Get()
@@ -52,7 +52,7 @@ export class MonitorsController {
     @Body() updateMonitorDto: UpdateMonitorDto,
     @CurrentUser() user: any,
   ): Promise<MonitorResponseDto> {
-    return this.monitorsService.updateMonitor(id, user.id, updateMonitorDto);
+    return this.monitorsService.updateMonitor(id, user, updateMonitorDto);
   }
 
   @Delete(':id')

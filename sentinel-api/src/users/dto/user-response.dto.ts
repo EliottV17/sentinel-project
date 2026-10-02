@@ -7,6 +7,7 @@ export class UserResponseDto {
   phonenumber: string | null;
   status: string | null;
   is_active: boolean;
+  is_demo: boolean;
   created_at: Date;
   updated_at: Date;
 
@@ -20,6 +21,7 @@ export class UserResponseDto {
       phonenumber: user.phonenumber ?? null,
       status: user.status ?? 'Active',
       is_active: user.is_active,
+      is_demo: user.is_demo === true,
       created_at: user.created_at,
       updated_at: user.updated_at,
     };

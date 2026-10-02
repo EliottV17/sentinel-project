@@ -8,6 +8,7 @@ import { AuthModule } from './auth/auth.module';
 import { MonitorsModule } from './monitors/monitors.module';
 import { AppController } from './app.controller';
 import { AppThrottlerGuard } from './common/guards/app-throttler.guard';
+import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 
 @Module({
   imports: [
@@ -46,6 +47,10 @@ import { AppThrottlerGuard } from './common/guards/app-throttler.guard';
     {
       provide: APP_GUARD,
       useClass: AppThrottlerGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
     },
   ],
 })

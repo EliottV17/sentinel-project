@@ -46,12 +46,23 @@ API (sentinel-api):
 - [x] **Documentación de variables de entorno:** bloque con valores solo de ejemplo pegado y confirmado por el usuario en `005d555`; el agente no accedió ni modificó ningún `.env.example`.
 
 ## FASE 3: Página de estado pública
-- [ ] Campo is_public en monitor. Solo se asigna desde el seed o una cuenta admin; ningún usuario normal ni la cuenta demo puede activarlo.
-- [ ] GET /api/v1/public/status sin autenticación, con rate limit o caché corto. Expone solo name, last_state, uptime_percentage y last_checked_at; nunca target, configs internas ni datos del dueño.
-- [ ] Ruta pública /status en el frontend con estados operacional, degradado y caído.
+- [ ] Campo `is_public` Boolean con default `false` y migración. Solo se asigna desde el seed: sin rol admin ni endpoint para modificarlo. Ningún DTO de POST/PATCH lo acepta; tests de mass assignment para usuarios normales y demo.
+- [ ] JWT global con `@Public()` explícito. Test de inventario que enumera las rutas y verifica la lista pública exacta: login, registro, demo-login, public/status y el health existente. Una ruta nueva sin declaración explícita debe hacer fallar el test.
+- [ ] Dueño dedicado identificado por `STATUS_OWNER_EMAIL`, distinto de demo, sin contraseña usable ni pública. El seed debe fallar claramente si el email pertenece a una cuenta existente; nunca apropiarse de ella. Test de aislamiento del reset demo que preserva monitores públicos y su historial.
+- [ ] Manifiesto raíz `status-monitors.json` separado del demo, targets públicos de ejemplo validados contra SSRF y `seed_key` estable. Seed idempotente que actualiza y nunca borra monitores ni historial.
+- [ ] `GET /api/v1/public/status` responde 200 sin token. Solo monitores activos con `is_public = true`; privados y demo nunca aparecen. Selección explícita y respuesta con exactamente `name`, `last_state`, `uptime_percentage`, `last_checked_at`, sin id, target, configuración ni dueño.
+- [ ] Uptime calculado en SQL agregado, sin N+1, sobre ventana configurable (`STATUS_UPTIME_WINDOW_HOURS`, ejemplo 24); `null` sin muestras. Índice `(monitor_id, created_at)` en `check_result` y tests sin datos, mixtos y saludables.
+- [ ] Caché en memoria configurable (ejemplo 30 segundos), sin Redis, más throttler por defecto por IP. Tests de caché y polling normal sin 429.
+- [ ] Ruta pública `/status` fuera de autenticación, peticiones sin `Authorization` y sin redirecciones a login. Enlace discreto desde login.
+- [ ] Una única función de estado testeada: Operacional, Degradado, Caído y Sin datos. Umbral de degradación configurable (ejemplo 99%); chequeos más viejos que `STATUS_STALE_AFTER_MINUTES` (ejemplo 5) son Sin datos, incluido worker caído. Documentar reglas en el README del endpoint.
+- [ ] UI con resumen del peor estado, icono y texto, uptime y “última verificación hace X”; carga, vacío y error. Refresco cada 30–60 segundos, conservando datos ante fallos y mensajes claros para 429, sin errores crudos.
+- [ ] Verificación local: unitarios y e2e de API contra PostgreSQL real de Compose, lint y tests aplicables del frontend, `go test -count=1 ./...`, `docker compose up -d --build`, API healthy y curl con las cuatro claves exactas. No se agregan healthchecks de worker/frontend en esta fase.
+- [ ] Entregar bloque de variables nuevas con valores solo de ejemplo, sin leer ni editar `.env.example`.
 
 ## FASE 4: Despliegue
 - [ ] Docker Compose de producción: db, api, worker, frontend, con healthchecks y depends_on con condition: service_healthy.
+- [ ] Agregar healthchecks explícitos para worker y frontend (diferidos de la Fase 3), incluyendo detección real de funcionamiento del worker.
+- [ ] Retención de `check_result`: borrar filas de más de 30 días mediante una política configurable, sin afectar datos recientes ni el cálculo de uptime de la ventana pública.
 - [ ] Reverse proxy con HTTPS automático (Caddy) delante de frontend y API.
 - [ ] .env.example completo y documentado.
 - [ ] Script de arranque que corra prisma migrate deploy y el seed de forma idempotente.

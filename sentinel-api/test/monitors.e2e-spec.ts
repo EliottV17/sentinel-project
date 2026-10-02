@@ -1,4 +1,5 @@
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { ValidationPipe } from '@nestjs/common';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test, TestingModule } from '@nestjs/testing';
 import * as request from 'supertest';
 import * as express from 'express';
@@ -6,13 +7,15 @@ import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 
 describe('Monitors (e2e)', () => {
-  let app: INestApplication;
+  let app: NestExpressApplication;
   let prisma: PrismaService;
   let ownerToken: string;
   let ownerId: number;
   let otherToken: string;
   let otherId: number;
   let createdMonitorId: number;
+  let demoToken: string;
+  let demoId: number;
 
   const ownerEmail = `monowner_${Date.now()}@sentinel.com`;
   const ownerUser = `monowner${Date.now()}`.substring(0, 18);
@@ -25,7 +28,8 @@ describe('Monitors (e2e)', () => {
       imports: [AppModule],
     }).compile();
 
-    app = moduleFixture.createNestApplication();
+    app = moduleFixture.createNestApplication<NestExpressApplication>();
+    app.set('trust proxy', 1);
     app.use(express.json());
     app.use(express.urlencoded({ extended: true }));
     app.setGlobalPrefix('api/v1', { exclude: ['/'] });
@@ -39,6 +43,13 @@ describe('Monitors (e2e)', () => {
 
     prisma = moduleFixture.get<PrismaService>(PrismaService);
     await app.init();
+
+    const demoLogin = await request(app.getHttpServer()).post('/api/v1/auth/demo-login').send({});
+    if (demoLogin.status === 200) {
+      demoToken = demoLogin.body.access_token;
+      const demoMe = await request(app.getHttpServer()).get('/api/v1/users/me').set('Authorization', `Bearer ${demoToken}`);
+      demoId = demoMe.body.id;
+    }
 
     // Register owner
     const regOwner = await request(app.getHttpServer())
@@ -88,12 +99,41 @@ describe('Monitors (e2e)', () => {
       await prisma.monitor.deleteMany({
         where: { user_id: { in: [ownerId, otherId] } },
       });
+      if (demoId) {
+        await prisma.monitor.deleteMany({ where: { user_id: demoId, name: { startsWith: 'E2E demo quota' } } });
+      }
       await prisma.users.deleteMany({
         where: { id: { in: [ownerId, otherId] } },
       });
       await prisma.$disconnect();
     }
     await app.close();
+  });
+
+  it('enforces the demo frequency, three-monitor quota, and rejects public flags', async () => {
+    expect(demoToken).toBeDefined();
+    const demoAuth = { Authorization: `Bearer ${demoToken}` };
+    const minFrequency = Number(process.env.DEMO_MIN_FREQUENCY_SECONDS || 60);
+    const belowMinimum = await request(app.getHttpServer()).post('/api/v1/monitors').set(demoAuth).send({ name: 'E2E demo quota low frequency', target: 'https://example.com', frequency: Math.max(1, minFrequency - 1) });
+    expect(belowMinimum.status).toBe(400);
+
+    const startCount = await prisma.monitor.count({ where: { user_id: demoId } });
+    const createdIds: number[] = [];
+    for (let index = startCount; index < 3; index++) {
+      const created = await request(app.getHttpServer()).post('/api/v1/monitors').set(demoAuth).send({ name: `E2E demo quota ${index}`, target: 'https://example.com', frequency: minFrequency });
+      expect(created.status).toBe(201);
+      createdIds.push(created.body.id);
+    }
+    const fourth = await request(app.getHttpServer()).post('/api/v1/monitors').set(demoAuth).send({ name: 'E2E demo quota fourth', target: 'https://example.com', frequency: minFrequency });
+    expect(fourth.status).toBe(400);
+    expect(fourth.body.message).toContain('Monitor limit reached');
+
+    const lowPatch = await request(app.getHttpServer()).patch(`/api/v1/monitors/${createdIds[0]}`).set(demoAuth).send({ frequency: Math.max(1, minFrequency - 1) });
+    expect(lowPatch.status).toBe(400);
+    const publicAttempt = await request(app.getHttpServer()).post('/api/v1/monitors').set(demoAuth).send({ name: 'E2E demo quota public', target: 'https://example.com', frequency: minFrequency, public: true });
+    expect(publicAttempt.status).toBe(400);
+    expect(publicAttempt.body.public).toBeUndefined();
+    expect(await prisma.monitor.count({ where: { user_id: demoId } })).toBe(3);
   });
 
   it('POST /api/v1/monitors should fail without auth', async () => {
@@ -156,6 +196,17 @@ describe('Monitors (e2e)', () => {
     }
   });
 
+  it('POST /api/v1/monitors rejects a public flag and never stores it', async () => {
+    const before = await prisma.monitor.count({ where: { user_id: ownerId } });
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/monitors')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ name: 'Public attempt', target: 'https://example.com', frequency: 60, public: true });
+    expect(response.status).toBe(400);
+    expect(await prisma.monitor.count({ where: { user_id: ownerId } })).toBe(before);
+    expect(response.body.public).toBeUndefined();
+  });
+
   it('POST /api/v1/monitors should create monitor successfully', async () => {
     const res = await request(app.getHttpServer())
       .post('/api/v1/monitors')
@@ -177,22 +228,20 @@ describe('Monitors (e2e)', () => {
   });
 
   it('POST /api/v1/monitors should reject creation when exceeding MAX_MONITORS_PER_USER with 400', async () => {
-    // Owner currently has 1 monitor created above.
-    // Default MAX_MONITORS_PER_USER is 10.
-    // Fill up to quota:
-    const extraIds: number[] = [];
-    for (let i = 2; i <= 10; i++) {
-      const res = await request(app.getHttpServer())
-        .post('/api/v1/monitors')
-        .set('Authorization', `Bearer ${ownerToken}`)
-        .send({
-          name: `Quota Monitor ${i}`,
-          target: `https://example${i}.com`,
-          frequency: 60,
-        });
-      expect(res.status).toBe(201);
-      extraIds.push(res.body.id);
-    }
+    // Owner currently has 1 monitor created above. Seed the remaining quota
+    // directly so the assertion exercises the quota rather than HTTP throttling.
+    await prisma.monitor.createMany({
+      data: Array.from({ length: 9 }, (_, index) => ({
+        name: `Quota Monitor ${index + 2}`,
+        target: `https://example${index + 2}.com`,
+        frequency: 60,
+        state: 'Active',
+        created_at: new Date(),
+        check_type: 'http',
+        consecutive_failures: 0,
+        user_id: ownerId,
+      })),
+    });
 
     // 11th monitor should be rejected with 400
     const excessRes = await request(app.getHttpServer())
@@ -206,10 +255,6 @@ describe('Monitors (e2e)', () => {
     expect(excessRes.status).toBe(400);
     expect(excessRes.body.message).toContain('Monitor limit reached');
 
-    // Clean up extra monitors so subsequent tests are unaffected
-    await prisma.monitor.deleteMany({
-      where: { id: { in: extraIds } },
-    });
   });
 
   it('GET /api/v1/monitors should list user monitors', async () => {

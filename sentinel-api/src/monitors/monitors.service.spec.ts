@@ -143,6 +143,53 @@ describe('MonitorsService', () => {
     });
   });
 
+  describe('demo monitor limits', () => {
+    const demoUser = { id: 7, is_demo: true };
+    const dto = { name: 'Demo', target: 'https://example.com', check_type: 'http', frequency: 60 };
+
+    it('enforces demo-specific count of three on create', async () => {
+      configService.get.mockImplementation((key: string, fallback: any) => key === 'DEMO_MAX_MONITORS' ? 3 : fallback);
+      prisma.monitor.count.mockResolvedValue(3);
+      prisma.monitor.create.mockImplementation(({ data }) => ({ id: 10, ...data }));
+      await expect(service.createMonitor(dto, demoUser as any)).rejects.toThrow('Maximum allowed: 3 monitors');
+      expect(prisma.monitor.create).not.toHaveBeenCalled();
+    });
+
+    it('uses DEMO_MIN_FREQUENCY_SECONDS to reject low-frequency creates', async () => {
+      configService.get.mockImplementation((key: string, fallback: any) => key === 'DEMO_MIN_FREQUENCY_SECONDS' ? 120 : fallback);
+      prisma.monitor.create.mockImplementation(({ data }) => ({ id: 10, ...data }));
+      await expect(service.createMonitor({ ...dto, frequency: 60 }, demoUser as any)).rejects.toThrow('less than 120 seconds');
+      expect(prisma.monitor.create).not.toHaveBeenCalled();
+    });
+
+    it('uses DEMO_MIN_FREQUENCY_SECONDS to reject low-frequency PATCHes', async () => {
+      configService.get.mockImplementation((key: string, fallback: any) => key === 'DEMO_MIN_FREQUENCY_SECONDS' ? 120 : fallback);
+      prisma.monitor.findFirst.mockResolvedValue({ id: 7, user_id: 7 });
+      prisma.monitor.update.mockImplementation(({ data }) => ({ id: 7, user_id: 7, ...data }));
+      await expect(service.updateMonitor(7, demoUser as any, { frequency: 60 } as any)).rejects.toThrow('less than 120 seconds');
+      expect(prisma.monitor.update).not.toHaveBeenCalled();
+    });
+
+    it('keeps ordinary minimum frequency independent from the demo setting', async () => {
+      configService.get.mockImplementation((key: string, fallback: any) => key === 'DEMO_MIN_FREQUENCY_SECONDS' ? 120 : key === 'MIN_MONITOR_FREQUENCY_SECONDS' ? 60 : fallback);
+      prisma.monitor.create.mockImplementation(({ data }) => ({ id: 10, ...data }));
+      await expect(service.createMonitor({ ...dto, frequency: 60 }, 9)).resolves.toMatchObject({ frequency: 60 });
+    });
+
+    it('keeps ordinary PATCH frequency independent from the demo setting', async () => {
+      configService.get.mockImplementation((key: string, fallback: any) => key === 'DEMO_MIN_FREQUENCY_SECONDS' ? 120 : key === 'MIN_MONITOR_FREQUENCY_SECONDS' ? 60 : fallback);
+      prisma.monitor.findFirst.mockResolvedValue({ id: 7, user_id: 9 });
+      prisma.monitor.update.mockImplementation(({ data }) => ({ id: 7, user_id: 9, ...data }));
+      await expect(service.updateMonitor(7, 9, { frequency: 60 })).resolves.toMatchObject({ frequency: 60 });
+    });
+
+    it('keeps the ordinary quota for non-demo users', async () => {
+      prisma.monitor.count.mockResolvedValue(3);
+      prisma.monitor.create.mockImplementation(({ data }) => ({ id: 10, ...data }));
+      await expect(service.createMonitor(dto, 9)).resolves.toMatchObject({ user_id: 9 });
+    });
+  });
+
   describe('updateMonitor', () => {
     it('should throw BadRequestException when updating frequency below minimum', async () => {
       prisma.monitor.findFirst.mockResolvedValue({ id: 1, user_id: 2, name: 'Monitor' });

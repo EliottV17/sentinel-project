@@ -67,12 +67,17 @@ Delivery strategy: ask-on-risk. Use small Conventional Commits separated by migr
 - Environment-variable docs remain pending user paste; no `.env.example` access.
 
 ### T5 — Add demo login and reset notice to frontend
-- Add “Probar demo” and visible fallback credentials to the login UI.
-- Use `is_demo` from authenticated identity to show a clear periodic-reset notice in the demo experience.
+- Add “Probar demo” using the dedicated parameter-free endpoint and visible example credentials that match configured Compose defaults.
+- Use the signed `is_demo` JWT claim for a zero-extra-request identity flag and show a clear 60-minute reset notice in the authenticated shell.
+- Decision: keep the button on `/auth/demo-login`; do not prefill regular login (wrong 5/min throttle). Read fallback text from Vite build args with matching defaults.
 - Checks: strict TDD with frontend tests and `bun run lint`.
 - Route: delegated direct; multi-file frontend change.
-- Status: pending.
-- Commit evidence: pending.
+- Status: done.
+- Strict TDD: login and provider tests first failed behavioral assertions for missing demo CTA/credentials and missing reset notice; GREEN followed after implementation.
+- Verification: focused tests 3 files/15 passed; full frontend suite 13 files/87 passed; typecheck, lint, and production build passed. Compose build args matched configured backend demo credentials; Compose defaults/mounts remained valid. Build emitted two non-fatal upstream Zod Rollup annotation warnings.
+- Commit evidence: `656fabc test(frontend): cover demo access and reset notice`; `c8d4589 feat(frontend): add demo access and reset notice`; `4f69c4f feat(frontend): show demo reset notice`; `384e28d build(compose): pass demo credentials to frontend`.
+- `is_demo` comes from signed JWT claim; the banner makes no extra `/users/me` request. Demo CTA uses the dedicated 30/min endpoint and leaves standard login unchanged.
+- Environment-variable docs remain pending user paste; no `.env.example` access.
 
 ### T6 — Complete acceptance tests, Phase 2 checklist, and requested suites
 - Add/update e2e and unit tests for every approved requirement; include rate-limit distinctions, missing demo account, PATCH quota, account mutation protections, idempotent reset, and reset-vs-worker FK race.

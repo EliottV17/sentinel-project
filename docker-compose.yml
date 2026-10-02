@@ -30,7 +30,12 @@ services:
       ALGORITHM: HS256
       ACCESS_TOKEN_EXPIRE_MINUTES: 30
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
-      DEMO_MONITORS_MANIFEST_PATH: /app/demo-monitors.json
+      DEMO_USER_EMAIL: ${DEMO_USER_EMAIL:-demo@sentinel.dev}
+      DEMO_USER_PASSWORD: "${DEMO_USER_PASSWORD:-DemoPassword123!}"
+      DEMO_ACCESS_TOKEN_EXPIRE_MINUTES: ${DEMO_ACCESS_TOKEN_EXPIRE_MINUTES:-15}
+      DEMO_MAX_MONITORS: ${DEMO_MAX_MONITORS:-3}
+      DEMO_MIN_FREQUENCY_SECONDS: ${DEMO_MIN_FREQUENCY_SECONDS:-60}
+      DEMO_MONITORS_MANIFEST_PATH: ${DEMO_MONITORS_MANIFEST_PATH:-/app/demo-monitors.json}
     ports:
       - "8000:8000"
     volumes:
@@ -45,7 +50,9 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgres://postgres:postgres@db:5432/sentinel_db
-      DEMO_MONITORS_MANIFEST_PATH: /app/demo-monitors.json
+      DEMO_USER_EMAIL: ${DEMO_USER_EMAIL:-demo@sentinel.dev}
+      DEMO_RESET_INTERVAL_MINUTES: ${DEMO_RESET_INTERVAL_MINUTES:-60}
+      DEMO_MONITORS_MANIFEST_PATH: ${DEMO_MONITORS_MANIFEST_PATH:-/app/demo-monitors.json}
     volumes:
       - ./demo-monitors.json:/app/demo-monitors.json:ro
 

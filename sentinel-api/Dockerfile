@@ -11,7 +11,7 @@ COPY prisma ./prisma/
 
 RUN bun install --frozen-lockfile
 
-COPY tsconfig.json nest-cli.json ./
+COPY tsconfig.json tsconfig.build.json nest-cli.json ./
 COPY src ./src
 
 RUN bunx prisma generate

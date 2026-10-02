@@ -81,9 +81,13 @@ Delivery strategy: ask-on-risk. Use small Conventional Commits separated by migr
 
 ### T6 — Complete acceptance tests, Phase 2 checklist, and requested suites
 - Add/update e2e and unit tests for every approved requirement; include rate-limit distinctions, missing demo account, PATCH quota, account mutation protections, idempotent reset, and reset-vs-worker FK race.
-- Mark Phase 2 checklist items complete only when evidence passes.
+- Mark Phase 2 checklist items complete only when evidence passes; keep environment documentation user-owned and unchecked.
 - Run the exact requested API unit/e2e, frontend lint, and worker suites; report every failure or skipped check truthfully.
 - Checks: all user-requested suites; e2e against the real Compose database.
 - Route: delegated verification for command execution; parent performs scoped result/readback.
-- Status: pending.
-- Commit evidence: pending.
+- Status: engineering implementation and verification complete; waiting for the user-owned environment documentation paste.
+- Final verification: API unit 10 suites/52 tests; API Compose e2e 2 suites/31 tests; frontend full suite 13 files/87 tests, typecheck, lint, and build; worker `go test -count=1 ./...`, `go vet ./...`; Compose defaults/mounts and frontend credential build args validated; `git diff --check` clean.
+- Remaining user action: paste the final example-only environment block into `.env.example` manually, then confirm so the PLAN checkbox can be checked. No `.env.example` was read or changed.
+- Additional gap: worker reset transaction was tested with fakes and checked against schema DDL, but no live PostgreSQL worker reset was executed.
+- RDD: native assessment/inspect unavailable because the package-local binary is missing; independent verifiers passed. No installation attempted.
+- Commit evidence: substantive T1–T5 work-unit commits are recorded above; T6 introduced no source changes.

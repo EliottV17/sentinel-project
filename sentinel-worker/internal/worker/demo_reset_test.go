@@ -44,16 +44,42 @@ type execCall struct {
 	args  []any
 }
 type fakeDemoTx struct {
-	calls      []execCall
-	committed  bool
-	rolledBack bool
-	failAt     int
+	calls               []execCall
+	committed           bool
+	rolledBack          bool
+	failAt              int
+	monitorOwners       map[int]int
+	historyMonitorOwners map[int]int
+	nextMonitorID       int
 }
 
 func (tx *fakeDemoTx) Exec(_ context.Context, q string, args ...any) (pgconn.CommandTag, error) {
 	tx.calls = append(tx.calls, execCall{q, args})
 	if tx.failAt > 0 && len(tx.calls) == tx.failAt {
 		return pgconn.CommandTag{}, errors.New("manifest insert failed")
+	}
+	userID := 0
+	if len(args) > 0 {
+		userID, _ = args[0].(int)
+	}
+	switch q {
+	case `DELETE FROM check_result WHERE monitor_id IN (SELECT id FROM monitor WHERE user_id = $1)`:
+		for id, ownerID := range tx.historyMonitorOwners {
+			if tx.monitorOwners[ownerID] == userID {
+				delete(tx.historyMonitorOwners, id)
+			}
+		}
+	case `DELETE FROM monitor WHERE user_id = $1`:
+		for id, ownerID := range tx.monitorOwners {
+			if ownerID == userID {
+				delete(tx.monitorOwners, id)
+			}
+		}
+	case `INSERT INTO monitor (user_id, name, target, check_type, check_config, frequency, state, seed_key, created_at, consecutive_failures) VALUES ($1,$2,$3,$4,$5,$6,'Active',$7,CURRENT_TIMESTAMP,0)`:
+		tx.nextMonitorID++
+		if tx.monitorOwners != nil {
+			tx.monitorOwners[tx.nextMonitorID] = userID
+		}
 	}
 	return pgconn.NewCommandTag("OK"), nil
 }
@@ -121,6 +147,37 @@ func TestResetDemoAccountScopesAndRestoresManifest(t *testing.T) {
 				t.Fatal("transaction was not committed")
 			}
 		})
+	}
+}
+
+func TestResetDemoAccountPreservesStatusOwnerMonitorsAndCheckHistory(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "manifest.json")
+	if err := os.WriteFile(path, []byte(`[{"seed_key":"replacement","name":"Replacement","target":"https://example.com","frequency":60,"check_type":"http"}]`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	tx := &fakeDemoTx{
+		monitorOwners: map[int]int{601: 42, 901: 99},
+		historyMonitorOwners: map[int]int{7001: 601, 9001: 901},
+	}
+	db := &fakeDemoDB{row: fakeDemoRow{id: 42}, tx: tx}
+
+	if err := resetDemoAccount(context.Background(), db, "demo@example.test", path); err != nil {
+		t.Fatal(err)
+	}
+	if _, exists := tx.monitorOwners[901]; !exists {
+		t.Fatal("demo reset removed the public status owner's monitor")
+	}
+	if monitorID, exists := tx.historyMonitorOwners[9001]; !exists || monitorID != 901 {
+		t.Fatal("demo reset removed the public status owner's check history")
+	}
+	if _, exists := tx.monitorOwners[601]; exists {
+		t.Fatal("demo reset did not replace the demo monitor")
+	}
+	if tx.monitorOwners[tx.nextMonitorID] != 42 {
+		t.Fatalf("restored monitor owner=%d, want demo user 42", tx.monitorOwners[tx.nextMonitorID])
+	}
+	if _, exists := tx.historyMonitorOwners[7001]; exists {
+		t.Fatal("demo reset retained demo check history")
 	}
 }
 

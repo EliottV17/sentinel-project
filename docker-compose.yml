@@ -36,10 +36,13 @@ services:
       DEMO_MAX_MONITORS: ${DEMO_MAX_MONITORS:-3}
       DEMO_MIN_FREQUENCY_SECONDS: ${DEMO_MIN_FREQUENCY_SECONDS:-60}
       DEMO_MONITORS_MANIFEST_PATH: ${DEMO_MONITORS_MANIFEST_PATH:-/app/demo-monitors.json}
+      STATUS_OWNER_EMAIL: ${STATUS_OWNER_EMAIL:-}
+      STATUS_MONITORS_MANIFEST_PATH: ${STATUS_MONITORS_MANIFEST_PATH:-/app/status-monitors.json}
     ports:
       - "8000:8000"
     volumes:
       - ./demo-monitors.json:/app/demo-monitors.json:ro
+      - ./status-monitors.json:/app/status-monitors.json:ro
     healthcheck:
       test: ["CMD", "bun", "-e", "fetch('http://127.0.0.1:8000/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
       interval: 10s

@@ -83,5 +83,7 @@ describe('DemoSeed', () => {
     expect(rows.find((row) => row.id === extraRow.id)).toEqual(extraRow);
     expect(prisma.monitor.delete).not.toHaveBeenCalled();
     expect(prisma.monitor.deleteMany).not.toHaveBeenCalled();
+    expect(monitorUpsert.mock.calls[0][0].create.is_public).toBe(false);
+    expect(monitorUpsert.mock.calls[0][0].update.is_public).toBe(false);
   });
 });

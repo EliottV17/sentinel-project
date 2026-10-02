@@ -58,8 +58,13 @@ Delivery strategy: ask-on-risk. Use small Conventional Commits separated by migr
 - Add deterministic worker tests for reset and concurrent deletion behavior.
 - Checks: strict TDD plus `go test -count=1 ./...`.
 - Route: delegated direct; worker-specific multi-file change.
-- Status: in progress.
-- Commit evidence: pending.
+- Status: done.
+- Strict TDD recovery: initial tests-first run failed at compile time (not acceptable behavior RED); then a schema-driven test failed at runtime because the reset INSERT omitted required `created_at` and `consecutive_failures`. Added both and saw focused tests pass. FK insert seam tests also demonstrated behavior RED against a stub before GREEN.
+- Verification: `go test -count=1 ./...` passed; `go vet ./...` passed; independent verifier repeated both. `docker compose --env-file /dev/null config ...` validated API/worker demo defaults and read-only shared manifest mounts.
+- Database evidence: reset logic and rollback/scope/race tested with fakes; schema readback verifies required DDL. No live PostgreSQL worker reset was executed.
+- Commit evidence: `2ddb2cf test: cover worker demo reset and races`; `3a55478 feat(worker): reset demo monitors periodically`; `a68bf2d feat(compose): configure demo runtime defaults`.
+- RDD: native assessment/inspect unavailable because the package-local binary is missing; independent Go and Compose verification passed. No installation attempted.
+- Environment-variable docs remain pending user paste; no `.env.example` access.
 
 ### T5 — Add demo login and reset notice to frontend
 - Add “Probar demo” and visible fallback credentials to the login UI.

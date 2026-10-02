@@ -33,15 +33,15 @@ API (sentinel-api):
 - [x] La cuenta demo no puede cambiar contraseña, email ni borrar la cuenta; proteger todas las mutaciones de usuario actuales y futuras.
 - [x] JWT de demo con `is_demo` y expiración corta dedicada y configurable, independiente de la expiración ordinaria.
 - [x] `POST /api/v1/auth/demo-login` sin parámetros; límite de 30 solicitudes/minuto por IP, sin relajar el límite de 5/minuto por IP para login y registro ordinarios.
-- [ ] Si falta la cuenta demo, el login devuelve 503 y el reset periódico es un no-op.
+- [x] Si falta la cuenta demo, el login devuelve 503 y el reset periódico es un no-op.
 - [ ] Botón "Probar demo" en `LoginPage.tsx` y credenciales de respaldo visibles como texto.
 - [x] Seed idempotente de la cuenta demo y monitores de ejemplo; el demo no puede activar monitores públicos.
-- [ ] El único origen/lista de monitores demo es el manifiesto raíz `demo-monitors.json` (solo definiciones de monitores, sin credenciales), compartido por el seed de API y el reset del worker; no duplicar la lista.
+- [x] El único origen/lista de monitores demo es el manifiesto raíz `demo-monitors.json` (solo definiciones de monitores, sin credenciales), compartido por el seed de API y el reset del worker; no duplicar la lista.
 - [x] `docker-compose.yml` monta ese manifiesto exacto, de solo lectura, en `/app/demo-monitors.json` para API y worker; mantener los contextos de build existentes.
 - [x] Los targets del manifiesto son destinos públicos SSRF-safe, como `https://example.com` y `https://api.github.com`; omitir campos de publicación o fijarlos en `false`, nunca crear monitores demo públicos.
-- [ ] Reset periódico con `DEMO_RESET_INTERVAL_MINUTES` configurable, default 60; restaurar monitores desde el manifiesto y purgar idempotentemente el historial de checks y alertas del usuario demo.
-- [ ] Un reset no elimina datos de otros usuarios y sobrevive al reinicio del worker.
-- [ ] El worker trata una violación FK por borrado concurrente del monitor durante un check como carrera esperada: la registra, sigue ejecutándose y tiene pruebas deterministas del caso.
+- [x] Reset periódico con `DEMO_RESET_INTERVAL_MINUTES` configurable, default 60; restaurar monitores desde el manifiesto y purgar idempotentemente el historial de checks y alertas del usuario demo.
+- [x] Un reset no elimina datos de otros usuarios y sobrevive al reinicio del worker.
+- [x] El worker trata una violación FK por borrado concurrente del monitor durante un check como carrera esperada: la registra, sigue ejecutándose y tiene pruebas deterministas del caso.
 - [ ] La experiencia autenticada demo muestra un aviso visible de que los datos se restablecen periódicamente.
 - [ ] **Pending user paste — documentación de variables de entorno:** pegar manualmente el bloque con valores solo de ejemplo; no editar ningún `.env.example`. Mantener esta casilla sin marcar hasta confirmación del usuario.
 

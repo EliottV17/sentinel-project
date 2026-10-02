@@ -32,6 +32,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new BadRequestException('Inactive user');
     }
 
-    return user;
+    return { ...user, is_demo: user.is_demo === true };
   }
 }

@@ -25,16 +25,18 @@ export class MonitorsService {
 
   async createMonitor(
     dto: CreateMonitorDto,
-    userId: number,
+    userOrId: number | { id: number; is_demo?: boolean },
   ): Promise<MonitorResponseDto> {
+    const userId = typeof userOrId === 'number' ? userOrId : userOrId.id;
+    const isDemo = typeof userOrId === 'object' && userOrId.is_demo === true;
     const checkType = dto.check_type || 'http';
     if (!VALID_CHECK_TYPES.includes(checkType)) {
       throw new BadRequestException(`Unknown checker type: ${checkType}`);
     }
 
-    const minFrequency = Number(
-      this.configService.get<number>('MIN_MONITOR_FREQUENCY_SECONDS', 60),
-    );
+    const minFrequency = Number(this.configService.get<number>(
+      isDemo ? 'DEMO_MIN_FREQUENCY_SECONDS' : 'MIN_MONITOR_FREQUENCY_SECONDS', 60,
+    ));
     const frequency = dto.frequency ?? 60;
     if (frequency < minFrequency) {
       throw new BadRequestException(
@@ -42,9 +44,9 @@ export class MonitorsService {
       );
     }
 
-    const maxMonitors = Number(
-      this.configService.get<number>('MAX_MONITORS_PER_USER', 10),
-    );
+    const maxMonitors = Number(this.configService.get<number>(
+      isDemo ? 'DEMO_MAX_MONITORS' : 'MAX_MONITORS_PER_USER', isDemo ? 3 : 10,
+    ));
     const currentCount = await this.prisma.monitor.count({
       where: { user_id: userId },
     });
@@ -86,9 +88,11 @@ export class MonitorsService {
 
   async updateMonitor(
     monitorId: number,
-    userId: number,
+    userOrId: number | { id: number; is_demo?: boolean },
     dto: UpdateMonitorDto,
   ): Promise<MonitorResponseDto> {
+    const userId = typeof userOrId === 'number' ? userOrId : userOrId.id;
+    const isDemo = typeof userOrId === 'object' && userOrId.is_demo === true;
     const monitor = await this.prisma.monitor.findFirst({
       where: { id: monitorId, user_id: userId },
     });
@@ -104,9 +108,9 @@ export class MonitorsService {
     }
 
     if (dto.frequency !== undefined) {
-      const minFrequency = Number(
-        this.configService.get<number>('MIN_MONITOR_FREQUENCY_SECONDS', 60),
-      );
+      const minFrequency = Number(this.configService.get<number>(
+        isDemo ? 'DEMO_MIN_FREQUENCY_SECONDS' : 'MIN_MONITOR_FREQUENCY_SECONDS', 60,
+      ));
       if (dto.frequency < minFrequency) {
         throw new BadRequestException(
           `Monitor frequency cannot be less than ${minFrequency} seconds`,

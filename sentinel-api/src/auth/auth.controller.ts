@@ -8,6 +8,13 @@ import { TokenDto } from './dto/token.dto';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @Post('demo-login')
+  @Throttle({ auth: { limit: 30, ttl: 60000 } })
+  @HttpCode(HttpStatus.OK)
+  async demoLogin(): Promise<TokenDto> {
+    return this.authService.demoLogin();
+  }
+
   @Post('login')
   @Throttle({ auth: { limit: 5, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)

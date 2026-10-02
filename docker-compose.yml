@@ -63,6 +63,8 @@ services:
       # set e.g. VITE_API_BASE_URL=https://api.example.com for a split origin.
       args:
         VITE_API_BASE_URL: ""
+        VITE_DEMO_USER_EMAIL: ${DEMO_USER_EMAIL:-demo@sentinel.dev}
+        VITE_DEMO_USER_PASSWORD: "${DEMO_USER_PASSWORD:-DemoPassword123!}"
     container_name: sentinel_frontend
     restart: always
     depends_on:

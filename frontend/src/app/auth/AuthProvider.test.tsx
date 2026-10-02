@@ -109,6 +109,29 @@ describe("AuthProvider", () => {
     expect(params.get("password")).toBe("pw");
   });
 
+  it("demo login posts without parameters and exposes the signed demo claim", async () => {
+    let requestBody = "not called";
+    server.use(
+      http.post("/api/v1/auth/demo-login", async ({ request }) => {
+        requestBody = await request.text();
+        return HttpResponse.json({
+          access_token: makeJwt({ sub: "demo-user", exp: BASE_TS + 1800, is_demo: true }),
+          token_type: "bearer",
+        });
+      }),
+    );
+    const { holder } = renderAt("/monitors");
+
+    await act(async () => {
+      await holder.current!.demoLogin();
+    });
+
+    expect(requestBody).toBe("");
+    expect(tokenStore.get()).not.toBeNull();
+    expect(holder.current!.isAuthenticated).toBe(true);
+    expect(holder.current!.isDemo).toBe(true);
+  });
+
   it("login 401 surfaces ApiError to the caller without redirecting", async () => {
     server.use(
       http.post("/api/v1/auth/login", () =>

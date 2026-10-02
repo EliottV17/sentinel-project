@@ -116,6 +116,45 @@ describe("LoginPage", () => {
     expect(loc()).toBe("/login");
   });
 
+  it("shows demo credentials and logs in through the dedicated demo endpoint", async () => {
+    let requestMethod: string | undefined;
+    server.use(
+      http.post("/api/v1/auth/demo-login", ({ request }) => {
+        requestMethod = request.method;
+        return HttpResponse.json({
+          access_token: makeJwt({ sub: "demo-user", exp: BASE_TS + 1800 }),
+          token_type: "bearer",
+        });
+      }),
+    );
+    const { loc } = renderLoginPage("/monitors");
+
+    expect(screen.getByText(/Demo credentials: demo@sentinel\.dev \/ DemoPassword123!/)).toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Probar demo" }));
+    });
+
+    await waitFor(() => expect(loc()).toBe("/monitors"));
+    expect(requestMethod).toBe("POST");
+    expect(tokenStore.get()).not.toBeNull();
+  });
+
+  it("shows readable unavailable copy when demo login returns 503", async () => {
+    server.use(
+      http.post("/api/v1/auth/demo-login", () =>
+        HttpResponse.json({ detail: "Unavailable" }, { status: 503 }),
+      ),
+    );
+    const { loc } = renderLoginPage();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Probar demo" }));
+    });
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/demo.*unavailable|unavailable.*demo/i);
+    expect(loc()).toBe("/login");
+  });
+
   it("redirects to / when already authenticated", () => {
     tokenStore.set(makeJwt({ sub: "u", exp: BASE_TS + 1800 }));
     const { loc } = renderLoginPage();

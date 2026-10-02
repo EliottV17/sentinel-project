@@ -43,7 +43,7 @@ API (sentinel-api):
 - [x] Un reset no elimina datos de otros usuarios y sobrevive al reinicio del worker.
 - [x] El worker trata una violación FK por borrado concurrente del monitor durante un check como carrera esperada: la registra, sigue ejecutándose y tiene pruebas deterministas del caso.
 - [x] La experiencia autenticada demo muestra un aviso visible de que los datos se restablecen periódicamente.
-- [ ] **Pending user paste — documentación de variables de entorno:** pegar manualmente el bloque con valores solo de ejemplo; no editar ningún `.env.example`. Mantener esta casilla sin marcar hasta confirmación del usuario.
+- [x] **Documentación de variables de entorno:** bloque con valores solo de ejemplo pegado y confirmado por el usuario en `005d555`; el agente no accedió ni modificó ningún `.env.example`.
 
 ## FASE 3: Página de estado pública
 - [ ] Campo is_public en monitor. Solo se asigna desde el seed o una cuenta admin; ningún usuario normal ni la cuenta demo puede activarlo.

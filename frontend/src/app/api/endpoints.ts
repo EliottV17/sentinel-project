@@ -28,6 +28,14 @@ type MonitorDeleteResponse =
  * means bad credentials and is surfaced to the caller, so the client's
  * unauthorized handler (redirect) is bypassed for this call.
  */
+export function demoLogin(): Promise<LoginResponse> {
+  return apiFetch<LoginResponse>(
+    "/api/v1/auth/demo-login",
+    { method: "POST" },
+    { onUnauthorized: "ignore" },
+  );
+}
+
 export async function login(
   username: string,
   password: string,

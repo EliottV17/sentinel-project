@@ -11,13 +11,15 @@ import {
 import { useLocation, useNavigate } from "react-router-dom";
 import { tokenStore } from "../api/token";
 import { setUnauthorizedHandler } from "../api/client";
-import { login as loginEndpoint } from "../api/endpoints";
+import { demoLogin as demoLoginEndpoint, login as loginEndpoint } from "../api/endpoints";
 import { decodeJwtPayload, isExpiringSoon } from "./jwt";
 
 export interface AuthContextValue {
   isAuthenticated: boolean;
   user: string | null;
+  isDemo: boolean;
   login(username: string, password: string): Promise<void>;
+  demoLogin(): Promise<void>;
   logout(): void;
 }
 
@@ -37,18 +39,20 @@ const EXP_WATCH_INTERVAL_MS = 30_000;
 interface AuthSnapshot {
   isAuthenticated: boolean;
   user: string | null;
+  isDemo: boolean;
   expiringSoon: boolean;
 }
 
 function snapshot(): AuthSnapshot {
   const token = tokenStore.get();
   if (token === null) {
-    return { isAuthenticated: false, user: null, expiringSoon: false };
+    return { isAuthenticated: false, user: null, isDemo: false, expiringSoon: false };
   }
   const payload = decodeJwtPayload(token);
   return {
     isAuthenticated: true,
     user: payload?.sub ?? null,
+    isDemo: payload?.is_demo === true,
     expiringSoon: payload ? isExpiringSoon(payload, new Date()) : false,
   };
 }
@@ -97,6 +101,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAuth(snapshot());
   }, []);
 
+  const demoLogin = useCallback(async () => {
+    const { access_token } = await demoLoginEndpoint();
+    tokenStore.set(access_token);
+    setAuth(snapshot());
+  }, []);
+
   const logout = useCallback(() => {
     tokenStore.clear();
     setAuth(snapshot());
@@ -107,10 +117,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       isAuthenticated: auth.isAuthenticated,
       user: auth.user,
+      isDemo: auth.isDemo,
       login,
+      demoLogin,
       logout,
     }),
-    [auth, login, logout],
+    [auth, login, demoLogin, logout],
   );
 
   return (

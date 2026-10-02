@@ -1,10 +1,13 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ApiError } from "../../app/api/client";
 import { useAuth } from "../../app/auth/AuthProvider";
+
+const demoEmail = import.meta.env.VITE_DEMO_USER_EMAIL || "demo@sentinel.dev";
+const demoPassword = import.meta.env.VITE_DEMO_USER_PASSWORD || "DemoPassword123!";
 
 const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -14,7 +17,9 @@ const loginSchema = z.object({
 type LoginValues = z.infer<typeof loginSchema>;
 
 export function LoginPage() {
-  const { isAuthenticated, login } = useAuth();
+  const { isAuthenticated, login, demoLogin } = useAuth();
+  const [demoSubmitting, setDemoSubmitting] = useState(false);
+  const [demoError, setDemoError] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const from =
@@ -44,6 +49,24 @@ export function LoginPage() {
       navigate("/", { replace: true });
     }
   }, [isAuthenticated, navigate]);
+
+  const onDemoLogin = async () => {
+    setDemoSubmitting(true);
+    setDemoError(null);
+    ownsNavigationRef.current = true;
+    try {
+      await demoLogin();
+      navigate(from, { replace: true });
+    } catch (err) {
+      setDemoError(
+        err instanceof ApiError && err.status === 503
+          ? "Demo access is currently unavailable. Please try again later."
+          : "Unable to sign in to the demo right now. Please try again.",
+      );
+    } finally {
+      setDemoSubmitting(false);
+    }
+  };
 
   const onSubmit = handleSubmit(async (values) => {
     ownsNavigationRef.current = true;
@@ -112,6 +135,18 @@ export function LoginPage() {
           Sign in
         </button>
       </form>
+      <div className="mt-4 border-t border-slate-200 pt-4 text-sm text-slate-600">
+        <p>Demo credentials: {demoEmail} / {demoPassword}</p>
+        {demoError !== null && <p role="alert" className="mt-2 text-red-600">{demoError}</p>}
+        <button
+          type="button"
+          disabled={demoSubmitting}
+          onClick={onDemoLogin}
+          className="mt-3 w-full rounded border border-slate-300 px-3 py-2 text-sm font-medium text-slate-800 hover:bg-slate-100 disabled:opacity-50"
+        >
+          Probar demo
+        </button>
+      </div>
     </div>
   );
 }

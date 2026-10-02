@@ -28,8 +28,11 @@ ENV PORT=8000
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/src ./src
+COPY --chmod=755 docker-entrypoint.sh ./docker-entrypoint.sh
 COPY package.json ./
 
 EXPOSE 8000
 
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
 CMD ["bun", "dist/main.js"]

@@ -17,7 +17,7 @@ import (
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	slog.SetDefault(logger)
-	
+
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
@@ -34,6 +34,6 @@ func main() {
 	checker.Register("http", checker.NewHTTPChecker(allowedPorts))
 
 	slog.Info("Sentinel worker started")
-	worker.Run(ctx, pool, cfg.Concurrency)
+	worker.Run(ctx, pool, cfg.Concurrency, cfg.DemoUserEmail, cfg.DemoManifestPath, cfg.DemoResetInterval)
 	slog.Info("Sentinel worker stopped")
 }

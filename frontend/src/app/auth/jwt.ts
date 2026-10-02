@@ -6,6 +6,7 @@
 export interface JwtPayload {
   exp: number;
   sub?: string;
+  is_demo?: boolean;
   [key: string]: unknown;
 }
 

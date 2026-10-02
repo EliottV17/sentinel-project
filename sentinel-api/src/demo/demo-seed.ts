@@ -59,6 +59,7 @@ export class DemoSeed {
         check_type: monitor.check_type,
         check_config: monitor.check_config,
         consecutive_failures: 0,
+        is_public: false,
       };
       await this.prisma.monitor.upsert({
         where: { user_id_seed_key: { user_id: user.id, seed_key: monitor.seed_key } },

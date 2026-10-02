@@ -52,6 +52,11 @@ jobs:
       - name: Build
         run: bun run build
 
+      - name: Build API image and verify entrypoint
+        run: |
+          docker build --tag sentinel-api-ci .
+          docker run --rm --entrypoint sh sentinel-api-ci -c 'test -f /app/dist/main.js'
+
       - name: Unit Tests
         run: bun run test
 

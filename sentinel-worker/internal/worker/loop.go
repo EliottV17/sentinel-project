@@ -5,20 +5,28 @@ package worker
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"time"
 
 	"github.com/EliottV17/sentinel-worker/internal/checker"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func Run(ctx context.Context, pool *pgxpool.Pool, concurrency int) {
+func Run(ctx context.Context, pool *pgxpool.Pool, concurrency int, demoEmail, manifestPath string, resetMinutes int) {
 	if concurrency <= 0 {
 		concurrency = 10
 	}
 	sem := make(chan struct{}, concurrency)
+	resetDone := make(chan struct{})
+	go func() {
+		defer close(resetDone)
+		runDemoResetLoop(ctx, pool, demoEmail, manifestPath, resetInterval(resetMinutes))
+	}()
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
+	defer func() { <-resetDone }()
 
 	for {
 		select {
@@ -39,6 +47,47 @@ func Run(ctx context.Context, pool *pgxpool.Pool, concurrency int) {
 			}
 		}
 	}
+}
+
+type insertOutcome int
+
+const (
+	insertSucceeded insertOutcome = iota
+	insertMonitorDeleted
+	insertFailed
+)
+
+type insertResultValue struct {
+	outcome insertOutcome
+	err     error
+}
+
+type resultExecer interface {
+	Exec(context.Context, string, ...any) (pgconn.CommandTag, error)
+}
+
+func insertResult(ctx context.Context, exec resultExecer, query string, args []any) insertResultValue {
+	_, err := exec.Exec(ctx, query, args...)
+	return classifyInsertError(err)
+}
+
+func classifyInsertError(err error) insertResultValue {
+	if err == nil {
+		return insertResultValue{outcome: insertSucceeded}
+	}
+	if isConcurrentDeleteForeignKey(err) {
+		return insertResultValue{outcome: insertMonitorDeleted}
+	}
+	return insertResultValue{outcome: insertFailed, err: err}
+}
+
+func insertAlert(ctx context.Context, exec resultExecer, query string, args []any) insertResultValue {
+	return insertResult(ctx, exec, query, args)
+}
+
+func isConcurrentDeleteForeignKey(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "23503"
 }
 
 func fetchDueMonitors(ctx context.Context, pool *pgxpool.Pool) ([]checker.Monitor, error) {
@@ -81,12 +130,16 @@ func checkAndPersist(ctx context.Context, pool *pgxpool.Pool, m checker.Monitor)
 
 	now := time.Now().UTC()
 
-	_, err = pool.Exec(ctx, `
+	inserted := insertResult(ctx, pool, `
 		INSERT INTO check_result (monitor_id, state, status_code, latency_ms, response_sample, error_message, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
-	`, m.ID, result.State, result.StatusCode, result.LatencyMs, result.ResponseSample, result.ErrorMessage, now)
-	if err != nil {
-		slog.Error("insert check_result error", "monitor_id", m.ID, "err", err)
+	`, []any{m.ID, result.State, result.StatusCode, result.LatencyMs, result.ResponseSample, result.ErrorMessage, now})
+	if inserted.outcome != insertSucceeded {
+		if inserted.outcome == insertMonitorDeleted {
+			slog.Warn("check result ignored because monitor was deleted during check", "monitor_id", m.ID)
+		} else {
+			slog.Error("insert check_result error", "monitor_id", m.ID, "err", inserted.err)
+		}
 		return
 	}
 
@@ -95,7 +148,7 @@ func checkAndPersist(ctx context.Context, pool *pgxpool.Pool, m checker.Monitor)
 		"target", m.Target,
 		"state", result.State,
 		"status_code", result.StatusCode,
-		"latency_ms", result.LatencyMs,)
+		"latency_ms", result.LatencyMs)
 
 	newState := result.State
 	var oldState *string
@@ -127,12 +180,16 @@ func checkAndPersist(ctx context.Context, pool *pgxpool.Pool, m checker.Monitor)
 			message = m.Name + " se recuperó"
 		}
 
-		_, err = pool.Exec(ctx, `
+		alertInsert := insertAlert(ctx, pool, `
 			INSERT INTO alert (monitor_id, alert_type, message, created_at)
 			VALUES ($1, $2, $3, $4)
-		`, m.ID, alertType, message, now)
-		if err != nil {
-			slog.Error("insert alert error", "monitor_id", m.ID, "err", err)
+		`, []any{m.ID, alertType, message, now})
+		if alertInsert.outcome != insertSucceeded {
+			if alertInsert.outcome == insertMonitorDeleted {
+				slog.Warn("alert ignored because monitor was deleted during check", "monitor_id", m.ID)
+			} else {
+				slog.Error("insert alert error", "monitor_id", m.ID, "err", alertInsert.err)
+			}
 		} else {
 			slog.Info("state transition alert emitted",
 				"monitor_id", m.ID,

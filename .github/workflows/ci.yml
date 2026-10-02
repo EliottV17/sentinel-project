@@ -31,6 +31,12 @@ jobs:
     env:
       DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/sentinel_tests_db
       SECRET_KEY: "super-secret-key-para-tests-ci"
+      DEMO_USER_EMAIL: demo@sentinel.dev
+      DEMO_USER_PASSWORD: "DemoPassword123!"
+      DEMO_MAX_MONITORS: 3
+      DEMO_MIN_FREQUENCY_SECONDS: 60
+      DEMO_ACCESS_TOKEN_EXPIRE_MINUTES: 15
+      DEMO_MONITORS_MANIFEST_PATH: ../demo-monitors.json
 
     steps:
       - uses: actions/checkout@v5
@@ -48,6 +54,9 @@ jobs:
 
       - name: Push database schema
         run: bunx prisma db push
+
+      - name: Seed demo account and monitors
+        run: bun run prisma:seed
 
       - name: Build
         run: bun run build

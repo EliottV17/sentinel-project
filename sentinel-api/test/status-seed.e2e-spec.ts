@@ -4,6 +4,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import * as express from 'express';
 import * as request from 'supertest';
 import { readFile } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
 import { AppModule } from '../src/app.module';
 import { StatusSeed, StatusManifest } from '../src/status/status-seed';
@@ -11,15 +12,32 @@ import { StatusSeed, StatusManifest } from '../src/status/status-seed';
 describe('Status seed (PostgreSQL e2e)', () => {
   const prisma = new PrismaClient();
   const seed = new StatusSeed(prisma);
-  const ownerEmail = process.env.STATUS_OWNER_EMAIL!;
+  const configuredOwnerEmail = process.env.STATUS_OWNER_EMAIL!;
+  const originalStatusOwnerEmail = process.env.STATUS_OWNER_EMAIL;
+  const originalDemoEmail = process.env.DEMO_USER_EMAIL;
+  const ownerEmail = `status-test-${randomUUID()}@example.test`;
   const demoEmail = process.env.DEMO_USER_EMAIL!;
   const fixtureEmails: string[] = [];
+  let configuredOwnerSnapshot: { owner: unknown; monitors: unknown[]; history: unknown[] } | undefined;
   let app: NestExpressApplication;
 
   beforeAll(async () => {
-    expect(ownerEmail).toBeTruthy();
+    expect(configuredOwnerEmail).toBeTruthy();
     expect(demoEmail).toBeTruthy();
     expect(ownerEmail.toLowerCase()).not.toBe(demoEmail.toLowerCase());
+    process.env.STATUS_OWNER_EMAIL = ownerEmail;
+    const configuredOwner = await prisma.users.findUnique({ where: { email: configuredOwnerEmail } });
+    expect(configuredOwner).not.toBeNull();
+    const configuredMonitors = configuredOwner
+      ? await prisma.monitor.findMany({ where: { user_id: configuredOwner.id }, orderBy: { id: 'asc' } })
+      : [];
+    const configuredHistory = configuredMonitors.length
+      ? await prisma.check_result.findMany({
+          where: { monitor_id: { in: configuredMonitors.map((monitor) => monitor.id) } },
+          orderBy: { id: 'asc' },
+        })
+      : [];
+    configuredOwnerSnapshot = { owner: configuredOwner, monitors: configuredMonitors, history: configuredHistory };
     const moduleFixture: TestingModule = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleFixture.createNestApplication<NestExpressApplication>();
     app.set('trust proxy', 1);
@@ -30,19 +48,43 @@ describe('Status seed (PostgreSQL e2e)', () => {
   });
 
   afterAll(async () => {
-    if (fixtureEmails.length) {
-      const fixtures = await prisma.users.findMany({
-        where: { email: { in: fixtureEmails } },
-        select: { id: true },
-      });
-      const ownerIds = fixtures.map((user) => user.id);
-      if (ownerIds.length) {
-        await prisma.monitor.deleteMany({ where: { user_id: { in: ownerIds } } });
-        await prisma.users.deleteMany({ where: { id: { in: ownerIds } } });
+    try {
+      expect(fixtureEmails).not.toContain(configuredOwnerEmail);
+      if (fixtureEmails.length) {
+        const fixtures = await prisma.users.findMany({
+          where: { email: { in: fixtureEmails } },
+          select: { id: true },
+        });
+        const ownerIds = fixtures.map((user) => user.id);
+        if (ownerIds.length) {
+          await prisma.monitor.deleteMany({ where: { user_id: { in: ownerIds } } });
+          await prisma.users.deleteMany({ where: { id: { in: ownerIds } } });
+        }
+      }
+      if (configuredOwnerSnapshot) {
+        const owner = await prisma.users.findUnique({ where: { email: configuredOwnerEmail } });
+        const monitors = owner
+          ? await prisma.monitor.findMany({ where: { user_id: owner.id }, orderBy: { id: 'asc' } })
+          : [];
+        const history = monitors.length
+          ? await prisma.check_result.findMany({
+              where: { monitor_id: { in: monitors.map((monitor) => monitor.id) } },
+              orderBy: { id: 'asc' },
+            })
+          : [];
+        expect({ owner, monitors, history }).toEqual(configuredOwnerSnapshot);
+      }
+    } finally {
+      if (originalStatusOwnerEmail === undefined) delete process.env.STATUS_OWNER_EMAIL;
+      else process.env.STATUS_OWNER_EMAIL = originalStatusOwnerEmail;
+      if (originalDemoEmail === undefined) delete process.env.DEMO_USER_EMAIL;
+      else process.env.DEMO_USER_EMAIL = originalDemoEmail;
+      try {
+        await prisma.$disconnect();
+      } finally {
+        if (app) await app.close();
       }
     }
-    await prisma.$disconnect();
-    await app.close();
   });
 
   it('seeds the root manifest, updates in place, preserves omitted monitors and check history', async () => {
@@ -75,7 +117,6 @@ describe('Status seed (PostgreSQL e2e)', () => {
 
   it('rejects an ordinary account collision without changing the account or creating monitors', async () => {
     const collisionEmail = `status-collision-${Date.now()}@example.test`;
-    fixtureEmails.push(collisionEmail);
     process.env.STATUS_OWNER_EMAIL = collisionEmail;
     process.env.DEMO_USER_EMAIL = demoEmail;
     const ordinary = await prisma.users.create({
@@ -92,6 +133,7 @@ describe('Status seed (PostgreSQL e2e)', () => {
         updated_at: new Date(),
       },
     });
+    fixtureEmails.push(collisionEmail);
 
     await expect(seed.seed([{ seed_key: 'collision-monitor', name: 'Collision', target: 'https://example.com' }]))
       .rejects.toThrow(/already belongs/i);

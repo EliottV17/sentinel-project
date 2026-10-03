@@ -46,6 +46,7 @@ function renderAt(path: string) {
             }
           />
           <Route path="/login" element={<LocationProbe />} />
+          <Route path="/status" element={<LocationProbe />} />
         </Routes>
       </AuthProvider>
     </MemoryRouter>,
@@ -180,6 +181,45 @@ describe("AuthProvider", () => {
     expect(tokenStore.get()).toBeNull();
     expect(loc()).toBe("/login");
   });
+
+  it.each(["/status/", "/STATUS"])(
+    "keeps an expiring stored session on router-public %s after the 30s expiry check",
+    async (path) => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date(BASE_TS * 1000));
+      tokenStore.set(makeJwt({ sub: "u", exp: BASE_TS + 30 }));
+      const { loc } = renderAt(path);
+
+      await act(async () => {
+        vi.advanceTimersByTime(30_000);
+      });
+
+      expect(tokenStore.get()).not.toBeNull();
+      expect(loc()).toBe(path);
+    },
+  );
+
+  it.each(["/status/", "/STATUS"])(
+    "does not clear an expired stored session via unauthorized handling on %s",
+    async (path) => {
+      tokenStore.set(makeJwt({ sub: "u", exp: 1 }));
+      server.use(
+        http.get("/api/v1/monitors/", () =>
+          HttpResponse.json({ detail: "Unauthorized" }, { status: 401 }),
+        ),
+      );
+      const { loc } = renderAt(path);
+
+      await act(async () => {
+        await catchError(apiFetch("/api/v1/monitors/"));
+      });
+
+      // apiFetch clears the token before notifying AuthProvider; the provider
+      // must nevertheless leave an accepted public route in place.
+      expect(tokenStore.get()).toBeNull();
+      expect(loc()).toBe(path);
+    },
+  );
 
   it("the exp-watcher leaves healthy tokens alone", async () => {
     vi.useFakeTimers();

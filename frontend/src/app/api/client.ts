@@ -15,16 +15,19 @@ const API_BASE: string = import.meta.env.VITE_API_BASE_URL ?? "";
 export class ApiError extends Error {
   readonly status: number;
   readonly fields?: Record<string, string>;
+  readonly retryAfter?: string;
 
   constructor(
     status: number,
     message: string | undefined,
     fields?: Record<string, string>,
+    retryAfter?: string,
   ) {
     super(message ?? `API error ${status}`);
     this.name = "ApiError";
     this.status = status;
     this.fields = fields;
+    this.retryAfter = retryAfter;
   }
 }
 
@@ -38,10 +41,11 @@ export interface ApiFetchOptions {
   /**
    * "handler" (default): on 401 clear the token and invoke the registered
    * unauthorized handler. "ignore": still throw ApiError but leave token and
-   * handler alone (used by the login call, where a 401 is just bad
-   * credentials, not a session expiry).
+   * handler alone (used by login and anonymous requests).
    */
   onUnauthorized?: "handler" | "ignore";
+  /** Never attach stored or caller-provided Authorization, even with a token present. */
+  anonymous?: boolean;
 }
 
 export async function apiFetch<T>(
@@ -50,8 +54,11 @@ export async function apiFetch<T>(
   options?: ApiFetchOptions,
 ): Promise<T> {
   const headers = new Headers(init?.headers);
-  const token = tokenStore.get();
-  if (token && !headers.has("Authorization")) {
+  const anonymous = options?.anonymous === true;
+  const token = anonymous ? null : tokenStore.get();
+  if (anonymous) {
+    headers.delete("Authorization");
+  } else if (token && !headers.has("Authorization")) {
     headers.set("Authorization", `Bearer ${token}`);
   }
   // Force JSON only for string bodies the caller did not type; URLSearchParams
@@ -89,7 +96,11 @@ export async function apiFetch<T>(
     // non-JSON body: degrade to a form-level message below
   }
 
-  if (response.status === 401 && options?.onUnauthorized !== "ignore") {
+  if (
+    response.status === 401 &&
+    !anonymous &&
+    options?.onUnauthorized !== "ignore"
+  ) {
     tokenStore.clear();
     unauthorizedHandler?.();
   }
@@ -104,5 +115,10 @@ export async function apiFetch<T>(
     }
   }
 
-  throw new ApiError(response.status, message, fields);
+  throw new ApiError(
+    response.status,
+    message,
+    fields,
+    response.headers.get("Retry-After") ?? undefined,
+  );
 }

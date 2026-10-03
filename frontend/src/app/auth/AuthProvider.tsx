@@ -8,7 +8,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { matchPath, useLocation, useNavigate } from "react-router-dom";
 import { tokenStore } from "../api/token";
 import { setUnauthorizedHandler } from "../api/client";
 import { demoLogin as demoLoginEndpoint, login as loginEndpoint } from "../api/endpoints";
@@ -35,6 +35,10 @@ export function useAuth(): AuthContextValue {
 
 /** Slow proactive-expiry watcher cadence (design §4.2). */
 const EXP_WATCH_INTERVAL_MS = 30_000;
+
+function isPublicRoute(pathname: string): boolean {
+  return matchPath({ path: "/status", end: true }, pathname) !== null;
+}
 
 interface AuthSnapshot {
   isAuthenticated: boolean;
@@ -71,6 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Register the client's unauthorized handler once: clear → /login?next=….
   useEffect(() => {
     setUnauthorizedHandler(() => {
+      if (isPublicRoute(locationRef.current.pathname)) return;
       tokenStore.clear();
       setAuth(snapshot());
       navigateRef.current(
@@ -84,6 +89,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const id = setInterval(() => {
       const snap = snapshot();
+      if (isPublicRoute(locationRef.current.pathname)) {
+        setAuth(snap);
+        return;
+      }
       if (snap.isAuthenticated && snap.expiringSoon) {
         tokenStore.clear();
         setAuth(snapshot());

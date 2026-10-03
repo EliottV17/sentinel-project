@@ -18,6 +18,8 @@ async function main() {
       const statusPath = resolve(process.env.STATUS_MONITORS_MANIFEST_PATH ?? '../status-monitors.json');
       const statusMonitors = JSON.parse(await readFile(statusPath, 'utf8'));
       await new StatusSeed(prisma).seed(statusMonitors);
+    } else {
+      await new StatusSeed(prisma).seed([]);
     }
     await new DemoSeed(prisma).seed({ user: { email, password }, monitors });
   } finally {

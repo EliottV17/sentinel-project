@@ -71,6 +71,7 @@ describe("LoginPage", () => {
     );
     const { loc } = renderLoginPage("/monitors");
 
+    expect(screen.getByRole("link", { name: "Estado del sistema" })).toHaveAttribute("href", "/status");
     await act(async () => {
       submitForm("eliott", "pw");
     });

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ApiError } from "../../app/api/client";
 import { useAuth } from "../../app/auth/AuthProvider";
 
@@ -135,6 +135,11 @@ export function LoginPage() {
           Sign in
         </button>
       </form>
+      <p className="mt-4 text-center text-xs text-slate-500">
+        <Link to="/status" className="underline underline-offset-2 hover:text-slate-800">
+          Estado del sistema
+        </Link>
+      </p>
       <div className="mt-4 border-t border-slate-200 pt-4 text-sm text-slate-600">
         <p>Demo credentials: {demoEmail} / {demoPassword}</p>
         {demoError !== null && <p role="alert" className="mt-2 text-red-600">{demoError}</p>}

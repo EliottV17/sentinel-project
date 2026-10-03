@@ -1,0 +1,65 @@
+# Phase 4 — Production Deployment
+
+## Objective and source of truth
+Implement the user-approved Phase 4 requirements on `chore/phase-4-deployment`, based on `main` at `e0a4990` (Phase 3 merge PR #16). `PLAN.md` is the product source of truth; this document tracks work units and observed evidence.
+
+## Problem and approach
+Development containers lack complete production health, bounded worker DB operations, retention, backup verification and a public HTTPS gateway. Add an isolated production Compose without changing development behavior. Build images on the target VM; no registry or cloud operations.
+
+## Constraints and accepted decisions
+- Never read or edit any `.env*` file, including examples. Supply test values via inline environment or workflow env; deliver consolidated example root/API blocks at completion.
+- No real secrets, cloud/service mutations, push or merge. User authorized local work-unit commits, first a PLAN.md-only commit.
+- One writer at a time. Tests first where deterministic behavior permits RED/GREEN; record exceptions for passive docs/config.
+- Preserve development `docker compose up -d --build`. Only Caddy publishes 80/443 in production.
+- Keep `trust proxy=1` and exactly one API proxy hop: Caddy directly to API. Verify spoofed X-Forwarded-For cannot evade limits.
+- Production CORS must reject empty or wildcard origins. Mandatory production secret, non-default Postgres password and seed settings fail clearly.
+- Heartbeat comes from actual poller progress and is readable by the binary health subprocess; health also checks DB with a deadline. All worker DB queries have bounded contexts.
+- Worker retains old checks/alerts in small periodic batches, preserving monitor state and uptime window; retention below the uptime window fails startup.
+- Nonroot frontend listens on an internal high port. Compile seed separately; preserve actual server output path and retain local Prisma CLI.
+- AMD64 CI production smoke required; ARM Buildx/QEMU job manual or nonblocking. Report exact argon2/Prisma Alpine ARM failure before changing base image.
+- Backups require an actual isolated local restore, not just inspecting a dump.
+- PLAN checkpoints after each completed layer. Remote CI, live link/video and pasted env examples remain user-owned pending evidence.
+
+## Tasks
+- [x] D01 — Expand PLAN.md with approved requirements and commit only PLAN.md. Commit: `cc39e9a`.
+- [ ] D02 — Worker DB deadlines, progress heartbeat and binary health command, with slow-query/stale-heartbeat tests. **in_progress**
+- [ ] D03 — Worker check/alert retention, validation, timestamp indexes and preservation/idempotence tests; close worker checkpoint.
+- [ ] D04 — API DB-backed public health, public inventory tests and production CORS validation.
+- [ ] D05 — API production seed validation, compiled seed/runtime image and explicit entrypoint failures; close API checkpoint.
+- [ ] D06 — Isolated production Compose, nonroot frontend, Caddy and runtime health/proxy checks; close deployment checkpoint.
+- [ ] D07 — AMD64 build/healthy smoke CI plus manual/nonblocking ARM build; close CI checkpoint.
+- [ ] D08 — Compressed rotating Postgres backup and real isolated restore verification.
+- [ ] D09 — DEPLOY.md and factual English README, consolidated example env blocks, final full suites and backups/docs checkpoint.
+
+## Acceptance and verification
+- API: `bun run test`, `bun run test:e2e` against a dedicated real DB, and `bun run build` in sentinel-api.
+- Frontend: actual package lint/test/typecheck/build commands, with a browser/HTTPS functional check where available.
+- Go: focused RED/GREEN tests, then `go test -count=1 ./...` and build.
+- Production: all services healthy with SITE_ADDRESS=localhost, HTTPS via Caddy; health and public/status smoke; fake XFF still throttled.
+- Worker runtime: progressing healthy; stalled poller unhealthy; stopped exited; restart healthy; paused DB unhealthy and recovery healthy.
+- Fail-fast checks for missing secrets/password, forbidden Postgres password, production CORS and seed requirements.
+- Backup: actual dump and restore to isolated DB with data verified. No existing application DB is dropped.
+- Development Compose remains functional; never display resolved configuration or unrestricted logs that could expose existing secrets.
+- CI workflow verified locally where possible; remote CI is pending without authorized push.
+
+## Progress and evidence
+- Preflight: PLAN.md read fully; clean branch created from updated main, Phase 3 ancestry verified.
+- Read-only audit completed (explorer musyw4pe-1-60g2); API Dockerfile/bootstrap and worker loop spot-checked.
+- User approved plan with stricter CORS, worker query deadlines, VM-native ARM builds, nonroot frontend, explicit seed errors and DB-pause tests.
+- Planning commit observed. D02 writer `muszd9wb-2-5vll` completed implementation. Writer observed RED (new APIs undefined), then focused/full Go tests, race tests, build and diff whitespace GREEN. Independent commands passed, but acceptance failed on the three defects below; D02 is not complete and has no commit.
+- D03-D09 mapping completed by explorer `muszdxne-3-7rmz`: strict route inventory, timestamp-only indexes missing, raw seed imports, existing shell entrypoint tests, production/frontend/CI edit paths identified.
+- Retention runtime tests must use an isolated dedicated DB/schema; never assume unrelated existing rows are recent. Compose verification uses `--env-file /dev/null`; follow-up `musziw6x-4-xtwh` confirmed Nest explicitly loads .env and ../.env, and Bun/Vite also autoload dotenv. D04 must suppress Nest loading in test/production; D06 must support frontend verification isolation without changing ordinary development. Do not assume the unverified Vite CLI --envDir flag exists.
+- Build context .dockerignore must exclude all .env* files, including the frontend exception that currently includes .env.example.
+- Read-only verifier `muszksoi-5-vpix` completed: Bun 1.4.2, Go 1.27.1, Docker 29.7.2 AMD64, Compose 5.5.1, Buildx 0.37.0; dependencies present, no running containers. Vite config `envDir: false` is supported and skips all env paths; CLI --envDir is unsupported.
+- Dedicated isolated PostgreSQL setup delegated to verifier `muszn0sa-6-j6xe`: new sentinel-phase4-test-db, localhost:55432, sentinel_tests_db, example-only credentials, tmpfs; no reuse/destruction of existing resources and no API tests before dotenv safeguards. Setup passed: container healthy, pg_isready accepts connections, SELECT 1 returned 1. Test URL: `postgresql://postgres:phase4-local-example-password@127.0.0.1:55432/sentinel_tests_db` (public examples only). No schema/migrations/tests run yet. No existing data/volumes touched.
+- D01 checks: structural readback and `git diff --check` passed; tests N/A for passive plan update. First commit includes only PLAN.md.
+- D02 implementation: bounded polling/persistence/pool/reset DB contexts, cancellation-aware dispatch, atomic successful-cycle heartbeat, startup invalidation, same-binary health freshness plus bounded DB ping. Corrected defaults: DB timeout10s, health DB timeout5s, heartbeat age67s (floor4*DBtimeout+27s, lower overrides clamped)/path `/tmp/sentinel-worker.heartbeat`.
+- D02 writer checks: `go test -count=1 ./...`, focused health/worker tests, race, build, `git diff --check` passed. Parent re-ran `cd sentinel-worker && go test -count=1 ./internal/worker/... ./internal/health/...`: both packages passed.
+- Native assessment: unassessable due undeclared new untracked files; plan explicitly requires independent verifier as high-risk fallback, RDD stays off. Verifier `muszs8nn-7-f2x3` completed: full/race/build/whitespace pass, acceptance FAIL. Blockers: normal-load cycles exceed15s freshness; unknown checker repeatedly suppresses heartbeat; slow-query test covers a helper instead of actual fetch/persistence methods. Corrections stay within D02 and require regression RED/GREEN plus repeat independent verification. No Docker runtime health evidence yet.
+- D02 corrections: coordinator-only per-monitor progress heartbeats, monitor-local error type, direct fetch/Exec slow-call tests and row-close-before-cancel coverage. Correction writer full/focused/race/build/whitespace all passed after regression RED. Parent recheck worker/health/config focused tests passed.
+- Corrected candidate staged with exact paths (no env files); fresh native assess high risk, independent verifier required. Repeat verifier `mut0akc9-9-v2t3` PASS: full Go/race/build and both whitespace checks passed; all three defects verified fixed with path/line evidence, strict15s probe cap and drain-on-cancellation confirmed. No source commit or Docker-runtime acceptance yet. Review load ~12files/972diff lines including complete regression tests/task record; retention/API deliberately excluded.
+- Commit identities: D01 `cc39e9a` (`docs(plan): define approved phase 4 deployment requirements`).
+- Rollback boundary: each behavior layer is independently committed with its tests/checkpoint; no destructive git operations authorized.
+
+## Next step
+D02 correction writer `muszw8ho-8-p1c4` completed regression RED/GREEN and passed all checks; independent acceptance `mut0akc9-9-v2t3` PASS. D02 work-unit commit is next, then start D03. D03 starts only after that boundary.

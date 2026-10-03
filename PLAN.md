@@ -56,8 +56,12 @@ API (sentinel-api):
 - [x] Ruta pública `/status` fuera de autenticación, peticiones sin `Authorization` y sin redirecciones a login. Enlace discreto desde login.
 - [x] Una única función de estado testeada: Operacional, Degradado, Caído y Sin datos. Umbral de degradación configurable (ejemplo 99%); chequeos más viejos que `STATUS_STALE_AFTER_MINUTES` (ejemplo 5) son Sin datos, incluido worker caído. Documentar reglas en el README del endpoint.
 - [x] UI con resumen del peor estado, icono y texto, uptime y “última verificación hace X”; carga, vacío y error. Refresco cada 30–60 segundos, conservando datos ante fallos y mensajes claros para 429, sin errores crudos.
-- [ ] Verificación local: unitarios y e2e de API contra PostgreSQL real de Compose, lint y tests aplicables del frontend, `go test -count=1 ./...`, `docker compose up -d --build`, API healthy y curl con las cuatro claves exactas. No se agregan healthchecks de worker/frontend en esta fase.
-- [ ] Entregar bloque de variables nuevas con valores solo de ejemplo, sin leer ni editar `.env.example`.
+- [x] Verificación local: unitarios y e2e de API contra PostgreSQL real de Compose, lint y tests aplicables del frontend, `go test -count=1 ./...`, `docker compose up -d --build`, API healthy y curl con las cuatro claves exactas. No se agregan healthchecks de worker/frontend en esta fase.
+- [x] Entregar bloque de variables nuevas con valores solo de ejemplo, sin leer ni editar `.env.example`.
+
+Verificación local observada: API 74 unitarios y 44 e2e contra PostgreSQL real; frontend 120 tests, lint, typecheck y build; Go 3 paquetes aprobados y 3 sin tests. Compose construido y levantado, API healthy, curl anónimo 200 con dos filas y las cuatro claves exactas. Chromium comprobó sesión vencida, variantes de ruta pública, ausencia de Authorization y conservación de datos ante fallos de refresco.
+
+**Pendiente externo:** CI remoto no ejecutado/observado; no hubo push, PR ni merge. La implementación y la verificación local están completas, pero no se declara cumplida la condición de cierre de fase que exige CI verde. RDD sigue desactivado solo para este clon por decisión explícita del usuario; la revisión bloqueada se conserva sin aprobación.
 
 ## FASE 4: Despliegue
 - [ ] Docker Compose de producción: db, api, worker, frontend, con healthchecks y depends_on con condition: service_healthy.

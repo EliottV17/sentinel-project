@@ -5,8 +5,7 @@ Implementation and local verification are complete on `feat/phase-3-public-statu
 Final documentation commit: `4d6d7041aa572255702604d9327b406528085816`.
 At that initial boundary the source worktree was clean; cumulative work-unit diff lines were 1,985.
 Publication-maintenance follow-up: `c5c924011fe9db0a454ec9c04bc41eb6aad5915d`, see `odd/tasks/status-publication-reconciliation.md`. It revokes obsolete public flags without deletion; current API checks are 76 unit/46 real-PG e2e/build PASS. User edits to .env.example/status-monitors.json remain preserved outside the fix. Configuration follow-up: `c434fa381a46650bcb3267984358f917a9f4af13` commits the user-approved .env.example and one portfolio monitor manifest; source Git worktree now clean. Total cumulative work-unit diff lines: 2,371.
-Remote CI is **not observed**. The PLAN phase-completion condition requiring green CI remains pending.
-No push, PR creation, merge, or Phase 4 implementation is authorized.
+External follow-up completed by the user: PR created and CI verified green. Phase 3 is complete. Phase 4 remains explicitly deferred; do not begin it until the user authorizes.
 
 ## Constraints and decisions
 - PLAN.md remains authoritative; Phase 2 preceded this branch.
@@ -71,8 +70,7 @@ Verified source boundary: `273cf20b941c018f4205e9f9e50c5cb08716cbab`; subsequent
 - Relevant skills used: work-unit-commits, cognitive-doc-design, go-testing.
 
 ## Next step
-Remote CI and future feature-branch-chain review require explicit human authorization for push/PR actions.
-Do not start Phase 4 until Phase 3 is integrated according to PLAN.
+Phase 3 is complete based on the user's report that the PR was created and CI passed. No further Phase 3 action is pending here. Do not start Phase 4 until explicitly authorized by the user.
 
 ## Approved example/manifest commit
 User explicitly authorized the two-file commit after supplying .env.example contents. Public demo credentials and SECRET_KEY placeholder are examples (placeholder rejected in production); staged active assignments matched supplied values without disclosing unexpected values. Actual .env was not read/edited. Manifest has one unique stable key and HTTPS portfolio target, validated with the actual API target validator; no DB writes or source behavior edits. Commit c434fa3 includes only these files, no push/PR/merge. This approval is a bounded exception to the earlier example-file restriction, not unrestricted future environment access. Local implementation/runtime verification remains complete, remote CI unobserved.

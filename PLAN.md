@@ -68,10 +68,46 @@ Verificación local observada: API 74 unitarios y 44 e2e contra PostgreSQL real;
 **Pendiente externo:** CI remoto no ejecutado/observado; no hubo push, PR ni merge. La implementación y la verificación local están completas, pero no se declara cumplida la condición de cierre de fase que exige CI verde. RDD sigue desactivado solo para este clon por decisión explícita del usuario; la revisión bloqueada se conserva sin aprobación.
 
 ## FASE 4: Despliegue
-- [ ] Docker Compose de producción: db, api, worker, frontend, con healthchecks y depends_on con condition: service_healthy.
-- [ ] Agregar healthchecks explícitos para worker y frontend (diferidos de la Fase 3), incluyendo detección real de funcionamiento del worker.
-- [ ] Retención de `check_result`: borrar filas de más de 30 días mediante una política configurable, sin afectar datos recientes ni el cálculo de uptime de la ventana pública.
-- [ ] Reverse proxy con HTTPS automático (Caddy) delante de frontend y API.
-- [ ] .env.example completo y documentado.
-- [ ] Script de arranque que corra prisma migrate deploy y el seed de forma idempotente.
-- [ ] README: link en vivo, video demo, credenciales demo, diagrama de arquitectura, decisiones clave (por qué strategy + registry, por qué worker desacoplado) y sección de seguridad (SSRF con mitigación de DNS rebinding, rate limiting, cuotas).
+
+### Reglas específicas
+- No leer ni editar ningún archivo `.env*`, incluidos los ejemplos; no buscar rutas alternativas si la seguridad bloquea un archivo. Entregar al final bloques completos y consolidados de raíz y API, con un comentario por variable y valores solo de ejemplo, para que el usuario los pegue.
+- Probar con variables de entorno en la línea de comandos o en `env` del workflow, sin secretos reales. No hacer acciones en servicios externos ni en la nube; no hacer push ni merge sin confirmación.
+- Primero un commit pequeño que actualice este plan; después commits pequeños por capa: worker, API, Compose/Caddy, CI y backups/documentación. Mantener tests con el comportamiento y dejar aquí un checkpoint breve de hecho y pendiente al cerrar cada capa.
+- Mostrar solo resúmenes y fallos de tests. No declarar verificaciones pendientes como aprobadas.
+
+### Worker: salud, deadlines y retención
+- [ ] Agregar contextos con timeout a todas las consultas del worker, incluido polling, persistencia, reset demo, retención y healthcheck. Tests en Go de consulta lenta y cancelación.
+- [ ] Heartbeat actualizado por el progreso real de cada ciclo del poller, también sin monitores pendientes; subcomando del propio binario que comprueba frescura y conexión a DB con timeout, sin requerir shell en la imagen. Tests del heartbeat que deja de avanzar y de DB no disponible.
+- [ ] Retención periódica en el worker para `check_result` mediante `CHECK_RESULT_RETENTION_DAYS` (30 por defecto) y para `alert` con ventana propia configurable, borrando en lotes pequeños y sin tocar `monitor.last_state` ni datos recientes.
+- [ ] Fallar al arrancar con error claro si la retención de checks es menor que `STATUS_UPTIME_WINDOW_HOURS`; revisar/agregar índices por `created_at`. Tests: solo borra datos viejos, es idempotente y no altera el uptime de `/api/v1/public/status`.
+
+### API: salud y arranque
+- [ ] Endpoint público `/api/v1/health` que verifica la conexión a DB; agregar al inventario exacto de rutas públicas y a los tests.
+- [ ] Con `NODE_ENV=production`, rechazar al arrancar `CORS_ORIGINS` vacío o con `*`; restringir al origen configurado de Caddy. Tests de configuración válida e inválida.
+- [ ] Entry point: validar variables obligatorias de producción y del seed (`DATABASE_URL`, `SECRET_KEY`, `DEMO_USER_EMAIL`, `DEMO_USER_PASSWORD`, `STATUS_OWNER_EMAIL` y las necesarias para los manifiestos), ejecutar `prisma migrate deploy`, seed idempotente demo/estado y luego servidor; fallar explícitamente si cualquier paso falla.
+- [ ] Imagen de producción con CLI local de Prisma y seed compilado; verificar la ruta real del servidor (`dist/main.js`) y usuarios sin root donde sea posible.
+
+### Compose de producción y Caddy
+- [ ] Crear `docker-compose.prod.yml` separado con db, api, worker, frontend y Caddy; conservar el funcionamiento de desarrollo con `docker compose up -d --build`.
+- [ ] Solo Caddy publica 80/443; db, API, worker y frontend sin puertos publicados. Frontend sin root en puerto interno alto (por ejemplo 8080).
+- [ ] `NODE_ENV=production`; `SECRET_KEY` y contraseña de PostgreSQL obligatorios sin valores por defecto; rechazar contraseña `postgres`. Fallo claro por configuración faltante o inválida.
+- [ ] Volumen persistente de PostgreSQL, `restart: unless-stopped`, límites de memoria para VM pequeña y logs `json-file` con `max-size`/`max-file`.
+- [ ] Healthchecks de DB (`pg_isready`), API, frontend y worker, y dependencias con `condition: service_healthy`; worker no arranca antes de que la API haya migrado, sembrado y esté healthy.
+- [ ] Caddyfile con `SITE_ADDRESS` (localhost para pruebas), HTTPS automático, compresión, HSTS, X-Content-Type-Options, Referrer-Policy, protección contra framing, CSP compatible y caché larga solo para assets con hash.
+- [ ] Un solo salto a la API: Caddy enruta `/api/*` directamente a API y el resto a frontend; conservar `trust proxy=1`. Test a través de Caddy: variar un `X-Forwarded-For` falso no evita el rate limit.
+- [ ] Prueba local con `SITE_ADDRESS=localhost`: todos los servicios healthy y web por HTTPS; poller colgado → unhealthy; worker detenido → exited, reiniciado → healthy; DB pausada con `docker compose pause db` → worker unhealthy y recuperación al reanudar.
+
+### CI y ARM
+- [ ] Job obligatorio AMD64: construir imágenes de producción, levantar Compose con valores de prueba, esperar servicios healthy y smoke de `/api/v1/health` y `/api/v1/public/status`.
+- [ ] Job ARM64 Buildx/QEMU separado, manual o no bloqueante. En la VM construir con `docker compose build`, sin registro. Si argon2 o Prisma fallan en Alpine/ARM64, comunicar error exacto antes de cambiar la imagen base y documentar limitaciones en `DEPLOY.md`.
+
+### Backups y documentación
+- [ ] Script de backup PostgreSQL con `pg_dump` comprimido, rotación y manejo claro de fallos; restauración documentada y probada localmente con una restauración real aislada.
+- [ ] `DEPLOY.md`: Docker en VM Linux, DNS del subdominio, firewall del proveedor y de la VM (80/443), clonar, configuración, build local, levantar, logs, actualizar, backup/restauración y rollback.
+- [ ] README en inglés: descripción, credenciales demo, arquitectura Mermaid, strategy + registry, worker desacoplado, seguridad implementada (SSRF, DNS rebinding/socket pinning, rate limiting, cuotas, demo y página pública) y comandos de tests. Afirmar solo lo implementado.
+- [ ] README: link en vivo y video demo — placeholders pendientes de completar por el usuario.
+- [ ] `.env.example` completo y documentado — pendiente de pegar por el usuario; el agente entrega los bloques, sin acceder a archivos `.env*`.
+- [ ] Verificación final local: `bun run test`, `bun run test:e2e` contra PostgreSQL real, lint/tests/build del frontend y `go test -count=1 ./...`; registrar por separado cualquier check fallido, no ejecutado o pendiente y el CI remoto.
+
+### Checkpoints
+- Plan aprobado y ampliado; implementación por capas y verificaciones pendientes. La Fase 3 está fusionada en `main` (`e0a4990`, PR #16); su CI verde fue confirmado por el usuario. El registro anterior de pendiente externo corresponde a la sesión previa al merge.

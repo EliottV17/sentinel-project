@@ -59,6 +59,10 @@ API (sentinel-api):
 - [x] Verificación local: unitarios y e2e de API contra PostgreSQL real de Compose, lint y tests aplicables del frontend, `go test -count=1 ./...`, `docker compose up -d --build`, API healthy y curl con las cuatro claves exactas. No se agregan healthchecks de worker/frontend en esta fase.
 - [x] Entregar bloque de variables nuevas con valores solo de ejemplo, sin leer ni editar `.env.example`.
 
+El seed reconcilia `is_public` en cada ejecución: solo permanecen públicos los monitores del dueño configurado cuyo `seed_key` aparece en el manifiesto actual. Entradas omitidas, dueños anteriores y claves nulas se ocultan sin borrar monitores ni historial; un manifiesto vacío oculta todo. Sin `STATUS_OWNER_EMAIL`, el seed revoca toda publicación existente y no necesita leer un manifiesto de estado. La reconciliación se confirma junto con los upserts y registra el número realmente ocultado, incluso si es cero.
+
+Validación local de la corrección de publicación: 76 tests unitarios, 46 tests e2e de API contra la base dedicada de PostgreSQL Compose y `bun run build` aprobados.
+
 Verificación local observada: API 74 unitarios y 44 e2e contra PostgreSQL real; frontend 120 tests, lint, typecheck y build; Go 3 paquetes aprobados y 3 sin tests. Compose construido y levantado, API healthy, curl anónimo 200 con dos filas y las cuatro claves exactas. Chromium comprobó sesión vencida, variantes de ruta pública, ausencia de Authorization y conservación de datos ante fallos de refresco.
 
 **Pendiente externo:** CI remoto no ejecutado/observado; no hubo push, PR ni merge. La implementación y la verificación local están completas, pero no se declara cumplida la condición de cierre de fase que exige CI verde. RDD sigue desactivado solo para este clon por decisión explícita del usuario; la revisión bloqueada se conserva sin aprobación.

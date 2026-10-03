@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -27,11 +28,17 @@ func TestParseDemoManifestAcceptsVariableEntryCount(t *testing.T) {
 }
 
 type fakeDemoRow struct {
-	id  int
-	err error
+	id      int
+	err     error
+	waitFor context.Context
+	slow    bool
 }
 
 func (r fakeDemoRow) Scan(dest ...any) error {
+	if r.waitFor != nil {
+		<-r.waitFor.Done()
+		return r.waitFor.Err()
+	}
 	if r.err != nil {
 		return r.err
 	}
@@ -44,13 +51,13 @@ type execCall struct {
 	args  []any
 }
 type fakeDemoTx struct {
-	calls               []execCall
-	committed           bool
-	rolledBack          bool
-	failAt              int
-	monitorOwners       map[int]int
+	calls                []execCall
+	committed            bool
+	rolledBack           bool
+	failAt               int
+	monitorOwners        map[int]int
 	historyMonitorOwners map[int]int
-	nextMonitorID       int
+	nextMonitorID        int
 }
 
 func (tx *fakeDemoTx) Exec(_ context.Context, q string, args ...any) (pgconn.CommandTag, error) {
@@ -93,7 +100,10 @@ type fakeDemoDB struct {
 	args  []any
 }
 
-func (db *fakeDemoDB) QueryRow(_ context.Context, q string, args ...any) pgx.Row {
+func (db *fakeDemoDB) QueryRow(ctx context.Context, q string, args ...any) pgx.Row {
+	if db.row.slow {
+		db.row.waitFor = ctx
+	}
 	db.query = q
 	db.args = args
 	return db.row
@@ -156,7 +166,7 @@ func TestResetDemoAccountPreservesStatusOwnerMonitorsAndCheckHistory(t *testing.
 		t.Fatal(err)
 	}
 	tx := &fakeDemoTx{
-		monitorOwners: map[int]int{601: 42, 901: 99},
+		monitorOwners:        map[int]int{601: 42, 901: 99},
 		historyMonitorOwners: map[int]int{7001: 601, 9001: 901},
 	}
 	db := &fakeDemoDB{row: fakeDemoRow{id: 42}, tx: tx}
@@ -199,5 +209,21 @@ func TestResetDemoAccountRollsBackManifestInsertFailure(t *testing.T) {
 func TestResetDemoAccountNoopsWhenUnconfigured(t *testing.T) {
 	if err := resetDemoAccount(context.Background(), nil, "", ""); err != nil {
 		t.Fatalf("got %v", err)
+	}
+}
+
+func TestResetDemoAccountBoundsSlowLookup(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "manifest.json")
+	if err := os.WriteFile(path, []byte(`[{"seed_key":"one","name":"One","target":"https://one.example","frequency":60,"check_type":"http"}]`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	db := &fakeDemoDB{row: fakeDemoRow{slow: true}, tx: &fakeDemoTx{}}
+	started := time.Now()
+	err := resetDemoAccount(context.Background(), db, "demo@example.test", path, 20*time.Millisecond)
+	if !errors.Is(err, context.DeadlineExceeded) || time.Since(started) > time.Second {
+		t.Fatalf("slow lookup error=%v elapsed=%s", err, time.Since(started))
+	}
+	if db.tx.committed {
+		t.Fatal("timed out reset committed")
 	}
 }

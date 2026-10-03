@@ -3,11 +3,16 @@ package db
 
 import (
 	"context"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+const connectTimeout = 10 * time.Second
+
 func Connect(ctx context.Context, databaseURL string) (*pgxpool.Pool, error) {
+	connectCtx, cancel := context.WithTimeout(ctx, connectTimeout)
+	defer cancel()
 	config, err := pgxpool.ParseConfig(databaseURL)
 	if err != nil {
 		return nil, err
@@ -15,12 +20,12 @@ func Connect(ctx context.Context, databaseURL string) (*pgxpool.Pool, error) {
 
 	config.MaxConns = 25
 
-	pool, err := pgxpool.NewWithConfig(ctx, config)
+	pool, err := pgxpool.NewWithConfig(connectCtx, config)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := pool.Ping(ctx); err != nil {
+	if err := pool.Ping(connectCtx); err != nil {
 		pool.Close()
 		return nil, err
 	}

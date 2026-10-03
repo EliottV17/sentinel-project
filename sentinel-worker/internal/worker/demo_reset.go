@@ -66,13 +66,19 @@ func resetInterval(minutes int) time.Duration {
 	return time.Duration(minutes) * time.Minute
 }
 
-func resetDemoAccount(ctx context.Context, db demoResetDB, email, manifestPath string) error {
+func resetDemoAccount(ctx context.Context, db demoResetDB, email, manifestPath string, timeouts ...time.Duration) error {
 	if email == "" {
 		return nil
 	}
 	if db == nil {
 		return errors.New("demo reset database is nil")
 	}
+	timeout := defaultDBOperationTimeout
+	if len(timeouts) > 0 && timeouts[0] > 0 {
+		timeout = timeouts[0]
+	}
+	dbCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
 	if manifestPath == "" {
 		manifestPath = "../demo-monitors.json"
 	}
@@ -85,36 +91,42 @@ func resetDemoAccount(ctx context.Context, db demoResetDB, email, manifestPath s
 		return fmt.Errorf("parse demo manifest: %w", err)
 	}
 	var userID int
-	err = db.QueryRow(ctx, `SELECT id FROM users WHERE email = $1 AND is_demo = true`, email).Scan(&userID)
+	err = db.QueryRow(dbCtx, `SELECT id FROM users WHERE email = $1 AND is_demo = true`, email).Scan(&userID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil
 	}
 	if err != nil {
 		return fmt.Errorf("find demo user: %w", err)
 	}
-	tx, err := db.Begin(ctx)
+	tx, err := db.Begin(dbCtx)
 	if err != nil {
 		return fmt.Errorf("begin demo reset: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		cleanupCtx, cleanupCancel := context.WithTimeout(context.WithoutCancel(ctx), timeout)
+		defer cleanupCancel()
+		if err := tx.Rollback(cleanupCtx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			slog.Error("rollback demo reset", "err", err)
+		}
+	}()
 	for _, query := range []string{
 		`DELETE FROM check_result WHERE monitor_id IN (SELECT id FROM monitor WHERE user_id = $1)`,
 		`DELETE FROM alert WHERE monitor_id IN (SELECT id FROM monitor WHERE user_id = $1)`,
 		`DELETE FROM monitor WHERE user_id = $1`,
 	} {
-		if _, err = tx.Exec(ctx, query, userID); err != nil {
+		if _, err = tx.Exec(dbCtx, query, userID); err != nil {
 			return fmt.Errorf("delete demo-owned data: %w", err)
 		}
 	}
 	for _, m := range monitors {
-		if _, err = tx.Exec(ctx, `INSERT INTO monitor (user_id, name, target, check_type, check_config, frequency, state, seed_key, created_at, consecutive_failures) VALUES ($1,$2,$3,$4,$5,$6,'Active',$7,CURRENT_TIMESTAMP,0)`, userID, m.Name, m.Target, m.CheckType, m.CheckConfig, m.Frequency, m.SeedKey); err != nil {
+		if _, err = tx.Exec(dbCtx, `INSERT INTO monitor (user_id, name, target, check_type, check_config, frequency, state, seed_key, created_at, consecutive_failures) VALUES ($1,$2,$3,$4,$5,$6,'Active',$7,CURRENT_TIMESTAMP,0)`, userID, m.Name, m.Target, m.CheckType, m.CheckConfig, m.Frequency, m.SeedKey); err != nil {
 			return fmt.Errorf("restore demo monitor %q: %w", m.SeedKey, err)
 		}
 	}
-	return tx.Commit(ctx)
+	return tx.Commit(dbCtx)
 }
 
-func runDemoResetLoop(ctx context.Context, pool *pgxpool.Pool, email, manifestPath string, interval time.Duration) {
+func runDemoResetLoop(ctx context.Context, pool *pgxpool.Pool, email, manifestPath string, interval, timeout time.Duration) {
 	if email == "" {
 		slog.Info("demo reset disabled: DEMO_USER_EMAIL is not configured")
 		return
@@ -126,7 +138,7 @@ func runDemoResetLoop(ctx context.Context, pool *pgxpool.Pool, email, manifestPa
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			if err := resetDemoAccount(ctx, demoResetPool{pool}, email, manifestPath); err != nil {
+			if err := resetDemoAccount(ctx, demoResetPool{pool}, email, manifestPath, timeout); err != nil {
 				slog.Error("demo reset failed", "err", err)
 			}
 		}

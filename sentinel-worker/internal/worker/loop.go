@@ -30,6 +30,14 @@ func Run(ctx context.Context, pool *pgxpool.Pool, concurrency int, demoEmail, ma
 }
 
 func RunWithHealth(ctx context.Context, pool *pgxpool.Pool, concurrency int, demoEmail, manifestPath string, resetMinutes int, heartbeatPath string, dbTimeout time.Duration) {
+	runWithHealth(ctx, pool, concurrency, demoEmail, manifestPath, resetMinutes, heartbeatPath, dbTimeout, nil, 0)
+}
+
+func RunWithRetention(ctx context.Context, pool *pgxpool.Pool, concurrency int, demoEmail, manifestPath string, resetMinutes int, heartbeatPath string, dbTimeout time.Duration, retention RetentionConfig, retentionInterval time.Duration) {
+	runWithHealth(ctx, pool, concurrency, demoEmail, manifestPath, resetMinutes, heartbeatPath, dbTimeout, &retention, retentionInterval)
+}
+
+func runWithHealth(ctx context.Context, pool *pgxpool.Pool, concurrency int, demoEmail, manifestPath string, resetMinutes int, heartbeatPath string, dbTimeout time.Duration, retention *RetentionConfig, retentionInterval time.Duration) {
 	if concurrency <= 0 {
 		concurrency = 10
 	}
@@ -41,9 +49,24 @@ func RunWithHealth(ctx context.Context, pool *pgxpool.Pool, concurrency int, dem
 		defer close(resetDone)
 		runDemoResetLoop(ctx, pool, demoEmail, manifestPath, resetInterval(resetMinutes), dbTimeout)
 	}()
+	var retentionDone chan struct{}
+	if retention != nil {
+		retentionDone = make(chan struct{})
+		go func() {
+			defer close(retentionDone)
+			runRetentionLoop(ctx, retentionInterval, func(passCtx context.Context) error {
+				return RunRetentionPass(passCtx, pool, *retention, time.Now)
+			})
+		}()
+	}
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
-	defer func() { <-resetDone }()
+	defer func() {
+		<-resetDone
+		if retentionDone != nil {
+			<-retentionDone
+		}
+	}()
 
 	for {
 		select {

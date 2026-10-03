@@ -2,22 +2,29 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 	"time"
 )
 
 type Config struct {
-	DatabaseURL        string
-	Concurrency        int
-	AllowedPorts       string
-	DemoUserEmail      string
-	DemoManifestPath   string
-	DemoResetInterval  int
-	DBOperationTimeout time.Duration
-	HealthDBTimeout    time.Duration
-	HeartbeatPath      string
-	HeartbeatMaxAge    time.Duration
+	DatabaseURL              string
+	Concurrency              int
+	AllowedPorts             string
+	DemoUserEmail            string
+	DemoManifestPath         string
+	DemoResetInterval        int
+	DBOperationTimeout       time.Duration
+	HealthDBTimeout          time.Duration
+	HeartbeatPath            string
+	HeartbeatMaxAge          time.Duration
+	CheckResultRetentionDays int
+	AlertRetentionDays       int
+	StatusUptimeWindowHours  int
+	RetentionIntervalMinutes int
+	RetentionBatchSize       int
+	RetentionDBTimeout       time.Duration
 }
 
 func stringEnv(key, fallback string) string {
@@ -38,7 +45,27 @@ func durationEnv(key string, fallbackSeconds int) time.Duration {
 	return time.Duration(fallbackSeconds) * time.Second
 }
 
-func Load() Config {
+const (
+	maxRetentionDays             = 36500
+	maxUptimeHours               = 876000
+	maxRetentionIntervalMinutes  = 1440
+	maxRetentionBatchSize        = 5000
+	maxRetentionDBTimeoutSeconds = 3600
+)
+
+func boundedPositiveEnv(key string, fallback, maximum int) (int, error) {
+	value, exists := os.LookupEnv(key)
+	if !exists {
+		return fallback, nil
+	}
+	parsed, err := strconv.Atoi(value)
+	if err != nil || parsed <= 0 || parsed > maximum {
+		return 0, fmt.Errorf("%s must be an integer between 1 and %d", key, maximum)
+	}
+	return parsed, nil
+}
+
+func Load() (Config, error) {
 	concurrency := 10
 	url := os.Getenv("DATABASE_URL")
 	if url == "" {
@@ -64,16 +91,49 @@ func Load() Config {
 	if heartbeatMaxAge < minimumHeartbeatAge {
 		heartbeatMaxAge = minimumHeartbeatAge
 	}
-	return Config{
-		DatabaseURL:        url,
-		Concurrency:        concurrency,
-		AllowedPorts:       allowedPorts,
-		DemoUserEmail:      os.Getenv("DEMO_USER_EMAIL"),
-		DemoManifestPath:   os.Getenv("DEMO_MONITORS_MANIFEST_PATH"),
-		DemoResetInterval:  demoResetInterval,
-		DBOperationTimeout: dbTimeout,
-		HealthDBTimeout:    durationEnv("WORKER_HEALTH_DB_TIMEOUT_SECONDS", 5),
-		HeartbeatPath:      stringEnv("WORKER_HEARTBEAT_PATH", "/tmp/sentinel-worker.heartbeat"),
-		HeartbeatMaxAge:    heartbeatMaxAge,
+	checkDays, err := boundedPositiveEnv("CHECK_RESULT_RETENTION_DAYS", 30, maxRetentionDays)
+	if err != nil {
+		return Config{}, err
 	}
+	alertDays, err := boundedPositiveEnv("ALERT_RETENTION_DAYS", 90, maxRetentionDays)
+	if err != nil {
+		return Config{}, err
+	}
+	uptimeHours, err := boundedPositiveEnv("STATUS_UPTIME_WINDOW_HOURS", 24, maxUptimeHours)
+	if err != nil {
+		return Config{}, err
+	}
+	if checkDays*24 < uptimeHours {
+		return Config{}, fmt.Errorf("CHECK_RESULT_RETENTION_DAYS (%d) must be at least STATUS_UPTIME_WINDOW_HOURS (%d hours)", checkDays, uptimeHours)
+	}
+	retentionInterval, err := boundedPositiveEnv("RETENTION_INTERVAL_MINUTES", 60, maxRetentionIntervalMinutes)
+	if err != nil {
+		return Config{}, err
+	}
+	batchSize, err := boundedPositiveEnv("RETENTION_BATCH_SIZE", 500, maxRetentionBatchSize)
+	if err != nil {
+		return Config{}, err
+	}
+	retentionTimeout, err := boundedPositiveEnv("RETENTION_DB_TIMEOUT_SECONDS", 5, maxRetentionDBTimeoutSeconds)
+	if err != nil {
+		return Config{}, err
+	}
+	return Config{
+		DatabaseURL:              url,
+		Concurrency:              concurrency,
+		AllowedPorts:             allowedPorts,
+		DemoUserEmail:            os.Getenv("DEMO_USER_EMAIL"),
+		DemoManifestPath:         os.Getenv("DEMO_MONITORS_MANIFEST_PATH"),
+		DemoResetInterval:        demoResetInterval,
+		DBOperationTimeout:       dbTimeout,
+		HealthDBTimeout:          durationEnv("WORKER_HEALTH_DB_TIMEOUT_SECONDS", 5),
+		HeartbeatPath:            stringEnv("WORKER_HEARTBEAT_PATH", "/tmp/sentinel-worker.heartbeat"),
+		HeartbeatMaxAge:          heartbeatMaxAge,
+		CheckResultRetentionDays: checkDays,
+		AlertRetentionDays:       alertDays,
+		StatusUptimeWindowHours:  uptimeHours,
+		RetentionIntervalMinutes: retentionInterval,
+		RetentionBatchSize:       batchSize,
+		RetentionDBTimeout:       time.Duration(retentionTimeout) * time.Second,
+	}, nil
 }

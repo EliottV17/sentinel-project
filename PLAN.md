@@ -76,10 +76,11 @@ Verificación local observada: API 74 unitarios y 44 e2e contra PostgreSQL real;
 - Mostrar solo resúmenes y fallos de tests. No declarar verificaciones pendientes como aprobadas.
 
 ### Worker: salud, deadlines y retención
-- [ ] Agregar contextos con timeout a todas las consultas del worker, incluido polling, persistencia, reset demo, retención y healthcheck. Tests en Go de consulta lenta y cancelación.
+- [x] Agregar contextos con timeout a todas las consultas del worker, incluido polling, persistencia, reset demo, retención y healthcheck. Tests en Go de consulta lenta y cancelación.
 - [x] Heartbeat actualizado por el progreso real de cada ciclo del poller, también sin monitores pendientes; subcomando del propio binario que comprueba frescura y conexión a DB con timeout, sin requerir shell en la imagen. Tests del heartbeat que deja de avanzar y de DB no disponible.
-- [ ] Retención periódica en el worker para `check_result` mediante `CHECK_RESULT_RETENTION_DAYS` (30 por defecto) y para `alert` con ventana propia configurable, borrando en lotes pequeños y sin tocar `monitor.last_state` ni datos recientes.
-- [ ] Fallar al arrancar con error claro si la retención de checks es menor que `STATUS_UPTIME_WINDOW_HOURS`; revisar/agregar índices por `created_at`. Tests: solo borra datos viejos, es idempotente y no altera el uptime de `/api/v1/public/status`.
+- [x] Retención periódica en el worker para `check_result` mediante `CHECK_RESULT_RETENTION_DAYS` (30 por defecto) y para `alert` con `ALERT_RETENTION_DAYS` (90 por defecto), borrando en lotes pequeños y sin tocar `monitor.last_state` ni datos recientes.
+- [x] Fallar al arrancar con error claro si la retención de checks es menor que `STATUS_UPTIME_WINDOW_HOURS`; agregar índices por `created_at`. Tests contra PostgreSQL real: solo borra datos viejos, es idempotente y preserva el agregado SQL de uptime de la ventana pública.
+- [ ] Verificar además por HTTP que `/api/v1/public/status` conserva el uptime antes/después de retención real — pendiente de las comprobaciones API/runtime.
 
 ### API: salud y arranque
 - [ ] Endpoint público `/api/v1/health` que verifica la conexión a DB; agregar al inventario exacto de rutas públicas y a los tests.
@@ -111,4 +112,4 @@ Verificación local observada: API 74 unitarios y 44 e2e contra PostgreSQL real;
 
 ### Checkpoints
 - Plan aprobado y ampliado. La Fase 3 está fusionada en `main` (`e0a4990`, PR #16); su CI verde fue confirmado por el usuario. El registro anterior de pendiente externo corresponde a la sesión previa al merge.
-- Worker (parcial): consultas actuales con deadlines, heartbeat atómico por progreso y subcomando `health` implementados; suites Go, race y build aprobados con verificación independiente. Corregidos falsos unhealthy bajo carga y bloqueo por checker desconocido. Frescura mínima: `4 × WORKER_DB_TIMEOUT_SECONDS + 27` segundos (67 por defecto). Pendientes: retención, sus índices/tests y prueba runtime de contenedores/DB pausada en la capa Compose.
+- Worker: deadlines, heartbeat atómico por progreso, subcomando `health`, retención e índices implementados. Suites Go, race y build aprobados con verificación independiente; limpieza real aislada preservó datos recientes, `last_state` y agregado SQL de uptime y fue idempotente. Retención: checks 30 días, alertas 90, lotes de 500, máximo 10 por tabla/pasada, pausa 50 ms, intervalo 60 minutos y deadline 5 segundos. Frescura mínima: `4 × WORKER_DB_TIMEOUT_SECONDS + 27` segundos (67 por defecto). Pendientes de integración posterior: invariancia por HTTP, contenedores/DB pausada y toda la capa API/Compose/CI/backups/documentación.

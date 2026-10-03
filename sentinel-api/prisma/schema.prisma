@@ -18,6 +18,8 @@ model alert {
   message    String   @db.VarChar
   created_at DateTime @db.Timestamp(6)
   monitor    monitor  @relation(fields: [monitor_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([created_at], map: "ix_alert_created_at")
 }
 
 model check_result {
@@ -33,6 +35,7 @@ model check_result {
   monitor         monitor  @relation(fields: [monitor_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([monitor_id, created_at], map: "ix_check_result_monitor_id_created_at")
+  @@index([created_at], map: "ix_check_result_created_at")
 }
 
 model monitor {

@@ -9,6 +9,7 @@ import { MonitorsModule } from './monitors/monitors.module';
 import { AppController } from './app.controller';
 import { AppThrottlerGuard } from './common/guards/app-throttler.guard';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
+import { PublicStatusModule } from './status/public-status.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
     UsersModule,
     AuthModule,
     MonitorsModule,
+    PublicStatusModule,
   ],
   controllers: [AppController],
   providers: [

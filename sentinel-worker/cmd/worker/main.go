@@ -20,7 +20,11 @@ func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	slog.SetDefault(logger)
 
-	cfg := config.Load()
+	cfg, err := config.Load()
+	if err != nil {
+		slog.Error("Invalid worker configuration", "err", err)
+		os.Exit(1)
+	}
 	if len(os.Args) > 1 && os.Args[1] == "health" {
 		if err := runHealth(cfg); err != nil {
 			slog.Error("worker health check failed", "err", err)
@@ -47,7 +51,13 @@ func main() {
 	checker.Register("http", checker.NewHTTPChecker(allowedPorts))
 
 	slog.Info("Sentinel worker started")
-	worker.RunWithHealth(ctx, pool, cfg.Concurrency, cfg.DemoUserEmail, cfg.DemoManifestPath, cfg.DemoResetInterval, cfg.HeartbeatPath, cfg.DBOperationTimeout)
+	worker.RunWithRetention(ctx, pool, cfg.Concurrency, cfg.DemoUserEmail, cfg.DemoManifestPath, cfg.DemoResetInterval, cfg.HeartbeatPath, cfg.DBOperationTimeout, worker.RetentionConfig{
+		CheckResultDays:   cfg.CheckResultRetentionDays,
+		AlertDays:         cfg.AlertRetentionDays,
+		BatchSize:         cfg.RetentionBatchSize,
+		MaxBatchesPerPass: 10,
+		DBTimeout:         cfg.RetentionDBTimeout,
+	}, time.Duration(cfg.RetentionIntervalMinutes)*time.Minute)
 	slog.Info("Sentinel worker stopped")
 }
 

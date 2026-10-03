@@ -16,6 +16,7 @@ describe('Monitors (e2e)', () => {
   let createdMonitorId: number;
   let demoToken: string;
   let demoId: number;
+  const demoFixtureMonitorIds: number[] = [];
 
   const ownerEmail = `monowner_${Date.now()}@sentinel.com`;
   const ownerUser = `monowner${Date.now()}`.substring(0, 18);
@@ -99,8 +100,10 @@ describe('Monitors (e2e)', () => {
       await prisma.monitor.deleteMany({
         where: { user_id: { in: [ownerId, otherId] } },
       });
-      if (demoId) {
-        await prisma.monitor.deleteMany({ where: { user_id: demoId, name: { startsWith: 'E2E demo quota' } } });
+      if (demoFixtureMonitorIds.length) {
+        await prisma.check_result.deleteMany({ where: { monitor_id: { in: demoFixtureMonitorIds } } });
+        await prisma.alert.deleteMany({ where: { monitor_id: { in: demoFixtureMonitorIds } } });
+        await prisma.monitor.deleteMany({ where: { id: { in: demoFixtureMonitorIds } } });
       }
       await prisma.users.deleteMany({
         where: { id: { in: [ownerId, otherId] } },
@@ -123,6 +126,7 @@ describe('Monitors (e2e)', () => {
       const created = await request(app.getHttpServer()).post('/api/v1/monitors').set(demoAuth).send({ name: `E2E demo quota ${index}`, target: 'https://example.com', frequency: minFrequency });
       expect(created.status).toBe(201);
       createdIds.push(created.body.id);
+      demoFixtureMonitorIds.push(created.body.id);
     }
     const fourth = await request(app.getHttpServer()).post('/api/v1/monitors').set(demoAuth).send({ name: 'E2E demo quota fourth', target: 'https://example.com', frequency: minFrequency });
     expect(fourth.status).toBe(400);
@@ -130,9 +134,14 @@ describe('Monitors (e2e)', () => {
 
     const lowPatch = await request(app.getHttpServer()).patch(`/api/v1/monitors/${createdIds[0]}`).set(demoAuth).send({ frequency: Math.max(1, minFrequency - 1) });
     expect(lowPatch.status).toBe(400);
-    const publicAttempt = await request(app.getHttpServer()).post('/api/v1/monitors').set(demoAuth).send({ name: 'E2E demo quota public', target: 'https://example.com', frequency: minFrequency, public: true });
+    const publicAttempt = await request(app.getHttpServer()).post('/api/v1/monitors').set(demoAuth).send({ name: 'E2E demo quota public', target: 'https://example.com', frequency: minFrequency, is_public: true });
     expect(publicAttempt.status).toBe(400);
-    expect(publicAttempt.body.public).toBeUndefined();
+    expect(publicAttempt.body.is_public).toBeUndefined();
+    if (createdIds[0]) {
+      const demoPatch = await request(app.getHttpServer()).patch(`/api/v1/monitors/${createdIds[0]}`).set(demoAuth).send({ is_public: true });
+      expect(demoPatch.status).toBe(400);
+      expect((await prisma.monitor.findUnique({ where: { id: createdIds[0] } }))?.is_public).toBe(false);
+    }
     expect(await prisma.monitor.count({ where: { user_id: demoId } })).toBe(3);
   });
 
@@ -201,10 +210,10 @@ describe('Monitors (e2e)', () => {
     const response = await request(app.getHttpServer())
       .post('/api/v1/monitors')
       .set('Authorization', `Bearer ${ownerToken}`)
-      .send({ name: 'Public attempt', target: 'https://example.com', frequency: 60, public: true });
+      .send({ name: 'Public attempt', target: 'https://example.com', frequency: 60, is_public: true });
     expect(response.status).toBe(400);
     expect(await prisma.monitor.count({ where: { user_id: ownerId } })).toBe(before);
-    expect(response.body.public).toBeUndefined();
+    expect(response.body.is_public).toBeUndefined();
   });
 
   it('POST /api/v1/monitors should create monitor successfully', async () => {
@@ -225,6 +234,12 @@ describe('Monitors (e2e)', () => {
     expect(res.body.frequency).toBe(60);
     expect(res.body.user_id).toBe(ownerId);
     createdMonitorId = res.body.id;
+    const publicPatch = await request(app.getHttpServer())
+      .patch(`/api/v1/monitors/${createdMonitorId}`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ is_public: true });
+    expect(publicPatch.status).toBe(400);
+    expect((await prisma.monitor.findUnique({ where: { id: createdMonitorId } }))?.is_public).toBe(false);
   });
 
   it('POST /api/v1/monitors should reject creation when exceeding MAX_MONITORS_PER_USER with 400', async () => {

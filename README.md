@@ -139,5 +139,6 @@ Results of the run:
 For detailed per-service docs — local development, testing requirements, and internal architecture:
 
 * [Sentinel API (NestJS / Bun)](./sentinel-api/README.md)
+* [Public status endpoint](./sentinel-api/src/status/README.md) — anonymous API contract and uptime/cache behavior.
 * [Sentinel Worker (Go)](./sentinel-worker/README.md)
 * [Frontend (React SPA)](./frontend/README.md)

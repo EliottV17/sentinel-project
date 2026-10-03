@@ -94,6 +94,7 @@ describe('API route access inventory (e2e)', () => {
       'GET /monitors',
       'GET /monitors/:id/alerts',
       'GET /monitors/:id/history',
+      'GET /public/status',
       'GET /users/me',
       'PATCH /monitors/:id',
       'POST /auth/demo-login',
@@ -109,6 +110,7 @@ describe('API route access inventory (e2e)', () => {
         .sort(),
     ).toEqual([
       'GET /',
+      'GET /public/status',
       'POST /auth/demo-login',
       'POST /auth/login',
       'POST /users',

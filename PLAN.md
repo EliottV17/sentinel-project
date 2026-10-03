@@ -46,13 +46,13 @@ API (sentinel-api):
 - [x] **Documentación de variables de entorno:** bloque con valores solo de ejemplo pegado y confirmado por el usuario en `005d555`; el agente no accedió ni modificó ningún `.env.example`.
 
 ## FASE 3: Página de estado pública
-- [ ] Campo `is_public` Boolean con default `false` y migración. Solo se asigna desde el seed: sin rol admin ni endpoint para modificarlo. Ningún DTO de POST/PATCH lo acepta; tests de mass assignment para usuarios normales y demo.
-- [ ] JWT global con `@Public()` explícito. Test de inventario que enumera las rutas y verifica la lista pública exacta: login, registro, demo-login, public/status y el health existente. Una ruta nueva sin declaración explícita debe hacer fallar el test.
+- [x] Campo `is_public` Boolean con default `false` y migración. Solo se asigna desde el seed: sin rol admin ni endpoint para modificarlo. Ningún DTO de POST/PATCH lo acepta; tests de mass assignment para usuarios normales y demo.
+- [x] JWT global con `@Public()` explícito. Test de inventario que enumera las rutas y verifica la lista pública exacta: login, registro, demo-login, public/status y el health existente. Una ruta nueva sin declaración explícita debe hacer fallar el test.
 - [x] Dueño dedicado identificado por `STATUS_OWNER_EMAIL`, distinto de demo, sin contraseña usable ni pública. El seed debe fallar claramente si el email pertenece a una cuenta existente; nunca apropiarse de ella. Test de aislamiento del reset demo que preserva monitores públicos y su historial.
 - [x] Manifiesto raíz `status-monitors.json` separado del demo, targets públicos de ejemplo validados contra SSRF y `seed_key` estable. Seed idempotente que actualiza y nunca borra monitores ni historial.
-- [ ] `GET /api/v1/public/status` responde 200 sin token. Solo monitores activos con `is_public = true`; privados y demo nunca aparecen. Selección explícita y respuesta con exactamente `name`, `last_state`, `uptime_percentage`, `last_checked_at`, sin id, target, configuración ni dueño.
-- [ ] Uptime calculado en SQL agregado, sin N+1, sobre ventana configurable (`STATUS_UPTIME_WINDOW_HOURS`, ejemplo 24); `null` sin muestras. Índice `(monitor_id, created_at)` en `check_result` y tests sin datos, mixtos y saludables.
-- [ ] Caché en memoria configurable (ejemplo 30 segundos), sin Redis, más throttler por defecto por IP. Tests de caché y polling normal sin 429.
+- [x] `GET /api/v1/public/status` responde 200 sin token. Solo monitores activos con `is_public = true`; privados y demo nunca aparecen. Selección explícita y respuesta con exactamente `name`, `last_state`, `uptime_percentage`, `last_checked_at`, sin id, target, configuración ni dueño.
+- [x] Uptime calculado en SQL agregado, sin N+1, sobre ventana configurable (`STATUS_UPTIME_WINDOW_HOURS`, ejemplo 24); `null` sin muestras. Índice `(monitor_id, created_at)` en `check_result` y tests sin datos, mixtos y saludables.
+- [x] Caché en memoria configurable (ejemplo 30 segundos), sin Redis, más throttler por defecto por IP. Tests de caché y polling normal sin 429.
 - [ ] Ruta pública `/status` fuera de autenticación, peticiones sin `Authorization` y sin redirecciones a login. Enlace discreto desde login.
 - [ ] Una única función de estado testeada: Operacional, Degradado, Caído y Sin datos. Umbral de degradación configurable (ejemplo 99%); chequeos más viejos que `STATUS_STALE_AFTER_MINUTES` (ejemplo 5) son Sin datos, incluido worker caído. Documentar reglas en el README del endpoint.
 - [ ] UI con resumen del peor estado, icono y texto, uptime y “última verificación hace X”; carga, vacío y error. Refresco cada 30–60 segundos, conservando datos ante fallos y mensajes claros para 429, sin errores crudos.

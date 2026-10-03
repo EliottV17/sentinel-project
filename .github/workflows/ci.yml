@@ -37,6 +37,8 @@ jobs:
       DEMO_MIN_FREQUENCY_SECONDS: 60
       DEMO_ACCESS_TOKEN_EXPIRE_MINUTES: 15
       DEMO_MONITORS_MANIFEST_PATH: ../demo-monitors.json
+      STATUS_OWNER_EMAIL: status-owner-7c92@example.com
+      STATUS_MONITORS_MANIFEST_PATH: ../status-monitors.json
 
     steps:
       - uses: actions/checkout@v5

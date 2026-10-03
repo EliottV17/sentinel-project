@@ -1,12 +1,7 @@
 [
   {
-    "seed_key": "example-website",
-    "name": "Example Website",
-    "target": "https://example.com/api"
-  },
-  {
-    "seed_key": "github-api",
-    "name": "GitHub API",
-    "target": "https://api.github.com"
+    "seed_key": "portfolio-eliott-velarde",
+    "name": "Eliott Velarde Portfolio",
+    "target": "https://eliottvelarde.com"
   }
 ]

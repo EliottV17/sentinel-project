@@ -53,9 +53,9 @@ API (sentinel-api):
 - [x] `GET /api/v1/public/status` responde 200 sin token. Solo monitores activos con `is_public = true`; privados y demo nunca aparecen. Selección explícita y respuesta con exactamente `name`, `last_state`, `uptime_percentage`, `last_checked_at`, sin id, target, configuración ni dueño.
 - [x] Uptime calculado en SQL agregado, sin N+1, sobre ventana configurable (`STATUS_UPTIME_WINDOW_HOURS`, ejemplo 24); `null` sin muestras. Índice `(monitor_id, created_at)` en `check_result` y tests sin datos, mixtos y saludables.
 - [x] Caché en memoria configurable (ejemplo 30 segundos), sin Redis, más throttler por defecto por IP. Tests de caché y polling normal sin 429.
-- [ ] Ruta pública `/status` fuera de autenticación, peticiones sin `Authorization` y sin redirecciones a login. Enlace discreto desde login.
-- [ ] Una única función de estado testeada: Operacional, Degradado, Caído y Sin datos. Umbral de degradación configurable (ejemplo 99%); chequeos más viejos que `STATUS_STALE_AFTER_MINUTES` (ejemplo 5) son Sin datos, incluido worker caído. Documentar reglas en el README del endpoint.
-- [ ] UI con resumen del peor estado, icono y texto, uptime y “última verificación hace X”; carga, vacío y error. Refresco cada 30–60 segundos, conservando datos ante fallos y mensajes claros para 429, sin errores crudos.
+- [x] Ruta pública `/status` fuera de autenticación, peticiones sin `Authorization` y sin redirecciones a login. Enlace discreto desde login.
+- [x] Una única función de estado testeada: Operacional, Degradado, Caído y Sin datos. Umbral de degradación configurable (ejemplo 99%); chequeos más viejos que `STATUS_STALE_AFTER_MINUTES` (ejemplo 5) son Sin datos, incluido worker caído. Documentar reglas en el README del endpoint.
+- [x] UI con resumen del peor estado, icono y texto, uptime y “última verificación hace X”; carga, vacío y error. Refresco cada 30–60 segundos, conservando datos ante fallos y mensajes claros para 429, sin errores crudos.
 - [ ] Verificación local: unitarios y e2e de API contra PostgreSQL real de Compose, lint y tests aplicables del frontend, `go test -count=1 ./...`, `docker compose up -d --build`, API healthy y curl con las cuatro claves exactas. No se agregan healthchecks de worker/frontend en esta fase.
 - [ ] Entregar bloque de variables nuevas con valores solo de ejemplo, sin leer ni editar `.env.example`.
 

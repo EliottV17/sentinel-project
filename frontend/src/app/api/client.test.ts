@@ -35,6 +35,43 @@ describe("apiFetch", () => {
     expect(auth).toBe("Bearer tok-123");
   });
 
+  it("anonymous requests strip stored and caller-provided Authorization", async () => {
+    tokenStore.set("tok-public");
+    let auth: string | null = "not called";
+    server.use(
+      http.get("/api/v1/public/status", ({ request }) => {
+        auth = request.headers.get("authorization");
+        return HttpResponse.json([]);
+      }),
+    );
+
+    await apiFetch("/api/v1/public/status", {
+      headers: { Authorization: "Bearer caller-token" },
+    }, { anonymous: true, onUnauthorized: "ignore" });
+
+    expect(auth).toBeNull();
+    expect(tokenStore.get()).toBe("tok-public");
+  });
+
+  it("anonymous 401 preserves the session and does not invoke unauthorized navigation", async () => {
+    setUnauthorizedHandler(unauthorized);
+    tokenStore.set("tok-public-401");
+    server.use(
+      http.get("/api/v1/public/status", () =>
+        HttpResponse.json({ message: "Unauthorized" }, { status: 401 }),
+      ),
+    );
+
+    const err = await catchError(apiFetch("/api/v1/public/status", undefined, {
+      anonymous: true,
+      onUnauthorized: "ignore",
+    }));
+
+    expect(err).toBeInstanceOf(ApiError);
+    expect(tokenStore.get()).toBe("tok-public-401");
+    expect(unauthorized).not.toHaveBeenCalled();
+  });
+
   it("sends no Authorization header when unauthenticated", async () => {
     tokenStore.clear();
     let auth: string | null = null;

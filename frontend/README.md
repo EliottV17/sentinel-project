@@ -42,15 +42,9 @@ bun run typecheck          # TypeScript check only (tsc -b)
 bun run gen:api            # regenerate src/lib/api/schema.ts from the running API
 ```
 
-### Regenerating the API client (`gen:api`)
+### API client schema
 
-`src/lib/api/schema.ts` is generated from the FastAPI OpenAPI contract with `openapi-typescript`:
-
-```bash
-bun run gen:api
-```
-
-Prerequisite: a running dev API on `http://localhost:8000` (e.g. `cd ../sentinel-api && uv run uvicorn app.main:app --reload`). Regenerate only when the API contract changes — the generated file is committed, so keep diffs intentional.
+The committed `src/lib/api/schema.ts` is present, but the current NestJS API does not expose the `/openapi.json` endpoint targeted by the package's legacy `gen:api` script. Consequently, `bun run gen:api` is not a working schema-refresh command for this API. The previous FastAPI/uvicorn instructions do not describe the current backend. No replacement OpenAPI endpoint or generation workflow is configured.
 
 ## Project Layout
 

@@ -5,6 +5,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as express from 'express';
 import { validateSecretKey } from './auth/utils/secret-validator';
+import { getCorsOptions } from './common/config/cors-options';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -20,15 +21,12 @@ async function bootstrap() {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
-  const corsOrigins = configService.get<string>('CORS_ORIGINS');
-  const allowedOrigins = corsOrigins
-    ? corsOrigins.split(',').map((o) => o.trim()).filter(Boolean)
-    : '*';
-
-  app.enableCors({
-    origin: allowedOrigins,
-    credentials: true,
-  });
+  app.enableCors(
+    getCorsOptions(
+      configService.get<string>('CORS_ORIGINS'),
+      configService.get<string>('NODE_ENV', process.env.NODE_ENV),
+    ),
+  );
 
   app.setGlobalPrefix('api/v1', {
     exclude: ['/'],

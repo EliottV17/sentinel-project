@@ -1,0 +1,21 @@
+FROM oven/bun:alpine
+
+WORKDIR /workspace/sentinel-api
+
+# Native build tools and real Node.js for Jest's V8-dependent test runtime.
+RUN apk add --no-cache python3 make g++ nodejs
+
+COPY package.json bun.lock ./
+RUN bun --no-env-file install --frozen-lockfile
+
+# Prisma generation runs only in this sterile image workspace. The build context
+# excludes all .env* paths and no host source or node_modules are mounted.
+COPY prisma/schema.prisma prisma/seed.ts ./prisma/
+RUN bun --no-env-file ./node_modules/prisma/build/index.js generate --schema ./prisma/schema.prisma
+
+COPY tsconfig.json tsconfig.build.json nest-cli.json jest.config.js ./
+COPY test/jest-e2e.json ./test/jest-e2e.json
+COPY src ./src
+COPY test ./test
+
+CMD ["node", "./node_modules/jest/bin/jest.js", "--runInBand"]

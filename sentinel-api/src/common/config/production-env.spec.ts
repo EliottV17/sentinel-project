@@ -1,4 +1,32 @@
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { validateProductionEnvironment } from './production-env';
+
+const manifestDirectory = mkdtempSync(join(tmpdir(), 'sentinel-production-env-'));
+const demoManifestPath = join(manifestDirectory, 'demo-monitors.json');
+const statusManifestPath = join(manifestDirectory, 'status-monitors.json');
+writeFileSync(
+  demoManifestPath,
+  JSON.stringify([
+    {
+      seed_key: 'demo',
+      name: 'Demo',
+      target: 'https://example.test',
+      check_type: 'http',
+      check_config: {},
+      frequency: 60,
+    },
+  ]),
+);
+writeFileSync(
+  statusManifestPath,
+  JSON.stringify([
+    { seed_key: 'status', name: 'Status', target: 'https://status.example.test' },
+  ]),
+);
+
+afterAll(() => rmSync(manifestDirectory, { recursive: true, force: true }));
 
 describe('validateProductionEnvironment', () => {
   const validEnv = {
@@ -9,8 +37,8 @@ describe('validateProductionEnvironment', () => {
     DEMO_USER_PASSWORD: 'DemoPassword123!',
     STATUS_OWNER_EMAIL: 'status@example.test',
     CORS_ORIGINS: 'https://localhost',
-    DEMO_MONITORS_MANIFEST_PATH: '/workspace/demo-monitors.json',
-    STATUS_MONITORS_MANIFEST_PATH: '/workspace/status-monitors.json',
+    DEMO_MONITORS_MANIFEST_PATH: demoManifestPath,
+    STATUS_MONITORS_MANIFEST_PATH: statusManifestPath,
   };
 
   it.each([

@@ -1,0 +1,8 @@
+[
+  {
+    "seed_key": "smoke-status-primary",
+    "name": "Smoke Public Probe",
+    "target": "http://probe.example.test/health",
+    "frequency": 60
+  }
+]

@@ -1,0 +1,10 @@
+[
+  {
+    "seed_key": "smoke-demo-primary",
+    "name": "Smoke Demo Probe",
+    "target": "http://probe.example.test/health",
+    "frequency": 60,
+    "check_type": "http",
+    "check_config": {}
+  }
+]

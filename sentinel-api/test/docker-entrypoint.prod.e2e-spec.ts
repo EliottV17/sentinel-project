@@ -12,8 +12,6 @@ const baseEnv = {
   DEMO_USER_PASSWORD: 'DemoPassword123!',
   STATUS_OWNER_EMAIL: 'status@example.test',
   CORS_ORIGINS: 'https://localhost',
-  DEMO_MONITORS_MANIFEST_PATH: '/workspace/demo-monitors.json',
-  STATUS_MONITORS_MANIFEST_PATH: '/workspace/status-monitors.json',
 };
 
 describe('production Docker entrypoint', () => {
@@ -36,10 +34,29 @@ describe('production Docker entrypoint', () => {
     mkdirSync(mockBin);
     writeFileSync(
       join(mockBin, 'node'),
-      '#!/bin/sh\nif [ "$1" = "-e" ]; then exec /usr/bin/node "$@"; fi\nprintf "node:%s\\n" "$*" >>"$CALL_LOG"\ncase "$*" in *seed-dist/prisma/seed.js*) exit "${SEED_EXIT:-0}";; esac\nexit 0\n',
+      `#!/bin/sh\nif [ "$1" = "-e" ]; then exec "${process.execPath}" "$@"; fi\nprintf "node:%s\\n" "$*" >>"$CALL_LOG"\ncase "$*" in *seed-dist/prisma/seed.js*) exit "\${SEED_EXIT:-0}";; esac\nexit 0\n`,
       { mode: 0o755 },
     );
     writeFileSync(join(root, 'prisma/schema.prisma'), '');
+    const demoManifestPath = join(root, 'demo-monitors.json');
+    const statusManifestPath = join(root, 'status-monitors.json');
+    writeFileSync(
+      demoManifestPath,
+      JSON.stringify([
+        {
+          seed_key: 'demo',
+          name: 'Demo',
+          target: 'https://example.test',
+          check_type: 'http',
+          check_config: {},
+          frequency: 60,
+        },
+      ]),
+    );
+    writeFileSync(
+      statusManifestPath,
+      JSON.stringify([{ seed_key: 'status', name: 'Status', target: 'https://status.example.test' }]),
+    );
     const log = join(root, 'calls.log');
     writeFileSync(log, '');
     const result = (env: Record<string, string | undefined> = {}) => spawnSync('/bin/sh', ['./docker-entrypoint.prod.sh'], {
@@ -48,6 +65,8 @@ describe('production Docker entrypoint', () => {
       env: {
         ...process.env,
         ...baseEnv,
+        DEMO_MONITORS_MANIFEST_PATH: demoManifestPath,
+        STATUS_MONITORS_MANIFEST_PATH: statusManifestPath,
         ...overrides,
         CALL_LOG: log,
         NODE_PATH: join(sourceRoot, 'node_modules'),

@@ -1,0 +1,42 @@
+FROM oven/bun:alpine AS build
+
+WORKDIR /app
+RUN apk add --no-cache g++ make nodejs npm python3
+COPY package.json bun.lock ./
+RUN bun --no-env-file install --frozen-lockfile
+
+COPY prisma/schema.prisma ./prisma/schema.prisma
+COPY prisma/migrations ./prisma/migrations
+RUN bun --no-env-file ./node_modules/prisma/build/index.js generate --schema ./prisma/schema.prisma
+COPY prisma/seed.ts ./prisma/seed.ts
+COPY src ./src
+COPY tsconfig.json tsconfig.build.json nest-cli.json ./
+RUN bun --no-env-file run build
+RUN ./node_modules/.bin/tsc \
+    --target ES2021 \
+    --module commonjs \
+    --moduleResolution node \
+    --esModuleInterop \
+    --experimentalDecorators \
+    --emitDecoratorMetadata \
+    --skipLibCheck \
+    --outDir ./seed-dist \
+    prisma/seed.ts
+
+FROM oven/bun:alpine AS runtime
+WORKDIR /app
+RUN apk add --no-cache libstdc++ nodejs openssl \
+    && addgroup -S sentinel \
+    && adduser -S -G sentinel sentinel
+
+COPY --from=build --chown=sentinel:sentinel /app/package.json ./package.json
+COPY --from=build --chown=sentinel:sentinel /app/node_modules ./node_modules
+COPY --from=build --chown=sentinel:sentinel /app/dist ./dist
+COPY --from=build --chown=sentinel:sentinel /app/seed-dist ./seed-dist
+COPY --from=build --chown=sentinel:sentinel /app/prisma/schema.prisma ./prisma/schema.prisma
+COPY --from=build --chown=sentinel:sentinel /app/prisma/migrations ./prisma/migrations
+COPY --chmod=0555 --chown=sentinel:sentinel docker-entrypoint.prod.sh ./docker-entrypoint.prod.sh
+
+ENV NODE_ENV=production
+USER sentinel
+ENTRYPOINT ["/app/docker-entrypoint.prod.sh"]

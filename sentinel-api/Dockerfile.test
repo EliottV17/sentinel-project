@@ -17,5 +17,7 @@ COPY tsconfig.json tsconfig.build.json nest-cli.json jest.config.js ./
 COPY test/jest-e2e.json ./test/jest-e2e.json
 COPY src ./src
 COPY test ./test
+COPY docker-entrypoint.prod.sh ./docker-entrypoint.prod.sh
+RUN bun --no-env-file run build
 
 CMD ["node", "./node_modules/jest/bin/jest.js", "--runInBand"]

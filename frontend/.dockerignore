@@ -1,13 +1,20 @@
+# Keep host secrets, dependencies, and generated files out of every build context.
+.env*
+**/.env*
 node_modules
+**/node_modules
 dist
+**/dist
 dist-ssr
-.git
-.gitignore
-*.local
-.env
-.env.*
-!.env.example
+**/dist-ssr
 coverage
+**/coverage
 *.tsbuildinfo
+**/*.tsbuildinfo
+*.local
+**/*.local
+.git
+**/.git
+.gitignore
 Dockerfile
 .dockerignore

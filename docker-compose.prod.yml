@@ -1,0 +1,212 @@
+name: sentinel-prod
+
+services:
+  db:
+    image: postgres:17-alpine
+    user: postgres
+    restart: unless-stopped
+    command:
+      - sh
+      - -ec
+      - |
+        if [ "$${POSTGRES_PASSWORD}" = postgres ]; then
+          echo 'POSTGRES_PASSWORD must not be the default postgres password' >&2
+          exit 1
+        fi
+        exec docker-entrypoint.sh postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-sentinel_db}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    logging: &bounded_logs
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+  api:
+    build:
+      context: ./sentinel-api
+      dockerfile: Dockerfile.prod
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 8000
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must point at this Compose database}
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY is required}
+      ALGORITHM: ${ALGORITHM:-HS256}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      CORS_ORIGINS: ${CORS_ORIGINS:?CORS_ORIGINS must contain the public site origin}
+      DEMO_USER_EMAIL: ${DEMO_USER_EMAIL:?DEMO_USER_EMAIL is required}
+      DEMO_USER_PASSWORD: ${DEMO_USER_PASSWORD:?DEMO_USER_PASSWORD is required}
+      DEMO_ACCESS_TOKEN_EXPIRE_MINUTES: ${DEMO_ACCESS_TOKEN_EXPIRE_MINUTES:-15}
+      DEMO_MAX_MONITORS: ${DEMO_MAX_MONITORS:-3}
+      DEMO_MIN_FREQUENCY_SECONDS: ${DEMO_MIN_FREQUENCY_SECONDS:-60}
+      DEMO_MONITORS_MANIFEST_PATH: /app/demo-monitors.json
+      STATUS_OWNER_EMAIL: ${STATUS_OWNER_EMAIL:?STATUS_OWNER_EMAIL is required and must differ from demo}
+      STATUS_MONITORS_MANIFEST_PATH: /app/status-monitors.json
+      STATUS_UPTIME_WINDOW_HOURS: ${STATUS_UPTIME_WINDOW_HOURS:-24}
+      STATUS_CACHE_TTL_SECONDS: ${STATUS_CACHE_TTL_SECONDS:-30}
+      MAX_MONITORS_PER_USER: ${MAX_MONITORS_PER_USER:-10}
+      MIN_MONITOR_FREQUENCY_SECONDS: ${MIN_MONITOR_FREQUENCY_SECONDS:-60}
+      THROTTLE_DEFAULT_TTL: ${THROTTLE_DEFAULT_TTL:-60000}
+      THROTTLE_DEFAULT_LIMIT: ${THROTTLE_DEFAULT_LIMIT:-100}
+      THROTTLE_AUTH_TTL: ${THROTTLE_AUTH_TTL:-60000}
+      THROTTLE_AUTH_LIMIT: ${THROTTLE_AUTH_LIMIT:-5}
+      THROTTLE_MONITORS_TTL: ${THROTTLE_MONITORS_TTL:-60000}
+      THROTTLE_MONITORS_LIMIT: ${THROTTLE_MONITORS_LIMIT:-20}
+    volumes:
+      - ./demo-monitors.json:/app/demo-monitors.json:ro
+      - ./status-monitors.json:/app/status-monitors.json:ro
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "const c=new AbortController();const t=setTimeout(()=>c.abort(),4000);fetch('http://127.0.0.1:8000/api/v1/health',{signal:c.signal}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1)).finally(()=>clearTimeout(t))"
+      interval: 10s
+      timeout: 6s
+      retries: 6
+      start_period: 120s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+    logging: *bounded_logs
+
+  worker:
+    build:
+      context: ./sentinel-worker
+      dockerfile: Dockerfile.prod
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must point at this Compose database}
+      DEMO_USER_EMAIL: ${DEMO_USER_EMAIL:?DEMO_USER_EMAIL is required}
+      DEMO_MONITORS_MANIFEST_PATH: /app/demo-monitors.json
+      DEMO_RESET_INTERVAL_MINUTES: ${DEMO_RESET_INTERVAL_MINUTES:-60}
+      ALLOWED_PORTS: ${ALLOWED_PORTS:-80,443,8080,8443}
+      WORKER_DB_TIMEOUT_SECONDS: ${WORKER_DB_TIMEOUT_SECONDS:-10}
+      WORKER_HEALTH_DB_TIMEOUT_SECONDS: ${WORKER_HEALTH_DB_TIMEOUT_SECONDS:-5}
+      WORKER_HEARTBEAT_PATH: ${WORKER_HEARTBEAT_PATH:-/tmp/sentinel-worker.heartbeat}
+      WORKER_HEARTBEAT_MAX_AGE_SECONDS: ${WORKER_HEARTBEAT_MAX_AGE_SECONDS:-67}
+      CHECK_RESULT_RETENTION_DAYS: ${CHECK_RESULT_RETENTION_DAYS:-30}
+      ALERT_RETENTION_DAYS: ${ALERT_RETENTION_DAYS:-90}
+      STATUS_UPTIME_WINDOW_HOURS: ${STATUS_UPTIME_WINDOW_HOURS:-24}
+      RETENTION_INTERVAL_MINUTES: ${RETENTION_INTERVAL_MINUTES:-60}
+      RETENTION_BATCH_SIZE: ${RETENTION_BATCH_SIZE:-500}
+      RETENTION_DB_TIMEOUT_SECONDS: ${RETENTION_DB_TIMEOUT_SECONDS:-5}
+    volumes:
+      - ./demo-monitors.json:/app/demo-monitors.json:ro
+    healthcheck:
+      test: ["CMD", "/worker", "health"]
+      interval: 15s
+      timeout: 7s
+      retries: 3
+      start_period: 75s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    logging: *bounded_logs
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+      args:
+        VITE_API_BASE_URL: ""
+        VITE_DEMO_USER_EMAIL: ${DEMO_USER_EMAIL:?DEMO_USER_EMAIL is required}
+        VITE_DEMO_USER_PASSWORD: ${DEMO_USER_PASSWORD:?DEMO_USER_PASSWORD is required}
+        VITE_STATUS_STALE_AFTER_MINUTES: ${STATUS_STALE_AFTER_MINUTES:-5}
+        VITE_STATUS_DEGRADED_THRESHOLD_PERCENT: ${STATUS_DEGRADED_THRESHOLD_PERCENT:-99}
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/health"]
+      interval: 15s
+      timeout: 4s
+      retries: 3
+      start_period: 5s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    logging: *bounded_logs
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-localhost}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8081/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    logging: *bounded_logs
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:

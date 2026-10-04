@@ -1,0 +1,29 @@
+FROM oven/bun:alpine AS build
+
+WORKDIR /app
+RUN apk add --no-cache g++ make nodejs npm python3 icu-data-full
+COPY package.json bun.lock ./
+RUN bun --no-env-file install --frozen-lockfile
+COPY . .
+
+ARG VITE_API_BASE_URL=
+ARG VITE_DEMO_USER_EMAIL
+ARG VITE_DEMO_USER_PASSWORD
+ARG VITE_STATUS_STALE_AFTER_MINUTES=5
+ARG VITE_STATUS_DEGRADED_THRESHOLD_PERCENT=99
+ENV VITE_ISOLATED_BUILD=1 \
+    VITE_API_BASE_URL=${VITE_API_BASE_URL} \
+    VITE_DEMO_USER_EMAIL=${VITE_DEMO_USER_EMAIL} \
+    VITE_DEMO_USER_PASSWORD=${VITE_DEMO_USER_PASSWORD} \
+    VITE_STATUS_STALE_AFTER_MINUTES=${VITE_STATUS_STALE_AFTER_MINUTES} \
+    VITE_STATUS_DEGRADED_THRESHOLD_PERCENT=${VITE_STATUS_DEGRADED_THRESHOLD_PERCENT}
+RUN bun --no-env-file run build
+
+FROM nginxinc/nginx-unprivileged:alpine AS runtime
+COPY nginx.prod.conf /etc/nginx/nginx.conf
+COPY --from=build --chown=nginx:nginx /app/dist /usr/share/nginx/html
+RUN nginx -t
+
+EXPOSE 8080
+HEALTHCHECK --interval=15s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget -q -O /dev/null http://127.0.0.1:8080/health || exit 1

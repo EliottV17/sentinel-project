@@ -9,3 +9,5 @@ sentinel-worker/worker
 .env.local
 .env.*.local
 !.env.example
+/backups/
+*.sql.gz

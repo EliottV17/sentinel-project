@@ -1,0 +1,15 @@
+# Do not include environment files (including examples) anywhere in the build context.
+.env*
+**/.env*
+
+# Exclude host-installed, generated, repository, and transient files.
+node_modules
+**/node_modules
+dist
+**/dist
+coverage
+**/coverage
+.git
+**/.git
+*.log
+**/*.log

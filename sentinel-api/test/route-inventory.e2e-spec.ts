@@ -91,6 +91,7 @@ describe('API route access inventory (e2e)', () => {
 
     expect(identities).toEqual([
       'GET /',
+      'GET /health',
       'GET /monitors',
       'GET /monitors/:id/alerts',
       'GET /monitors/:id/history',
@@ -110,6 +111,7 @@ describe('API route access inventory (e2e)', () => {
         .sort(),
     ).toEqual([
       'GET /',
+      'GET /health',
       'GET /public/status',
       'POST /auth/demo-login',
       'POST /auth/login',

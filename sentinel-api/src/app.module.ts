@@ -10,11 +10,16 @@ import { AppController } from './app.controller';
 import { AppThrottlerGuard } from './common/guards/app-throttler.guard';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { PublicStatusModule } from './status/public-status.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      ignoreEnvFile:
+        process.env.NODE_ENV === 'test' ||
+        process.env.NODE_ENV === 'production' ||
+        process.env.IGNORE_ENV_FILE === 'true',
       envFilePath: ['.env', '../.env'],
     }),
     ThrottlerModule.forRootAsync({
@@ -43,6 +48,7 @@ import { PublicStatusModule } from './status/public-status.module';
     AuthModule,
     MonitorsModule,
     PublicStatusModule,
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [

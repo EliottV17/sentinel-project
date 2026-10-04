@@ -83,8 +83,8 @@ Verificación local observada: API 74 unitarios y 44 e2e contra PostgreSQL real;
 - [ ] Verificar además por HTTP que `/api/v1/public/status` conserva el uptime antes/después de retención real — pendiente de las comprobaciones API/runtime.
 
 ### API: salud y arranque
-- [ ] Endpoint público `/api/v1/health` que verifica la conexión a DB; agregar al inventario exacto de rutas públicas y a los tests.
-- [ ] Con `NODE_ENV=production`, rechazar al arrancar `CORS_ORIGINS` vacío o con `*`; restringir al origen configurado de Caddy. Tests de configuración válida e inválida.
+- [x] Endpoint público `/api/v1/health` que verifica la conexión a DB; agregar al inventario exacto de rutas públicas y a los tests.
+- [x] Con `NODE_ENV=production`, rechazar al arrancar `CORS_ORIGINS` vacío o con `*`; restringir al origen configurado de Caddy. Tests de configuración válida e inválida.
 - [ ] Entry point: validar variables obligatorias de producción y del seed (`DATABASE_URL`, `SECRET_KEY`, `DEMO_USER_EMAIL`, `DEMO_USER_PASSWORD`, `STATUS_OWNER_EMAIL` y las necesarias para los manifiestos), ejecutar `prisma migrate deploy`, seed idempotente demo/estado y luego servidor; fallar explícitamente si cualquier paso falla.
 - [ ] Imagen de producción con CLI local de Prisma y seed compilado; verificar la ruta real del servidor (`dist/main.js`) y usuarios sin root donde sea posible.
 
@@ -112,4 +112,5 @@ Verificación local observada: API 74 unitarios y 44 e2e contra PostgreSQL real;
 
 ### Checkpoints
 - Plan aprobado y ampliado. La Fase 3 está fusionada en `main` (`e0a4990`, PR #16); su CI verde fue confirmado por el usuario. El registro anterior de pendiente externo corresponde a la sesión previa al merge.
-- Worker: deadlines, heartbeat atómico por progreso, subcomando `health`, retención e índices implementados. Suites Go, race y build aprobados con verificación independiente; limpieza real aislada preservó datos recientes, `last_state` y agregado SQL de uptime y fue idempotente. Retención: checks 30 días, alertas 90, lotes de 500, máximo 10 por tabla/pasada, pausa 50 ms, intervalo 60 minutos y deadline 5 segundos. Frescura mínima: `4 × WORKER_DB_TIMEOUT_SECONDS + 27` segundos (67 por defecto). Pendientes de integración posterior: invariancia por HTTP, contenedores/DB pausada y toda la capa API/Compose/CI/backups/documentación.
+- Worker: deadlines, heartbeat atómico por progreso, subcomando `health`, retención e índices implementados. Suites Go, race y build aprobados con verificación independiente; limpieza real aislada preservó datos recientes, `last_state` y agregado SQL de uptime y fue idempotente. Retención: checks 30 días, alertas 90, lotes de 500, máximo 10 por tabla/pasada, pausa 50 ms, intervalo 60 minutos y deadline 5 segundos. Frescura mínima: `4 × WORKER_DB_TIMEOUT_SECONDS + 27` segundos (67 por defecto). Pendientes de integración posterior: invariancia por HTTP y contenedores/DB pausada; Compose/CI/backups/documentación siguen pendientes.
+- API (parcial): health público con DB, inventario exacto y CORS estricto implementados; 91 unitarios, 47 e2e contra PostgreSQL real y build aprobados en contenedor aislado sin entradas `.env*` del host. Seed de fixtures idempotente (2 usuarios/3 monitores tras dos ejecuciones). Nest ignora archivos de entorno en test/producción; Prisma 6 carga dotenv al importar, por lo que las pruebas usan cliente generado en imagen limpia y Node real para Jest. Pendientes: validación de arranque de producción, seed compilado, entrypoint e imagen de producción.

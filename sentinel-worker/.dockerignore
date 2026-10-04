@@ -1,0 +1,8 @@
+# Never send host secrets, build artifacts, or the root-level worker binary.
+.env*
+**/.env*
+.git
+**/.git
+/worker
+**/dist
+**/node_modules

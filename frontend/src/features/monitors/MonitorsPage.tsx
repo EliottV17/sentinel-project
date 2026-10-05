@@ -22,16 +22,16 @@ export function MonitorsPage() {
   };
 
   return (
-    <section className="mx-auto max-w-3xl p-6">
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-slate-900">Monitors</h1>
+    <section className="mx-auto w-full max-w-4xl">
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-2xl font-semibold tracking-tight text-ink">Monitors</h1>
         {query.isPending && query.data === undefined && <Spinner />}
       </div>
 
       {query.isError && query.data !== undefined && (
         <p
           role="alert"
-          className="mb-4 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800"
+          className="mb-5 rounded-control border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning"
         >
           {getErrorMessage()}
         </p>
@@ -39,13 +39,13 @@ export function MonitorsPage() {
 
       <CreateMonitorForm />
 
-      <div className="mt-6">
+      <div className="mt-8">
         {query.data !== undefined ? (
           <MonitorList monitors={query.data} />
         ) : query.isError ? (
           <div
             role="alert"
-            className="rounded border border-red-300 bg-red-50 p-4 text-sm text-red-800"
+            className="rounded-panel border border-danger/30 bg-danger-soft p-5 text-sm text-danger"
           >
             {query.error instanceof Error
               ? query.error.message

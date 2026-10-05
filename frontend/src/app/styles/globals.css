@@ -1,1 +1,155 @@
 @import "tailwindcss";
+
+@theme {
+  --color-canvas: #0b1120;
+  --color-surface: #111a2b;
+  --color-raised: #172338;
+  --color-line: #26364d;
+  --color-line-strong: #364a65;
+  --color-ink: #e6edf7;
+  --color-muted: #93a4ba;
+  --color-subtle: #667990;
+  --color-accent: #68b7f7;
+  --color-accent-strong: #328fdb;
+  --color-accent-soft: #142c45;
+  --color-success: #62d6a3;
+  --color-success-soft: #12382f;
+  --color-warning: #f3c66c;
+  --color-warning-soft: #3c3019;
+  --color-danger: #ff858e;
+  --color-danger-strong: #e05d6a;
+  --color-danger-soft: #43232f;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  --text-display: 2rem;
+  --text-heading: 1.5rem;
+  --text-body: 0.9375rem;
+  --text-caption: 0.75rem;
+  --spacing-page: clamp(1rem, 4vw, 2rem);
+  --spacing-section: 2rem;
+  --spacing-panel: 1.5rem;
+  --spacing-control: 0.75rem;
+  --radius-panel: 0.875rem;
+  --radius-control: 0.625rem;
+  --shadow-panel: 0 18px 44px rgb(0 0 0 / 0.22);
+  --shadow-glow: 0 0 0 1px rgb(104 183 247 / 0.12), 0 12px 30px rgb(0 0 0 / 0.2);
+}
+
+:root {
+  color-scheme: dark;
+  font-family: var(--font-sans);
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  background:
+    radial-gradient(ellipse at 50% -35%, rgb(36 79 120 / 0.28), transparent 60%),
+    var(--color-canvas);
+  color: var(--color-ink);
+}
+
+::selection {
+  background: rgb(104 183 247 / 0.32);
+  color: var(--color-ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+button,
+input,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+a,
+input {
+  transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
+}
+
+.dashboard-button {
+  border-radius: var(--radius-control);
+  padding: 0.625rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.18);
+}
+
+.dashboard-button.bg-slate-900 {
+  background-color: var(--color-accent-strong);
+}
+
+.dashboard-button.bg-slate-900:hover {
+  background-color: var(--color-accent);
+  box-shadow: var(--shadow-glow);
+}
+
+.dashboard-button.bg-red-600 {
+  background-color: var(--color-danger-strong);
+}
+
+.dashboard-button.bg-red-600:hover {
+  background-color: var(--color-danger);
+}
+
+.status-badge.border-emerald-300 {
+  border-color: rgb(98 214 163 / 0.3);
+  background-color: var(--color-success-soft);
+  color: var(--color-success);
+}
+
+.status-badge.border-amber-300 {
+  border-color: rgb(243 198 108 / 0.3);
+  background-color: var(--color-warning-soft);
+  color: var(--color-warning);
+}
+
+.status-badge.border-red-300 {
+  border-color: rgb(255 133 142 / 0.3);
+  background-color: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.status-badge.border-slate-300 {
+  border-color: var(--color-line);
+  background-color: var(--color-raised);
+  color: var(--color-muted);
+}
+
+.pill-status.bg-green-100 {
+  background-color: var(--color-success-soft);
+  color: var(--color-success);
+}
+
+.pill-status.bg-red-100 {
+  background-color: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.pill-status.bg-slate-100 {
+  background-color: var(--color-raised);
+  color: var(--color-muted);
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

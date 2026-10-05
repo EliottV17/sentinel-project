@@ -87,11 +87,11 @@ export function CreateMonitorForm() {
       onSubmit={(event) => {
         void onSubmit(event);
       }}
-      className="flex flex-col gap-3"
+      className="flex flex-col gap-5"
       noValidate
     >
       <div className="flex flex-col gap-1">
-        <label htmlFor="monitor-name" className="text-sm text-slate-700">
+        <label htmlFor="monitor-name" className="text-sm font-medium text-muted">
           Name
         </label>
         <input
@@ -99,14 +99,14 @@ export function CreateMonitorForm() {
           type="text"
           aria-invalid={errors.name !== undefined}
           {...register("name")}
-          className="rounded border border-slate-300 px-3 py-2 text-sm"
+          className="w-full rounded-control border border-line-strong bg-canvas px-3 py-2.5 text-sm text-ink focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
         />
         {errors.name !== undefined && (
-          <span className="text-xs text-red-600">{errors.name.message}</span>
+          <span className="text-xs text-danger">{errors.name.message}</span>
         )}
       </div>
       <div className="flex flex-col gap-1">
-        <label htmlFor="monitor-target" className="text-sm text-slate-700">
+        <label htmlFor="monitor-target" className="text-sm font-medium text-muted">
           Target
         </label>
         <input
@@ -115,14 +115,14 @@ export function CreateMonitorForm() {
           placeholder="https://example.com"
           aria-invalid={errors.target !== undefined}
           {...register("target")}
-          className="rounded border border-slate-300 px-3 py-2 text-sm"
+          className="w-full rounded-control border border-line-strong bg-canvas px-3 py-2.5 text-sm text-ink placeholder:text-subtle focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
         />
         {errors.target !== undefined && (
-          <span className="text-xs text-red-600">{errors.target.message}</span>
+          <span className="text-xs text-danger">{errors.target.message}</span>
         )}
       </div>
       <div className="flex flex-col gap-1">
-        <label htmlFor="monitor-frequency" className="text-sm text-slate-700">
+        <label htmlFor="monitor-frequency" className="text-sm font-medium text-muted">
           Frequency (seconds)
         </label>
         <input
@@ -130,23 +130,23 @@ export function CreateMonitorForm() {
           type="number"
           aria-invalid={errors.frequency !== undefined}
           {...register("frequency", { valueAsNumber: true })}
-          className="rounded border border-slate-300 px-3 py-2 text-sm"
+          className="w-full rounded-control border border-line-strong bg-canvas px-3 py-2.5 text-sm text-ink focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
         />
         {errors.frequency !== undefined && (
-          <span className="text-xs text-red-600">
+          <span className="text-xs text-danger">
             {errors.frequency.message}
           </span>
         )}
       </div>
       {errors.root !== undefined && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-danger">
           {errors.root.message}
         </p>
       )}
       <button
         type="submit"
         disabled={isSubmitting}
-        className="self-start rounded bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50"
+        className="self-start rounded-control bg-accent-strong px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-accent hover:shadow-glow disabled:cursor-not-allowed disabled:opacity-50"
       >
         Create monitor
       </button>

@@ -7,8 +7,8 @@ export function Input({ className = "", ...rest }: InputProps) {
   const invalid = rest["aria-invalid"] === true || rest["aria-invalid"] === "true";
   return (
     <input
-      className={`rounded border px-3 py-2 text-sm ${
-        invalid ? "border-red-500" : "border-slate-300"
+      className={`w-full rounded-control border bg-canvas px-3 py-2.5 text-sm text-ink placeholder:text-subtle focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 ${
+        invalid ? "border-danger text-danger" : "border-line-strong"
       } ${className}`}
       {...rest}
     />

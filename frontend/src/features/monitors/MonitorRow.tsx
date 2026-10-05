@@ -15,15 +15,15 @@ export function MonitorRow({ monitor, now }: { monitor: MonitorRead; now: Date }
   const slow = monitor.frequency > SLOW_FREQUENCY_SECONDS;
 
   return (
-    <li className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+    <li className="rounded-panel border border-line bg-surface p-5 shadow-panel transition duration-150 hover:border-line-strong hover:shadow-glow">
       <div className="flex items-center justify-between gap-2">
-        <span className="font-medium text-slate-900">{monitor.name}</span>
+        <span className="font-semibold text-ink">{monitor.name}</span>
         <StatusPill lastState={monitor.last_state} />
       </div>
-      <p className="mt-1 truncate font-mono text-sm text-slate-600">
+      <p className="mt-1 truncate font-mono text-sm text-muted">
         {monitor.target}
       </p>
-      <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-500">
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-line pt-3 text-xs text-muted">
         {slow ? (
           <span title="slow monitors are expected">every {monitor.frequency}s</span>
         ) : (
@@ -37,7 +37,7 @@ export function MonitorRow({ monitor, now }: { monitor: MonitorRead; now: Date }
           </span>
         )}
         {stale && (
-          <span className="text-amber-600">
+          <span className="text-warning">
             no recent check — engine may be down
           </span>
         )}

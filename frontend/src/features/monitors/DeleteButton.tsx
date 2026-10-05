@@ -44,23 +44,23 @@ export function DeleteButton({
           onClick={() => {
             setConfirming(true);
           }}
-          className="rounded px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+          className="rounded-control px-2.5 py-1.5 text-xs font-medium text-danger hover:bg-danger-soft"
         >
           Delete{monitorName !== undefined ? ` ${monitorName}` : ""}
         </button>
-        {message !== null && <span className="text-xs text-red-600">{message}</span>}
+        {message !== null && <span className="text-xs text-danger">{message}</span>}
       </span>
     );
   }
 
   return (
     <span className="inline-flex items-center gap-2">
-      <span className="text-xs text-slate-600">Confirm delete?</span>
+      <span className="text-xs text-muted">Confirm delete?</span>
       <button
         type="button"
         onClick={confirm}
         disabled={deleteMonitor.isPending}
-        className="rounded bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50"
+        className="rounded-control bg-danger-strong px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-danger disabled:cursor-not-allowed disabled:opacity-50"
       >
         Confirm delete
       </button>
@@ -69,11 +69,11 @@ export function DeleteButton({
         onClick={() => {
           setConfirming(false);
         }}
-        className="rounded px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100"
+        className="rounded-control px-2.5 py-1.5 text-xs font-medium text-muted hover:bg-raised hover:text-ink"
       >
         Cancel
       </button>
-      {message !== null && <span className="text-xs text-red-600">{message}</span>}
+      {message !== null && <span className="text-xs text-danger">{message}</span>}
     </span>
   );
 }

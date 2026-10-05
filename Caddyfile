@@ -6,7 +6,7 @@
 		X-Content-Type-Options "nosniff"
 		Referrer-Policy "strict-origin-when-cross-origin"
 		X-Frame-Options "DENY"
-		Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; img-src 'self' data: https:; font-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'"
+		Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; img-src 'self' data: https:; font-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-eval' 'sha256-A6XVjC0Wwd3bN413bV0i/7krCFB4s4Xb2NeGhJ8pnFU=' 'sha256-iYQ68IcxMpucM82DOoTgwyJrUbWdfWnVkzrBNYM2Rt4='; connect-src 'self'"
 		-Server
 	}
 

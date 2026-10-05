@@ -110,9 +110,9 @@ Verificación local observada: API 74 unitarios y 44 e2e contra PostgreSQL real;
 - [x] Script de backup PostgreSQL con `pg_dump` comprimido, rotación y manejo claro de fallos; restauración real local aislada aprobada con verificación independiente.
 - [x] Documentar la restauración PostgreSQL en `DEPLOY.md`.
 - [x] `DEPLOY.md`: Docker en VM Linux, DNS del subdominio, firewall del proveedor y de la VM (80/443), clonar, configuración, build local, levantar, logs, actualizar, backup/restauración y rollback.
-- [x] README en inglés: descripción, credenciales demo, arquitectura Mermaid, strategy + registry, worker desacoplado, seguridad implementada (SSRF, DNS rebinding/socket pinning, rate limiting, cuotas, demo y página pública) y comandos de tests. Afirmar solo lo implementado.
-- [x] README: placeholders de link en vivo y video demo creados.
-- [ ] Completar los enlaces reales de despliegue y video — decisión del usuario, sin publicar ni desplegar desde esta sesión.
+- [x] README en inglés actualizado: descripción, enlaces de demo y status, acceso demo compartido y limitado, arquitectura Mermaid, strategy + registry, worker desacoplado, seguridad implementada, salud/retención/backups y restore en `DEPLOY.md`, stack y comandos locales. Afirmar solo lo implementado.
+- [x] README: añadir enlace real proporcionado para el demo y credenciales de acceso documentadas.
+- [ ] Añadir enlace al video demo — pendiente de publicación por el usuario; mantener solo un comentario HTML TODO hasta entonces.
 - [x] Bloques consolidados de raíz y API documentados en `DEPLOY.md`, con un comentario por variable y solo placeholders; sin acceder a archivos `.env*`.
 - [ ] Pegar y completar los ejemplos de configuración — pendiente del usuario; el agente no crea ni edita archivos `.env*`.
 - [x] Verificación final local: API 107 unitarios/51 e2e contra PostgreSQL real/build; frontend 121 tests/lint/typecheck/build; Go 7 paquetes/full/race/build e integración PostgreSQL de retención. Smoke: 30 assertions, 15 escenarios producción (142 s), 5 desarrollo (26 s). Registrar por separado checks no ejecutados: ShellCheck no disponible; CI remoto/ARM64/VM/ACME público pendientes.

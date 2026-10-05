@@ -10,5 +10,5 @@ export function Button({ className = "", variant, ...rest }: ButtonProps & { var
     variant === "danger"
       ? "bg-red-600 text-white hover:bg-red-700"
       : "bg-slate-900 text-white hover:bg-slate-700";
-  return <button type="button" className={`${base} ${style} ${className}`} {...rest} />;
+  return <button type="button" className={`${base} ${style} ${className} dashboard-button`} {...rest} />;
 }

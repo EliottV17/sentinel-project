@@ -27,7 +27,7 @@ export function StatusPill({ lastState }: { lastState: LastState }) {
     (lastState !== null && PILL_STYLES[lastState]) || NEVER_CHECKED;
   return (
     <span
-      className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${style.className}`}
+      className={`inline-block rounded-full border border-white/5 px-2.5 py-1 text-xs font-semibold ${style.className} pill-status`}
     >
       {style.label}
     </span>

@@ -10,8 +10,8 @@ Sentinel is an uptime-monitoring service for HTTP and HTTPS endpoints. Authentic
 
 Select **Probar demo** (“Try demo”) on the login page to sign in without typing credentials. For manual sign-in, use exactly:
 
-- Email: `<DEMO_EMAIL>`
-- Password: `<DEMO_PASSWORD>`
+- Email: `demo@example.invalid`
+- Password: `demo_password_publica_123`
 
 This is an intentionally shared, limited account: it can have up to 3 monitors, each with a minimum interval of 60 seconds. Its account and example monitors are reset every 60 minutes, so demo changes and history are temporary. Demo access uses a 15-minute token. The service runs on a small VM and availability is best-effort; it is not a production monitoring SLA.
 

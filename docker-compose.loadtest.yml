@@ -1,0 +1,84 @@
+services:
+  db:
+    container_name: !reset null
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${LOADTEST_DB_PASSWORD:?set a load-test-only database password}
+      POSTGRES_DB: sentinel_db
+    ports: !reset []
+    volumes: !override
+      - sentinel_load_data:/var/lib/postgresql/data
+      - ./scripts/loadtest/seed.sql:/loadtest/seed.sql:ro
+
+  api:
+    container_name: !reset null
+    environment: !override
+      DATABASE_URL: ${LOADTEST_DATABASE_URL:?set the isolated load-test database URL}
+      SECRET_KEY: ${LOADTEST_SECRET_KEY:?set a load-test-only secret key}
+      ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: 30
+      NODE_ENV: test
+      IGNORE_ENV_FILE: "true"
+      CORS_ORIGINS: http://127.0.0.1:${LOADTEST_API_PORT:-18000}
+      DEMO_USER_EMAIL: ${LOADTEST_DEMO_EMAIL:?set the load-test demo email}
+      DEMO_USER_PASSWORD: ${LOADTEST_DEMO_PASSWORD:?set the load-test demo password}
+      DEMO_ACCESS_TOKEN_EXPIRE_MINUTES: 15
+      DEMO_MAX_MONITORS: 3
+      DEMO_MIN_FREQUENCY_SECONDS: 60
+      DEMO_MONITORS_MANIFEST_PATH: /loadtest/demo-monitors.json
+      STATUS_OWNER_EMAIL: ${LOADTEST_STATUS_EMAIL:?set the load-test status email}
+      STATUS_MONITORS_MANIFEST_PATH: /loadtest/status-monitors.json
+      STATUS_UPTIME_WINDOW_HOURS: 24
+      STATUS_CACHE_TTL_SECONDS: 30
+    ports: !override
+      - "127.0.0.1:${LOADTEST_API_PORT:-18000}:8000"
+    volumes: !override
+      - ./scripts/loadtest/demo-monitors.json:/loadtest/demo-monitors.json:ro
+      - ./scripts/loadtest/status-monitors.json:/loadtest/status-monitors.json:ro
+
+  worker:
+    container_name: !reset null
+    environment: !override
+      DATABASE_URL: ${LOADTEST_DATABASE_URL:?set the isolated load-test database URL}
+      DEMO_USER_EMAIL: ${LOADTEST_DEMO_EMAIL:?set the load-test demo email}
+      DEMO_RESET_INTERVAL_MINUTES: 60
+      DEMO_MONITORS_MANIFEST_PATH: /loadtest/demo-monitors.json
+    volumes: !override
+      - ./scripts/loadtest/demo-monitors.json:/loadtest/demo-monitors.json:ro
+    networks:
+      - default
+      - loadtest
+
+  frontend:
+    container_name: !reset null
+    ports: !reset []
+
+  target:
+    image: python:3.13-alpine
+    command: ["python", "/loadtest/target.py"]
+    environment:
+      TARGET_DELAY_MS: ${TARGET_DELAY_MS:-10}
+    volumes:
+      - ./scripts/loadtest/target.py:/loadtest/target.py:ro
+    networks:
+      loadtest:
+        ipv4_address: 198.51.100.10
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=2).read()"
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 2s
+
+volumes:
+  sentinel_load_data:
+
+networks:
+  loadtest:
+    ipam:
+      config:
+        - subnet: 198.51.100.0/24

@@ -14,8 +14,8 @@ Measure 5,000 private HTTP monitors at 60-second frequency against a local synth
 - Do not assert 75,000 results or ~25 MB without measurement. Full runs pending; theoretical upper bounds: 10/0.010=1000 checks/s; 10/0.300=33.333... checks/s before overhead; demand 5000/60=83.333... checks/s.
 
 ## Tasks
-- [ ] T1 (in progress): Implement isolated target/Compose, safe seeding and reproducible measurement scripts with focused tests and procedural README. Commit `test:` work unit after checks.
-- [ ] T2 (pending): Independently execute two-minute validation; write observed numbers and limitations in docs/load-test.md; full run rows pending; commit `docs:` evidence work unit.
+- [x] T1 (done): Implement isolated target/Compose, safe seeding and reproducible measurement scripts with focused tests and procedural README. Commit `c64b4d7eae9043b4f54e1837b3afd4efbd0981bf` (`test: add isolated reproducible worker load test`).
+- [ ] T2 (in progress): Independently execute two-minute validation; write observed numbers and limitations in docs/load-test.md; full run rows pending; commit `docs:` evidence work unit.
 
 ## Acceptance checks
 - Applicable script/target deterministic tests with observed RED/GREEN; syntax and Compose structural validation.
@@ -26,7 +26,11 @@ Measure 5,000 private HTTP monitors at 60-second frequency against a local synth
 ## Evidence and progress
 - Read PLAN.md completely. Read-only explorer mapped schema, SSRF, worker loop and startup. Hardcoded concurrency 10; all due monitors fetched without LIMIT; cycles do not overlap; timestamps are unzoned UTC.
 - Docker daemon available: Engine 29.7.2, 12 CPUs, 16,582,406,144 bytes RAM assigned. Host metadata will be captured by harness.
+- T1 test-first RED missing metrics module and unknown-state behavior; GREEN eight tests. Independent verifier repeated eight passing tests, Bash syntax, four Python AST parses, Compose config and whitespace checks.
+- Independent verifier found plain container_name:null retained dev names; parent fixed all four with !reset null; merged config rechecked names absent and project volume correct before any containers started.
+- Native assessment unassessable because new files were untracked: conservatively routed to independent verifier. RDD clone-local off, no native review started.
+- Harness is one coherent work unit (1,256 added lines including tests/docs); larger than the planning heuristic, with no code compression or omitted checks. No delivery authorized beyond commits.
 - Full runs and remote CI are pending, not acceptance evidence for the short validation.
 
 ## Next step
-Delegate T1 within derived allowed edit surfaces, then assess and route independent validation. No source changes yet.
+Run the independent two-minute validation from a clean committed tree; preserve ignored raw artifacts and isolated database. Then record measured data in docs/load-test.md. Do not run either full 15-minute scenario.

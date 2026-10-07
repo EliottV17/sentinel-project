@@ -6,26 +6,27 @@ This harness runs an isolated five-thousand-monitor workload without changing AP
 
 Prerequisites: Docker Engine with Compose v2 support for `!reset`/`!override`, Python 3.10+ on the host, and enough disk/memory to build and run the API, worker, and PostgreSQL. The `python:3.13-alpine` target image must be available locally or pullable. Choose a free loopback API port other than the development stack's port 8000.
 
-Run one of the following from any working directory:
+For repeated runs, use this nondestructive sequence from the repository root. Each invocation selects a new retained database volume; previous test volumes and artifacts are left untouched:
 
 ```sh
-./scripts/loadtest/loadtest.sh --delay 10
-./scripts/loadtest/loadtest.sh --delay 300
+./scripts/loadtest/loadtest.sh --duration 120 --delay 10 --fresh-volume
+./scripts/loadtest/loadtest.sh --delay 10 --fresh-volume
+./scripts/loadtest/loadtest.sh --delay 300 --fresh-volume
 ```
 
-Each command performs preparation, target/API health checks, dedicated user registration, exact SQL seeding, first-check startup measurement, a bounded warmup, then a 900-second steady window. The harness captures evidence under `scripts/loadtest/results/<UTC timestamp>/`; it stops only the `sentinel-load` worker afterward and intentionally leaves its DB/API/target running. Full 15-minute runs are operator-owned; do not interpret an unrun mode as measured evidence.
+The first command is the short validation; the following commands are the operator-owned 15-minute runs. Do not interpret an unrun mode as measured evidence. Each invocation performs preparation, target/API health checks, dedicated user registration, exact SQL seeding, first-check startup measurement, a bounded warmup, then its steady window. The harness captures evidence under `scripts/loadtest/results/<UTC timestamp>/`; it stops only the `sentinel-load` worker afterward and intentionally leaves its DB/API/target running. It prints and records the selected DB volume name in the summary.
 
 Set the port and target delay through command arguments or environment. The environment example below keeps the API off the development stack's 8000 port:
 
 ```sh
 env LOADTEST_API_PORT=18001 TARGET_DELAY_MS=300 \
-  ./scripts/loadtest/loadtest.sh --api-port 18001 --delay 300
+  ./scripts/loadtest/loadtest.sh --api-port 18001 --delay 300 --fresh-volume
 ```
 
 Use a short validation only when explicitly authorized:
 
 ```sh
-./scripts/loadtest/loadtest.sh --duration 120 --delay 10
+./scripts/loadtest/loadtest.sh --duration 120 --delay 10 --fresh-volume
 ```
 
 The two-minute run is a validation exercise, not a substitute for either full 15-minute run.
@@ -36,14 +37,7 @@ The two-minute run is a validation exercise, not a substitute for either full 15
 - The API is bound only to `127.0.0.1:<LOADTEST_API_PORT>` (default 18000); database and target have no host ports. The project-specific database volume is named `sentinel-load_sentinel_load_data`. The target is `198.51.100.10:8080` on `198.51.100.0/24`; the worker is attached to that network and the default DB network. It does not change `ALLOWED_PORTS` or any worker/API code.
 - Demo and status use empty test manifests and distinct test identities. API readiness at `/api/v1/health` is required after migration/seeding. The harness then registers a unique non-demo test user through `POST /api/v1/users`, checks the Docker project/service labels before SQL writes, and inserts exactly 5,000 active private HTTP monitors. Demo/status monitors in this database are paused. Worker startup happens only after the SQL assertions pass and the Docker stats sampler has collected its pre-start sample.
 - The built API runtime image copies only selected source/build files and does not copy `.env*`; the override sets `NODE_ENV=test` and `IGNORE_ENV_FILE=true` so Nest does not load dotenv files. Compose interpolation is independently disabled from host dotenv with `--env-file /dev/null`. Prisma's entrypoint migration runs inside the image, which has no copied dotenv files.
-- Re-running against an existing sentinel-load database is refused when a previous `loadtest-*@example.test` account exists. The safe default never deletes a volume or workload. To deliberately start over, first stop only the isolated project, inspect its labels, and explicitly remove only this project and its volume:
-
-  ```sh
-  docker compose --env-file /dev/null -p sentinel-load \
-    -f docker-compose.yml -f docker-compose.loadtest.yml down -v
-  ```
-
-  This is an operator cleanup instruction, not part of the harness, and must not be run against the main `sentinel` project. It is the only documented reset; the harness itself does not call `down`, remove volumes, or clean artifacts.
+- By default, an existing sentinel-load container or `sentinel-load_sentinel_load_data` volume is refused. Repeated runs should use `--fresh-volume`: each invocation generates a unique `sentinel-load_data_<UTC timestamp>_<suffix>` name, verifies labels on existing services, rejects a running worker, and force-recreates only the owned DB/API/target containers needed for the new empty database. The previous named volume and all artifacts remain intact; no reset or volume removal is performed. Old volumes are retained for later operator-managed cleanup.
 
 ## What the measurement means
 
@@ -51,11 +45,11 @@ The worker's effective concurrency is fixed at 10 (`sentinel-worker/internal/con
 
 The startup phase ends only after all 5,000 monitors have a first `last_checked_at`, bounded by 600 seconds by default. A separate warmup of at least one monitor frequency interval (60 seconds) follows; this criterion is not proof of convergence. If the bounded first-check phase fails, the run fails clearly and preserves its artifacts. A `--warmup-timeout` below 60 seconds is invalid; the permitted warmup/startup bound is at most 600 seconds.
 
-The steady window uses a monotonic deadline and is reported as the half-open UTC interval `[start,end)`. Final result SQL runs after the deadline, so query latency cannot silently extend the measured interval. Minute buckets are aligned to that exact window and label partial buckets. Inter-check intervals use `lag()` over each monitor's entire result history before filtering current results to the window, preserving a predecessor just before the start boundary. SQL compares unzoned PostgreSQL timestamps as UTC, consistent with worker writes.
+The steady window uses a monotonic deadline and is reported as the half-open UTC interval `[start,end)`. Final result SQL runs after the deadline, so query latency cannot silently extend the measured interval. Minute counts come from SQL `date_trunc('minute', created_at)` grouping inside the exact half-open window; UTC calendar-minute rows include overlap seconds and mark partial edge minutes (a non-minute-aligned start is not mislabeled as a full first minute). Inter-check intervals use `lag()` over each monitor's entire result history before filtering current results to the window, preserving a predecessor just before the start boundary. SQL compares unzoned PostgreSQL timestamps as UTC, consistent with worker writes.
 
-The harness samples `docker stats --no-stream` every 10 seconds for worker, DB, and target. `container-stats.csv` preserves Docker's raw CPU/memory strings plus CPU percent and memory bytes (Docker SI and IEC units converted to bytes). Startup-phase sampled peaks are separate from steady-window median and sampled peak CPU/memory for each of the three containers. `overdue.csv` samples every 60 seconds, counting a monitor overdue only when its last check—or its seed creation time when never checked—is older than `frequency + 30` seconds.
+The harness samples `docker stats --no-stream` every 10 seconds for worker, DB, and target. Per-container CSVs and `container-stats.csv` preserve Docker's raw CPU/memory strings plus normalized CPU percent and byte values. The converted memory byte values are derived from Docker's rounded human-readable display precision, not exact process or container memory; sampled peaks are labeled accordingly. Startup-phase sampled peaks are separate from steady-window median and sampled peak CPU/memory for each of the three containers. `overdue.csv` samples every 60 seconds, counting a monitor overdue only when its last check—or its seed creation time when never checked—is older than `frequency + 30` seconds.
 
-`summary.json` includes actual image IDs, container IDs/restarts/status, safe Docker resource limits, host OS/CPU/RAM, Docker version and allocated CPU/RAM, full Git SHA and dirty path/status list, fixed concurrency source, target delay, phase/window times, result counts, latency/interval medians and interpolated p95, and overdue maxima/sample time. It contains no database password, test secret, or registered user's password. Raw CSV and JSON evidence stays local and is ignored by the nested `.gitignore`.
+`summary.json` includes the retained database volume name, actual image IDs, container IDs/restarts/status, verified final worker `exited` state/restart count with safe-inspect provenance, safe Docker resource limits, host OS/CPU/RAM, Docker version and allocated CPU/RAM, full Git SHA and dirty path/status list, fixed concurrency source, target delay, phase/window times, result counts, latency/interval medians and interpolated p95, and overdue maxima/sample time. It contains no database password, test secret, or registered user's password. Raw CSV and JSON evidence stays local and is ignored by the nested `.gitignore`.
 
 Useful files:
 
@@ -78,4 +72,4 @@ All sampled peaks may miss short transients. Docker stats cache exclusion is not
 
 ## Scope and cleanup
 
-The harness starts only `db`, `api`, and `target` for preparation, then starts `worker` after successful registration and SQL checks. It never starts frontend. On normal completion or failure after worker startup, it stops only the Compose-owned worker; it retains the dedicated database, API, target, volume, and artifacts. The explicit `down -v` command above is an operator-only reset and cleanup instruction. Do not run cleanup as part of evidence capture.
+The harness starts only `db`, `api`, and `target` for preparation, then starts `worker` after successful registration and SQL checks. It never starts frontend. On normal completion or failure after worker startup, it stops only the Compose-owned worker; it retains the dedicated database, API, target, volume, and artifacts. No volume removal is part of this workflow. Each fresh run retains its named volume and results for later operator-managed cleanup; do not remove volumes as part of evidence capture.

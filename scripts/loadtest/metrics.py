@@ -5,6 +5,7 @@ from __future__ import annotations
 import math
 import re
 import statistics
+from datetime import datetime, timezone
 
 _MEMORY_UNIT = re.compile(r"^\s*([0-9]+(?:\.[0-9]+)?)\s*(B|kB|KB|KiB|MB|MiB|GB|GiB|TB|TiB)\s*$")
 _MEMORY_FACTORS = {
@@ -51,28 +52,27 @@ def percentile_summary(values: list[float]) -> dict[str, float | int | None]:
 
 
 def minute_buckets(
-    rows: list[tuple[float, str]], start: float, end: float
-) -> list[dict[str, int | bool]]:
-    """Count result timestamps in [start, end), retaining partial edge flags."""
+    rows: list[tuple[float, int, int, int]], start: float, end: float
+) -> list[dict[str, int | float | bool | str]]:
+    """Format SQL calendar-minute counts and mark partial UTC window overlaps."""
     if end <= start:
         raise ValueError("measurement end must follow start")
-    count = math.ceil((end - start) / 60.0)
-    buckets = [
-        {"minute": index, "successful": 0, "failed": 0, "unknown": 0, "partial": False}
-        for index in range(count)
-    ]
-    for timestamp, state in rows:
-        if start <= timestamp < end:
-            index = int((timestamp - start) // 60)
-            if state == "healthy":
-                key = "successful"
-            elif state == "unhealthy":
-                key = "failed"
-            else:
-                key = "unknown"
-            buckets[index][key] += 1
-    for index, bucket in enumerate(buckets):
-        bucket_start = start + index * 60
-        bucket_end = min(end, bucket_start + 60)
-        bucket["partial"] = bucket_end - bucket_start < 60
+    counts = {int(float(minute)): (successful, failed, unknown)
+              for minute, successful, failed, unknown in rows}
+    first_minute = math.floor(start / 60.0) * 60
+    buckets = []
+    minute_start = first_minute
+    while minute_start < end:
+        overlap_start = max(start, minute_start)
+        overlap_end = min(end, minute_start + 60)
+        successful, failed, unknown = counts.get(minute_start, (0, 0, 0))
+        buckets.append({
+            "minute_utc": datetime.fromtimestamp(minute_start, timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "successful": int(successful),
+            "failed": int(failed),
+            "unknown": int(unknown),
+            "window_seconds": round(overlap_end - overlap_start, 6),
+            "partial": overlap_end - overlap_start < 60,
+        })
+        minute_start += 60
     return buckets

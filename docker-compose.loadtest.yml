@@ -76,6 +76,7 @@ services:
 
 volumes:
   sentinel_load_data:
+    name: ${LOADTEST_VOLUME_NAME:-sentinel-load_sentinel_load_data}
 
 networks:
   loadtest:

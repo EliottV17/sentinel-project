@@ -16,7 +16,7 @@ Measure 5,000 private HTTP monitors at 60-second frequency against a local synth
 ## Tasks
 - [x] T1 (done): Implement isolated target/Compose, safe seeding and reproducible measurement scripts with focused tests and procedural README. Commit `c64b4d7eae9043b4f54e1837b3afd4efbd0981bf` (`test: add isolated reproducible worker load test`).
 - [x] T3 (done): Fix no-healthcheck inspection, sampler failure propagation and teardown, preserve failed data with opt-in fresh volume for repeat runs, and calendar-minute metric grouping. Commit `7030004f9726463c153be41bb2f74cdad07c69a5` (`test: make load test sampling and repeat runs reliable`); 19 regression tests independently passed, Bash/AST/Compose/whitespace checks passed.
-- [ ] T2 (in progress): Independently execute two-minute validation; write observed numbers and limitations in docs/load-test.md; full run rows pending; commit `docs:` evidence work unit.
+- [x] T2 (done): Independent two-minute fresh-volume validation completed at clean `5ef5fdbcd5e47c05fead4933cb5658e13a396222`; observed data documented and independently cross-checked in `docs/load-test.md`. Commit `6c77dbe4921d50d4764c52888563b0bfcf418a7b` (`docs: report measured worker load test validation`). Full 900-second runs remain operator-owned and pending.
 
 ## Acceptance checks
 - Applicable script/target deterministic tests with observed RED/GREEN; syntax and Compose structural validation.
@@ -37,5 +37,10 @@ Measure 5,000 private HTTP monitors at 60-second frequency against a local synth
 - Parent verified exact Docker ownership and stopped only sentinel-load-worker-1. No volumes/data removed; failed DB retained. SQL window produced 7,023 healthy results in 120 seconds, but this is not a completed measurement and must not be used to claim memory or sustained full-run throughput.
 - Authorized scoped correction adds opt-in new project-specific volume to repeat runs without deleting failed evidence; previous volumes retained. Calendar-minute counts must match requested date_trunc grouping rather than relative buckets.
 
+- Successful evidence directory: `scripts/loadtest/results/20261007T032218Z/`; 120.000-second window after 9.519-second startup and 60.000-second warmup. Exactly 5,000 monitors; 6,920 healthy results, zero failures/unknown, zero overdue in three samples. Interval median 61.9688225 seconds; p95 62.285953049999996 seconds.
+- Worker window memory median 24,080,547 and sampled peak 25,249,710 display-derived bytes. Startup had one 7.285 MiB sample and cannot resolve true transient peak. Post-window sample 26.36 MiB / 27,640,463 bytes disclosed; no 25 MB maximum claim.
+- Independent final readback cross-checked tables and raw artifacts, repeated all 19 passing tests and whitespace checks, verified no API/worker/dev Compose changes and final worker exited(0). DB/API/target healthy; new and failed-run volumes retained. No secrets serialized in summaries, no `.env*` read/edited, no push/PR.
+- Native assessment of new docs was unassessable due untracked scope; conservative independent verification performed. No native review approval claimed, RDD remains clone-local off. API/worker suites not rerun because source unchanged; real harness SQL/Compose/HTTP validated. Full runs/CI/external behavior remain unverified.
+
 ## Next step
-T3 independently verified and committed; native assessment high risk routed to independent verification. Human approved exact metrics.py edit surface. Repeat independent short validation with `--fresh-volume` from a clean committed tree, retaining failed evidence. Then record actual data in docs/load-test.md. Do not run either full 15-minute scenario.
+User runs sequentially `./scripts/loadtest/loadtest.sh --duration 900 --delay 10 --fresh-volume` and `./scripts/loadtest/loadtest.sh --duration 900 --delay 300 --fresh-volume`, then supplies summary.json and raw CSVs to replace pending evidence rows. Keep sample coverage, exact counts and memory units explicit. No full run, destructive cleanup or delivery operation is authorized for the agent.

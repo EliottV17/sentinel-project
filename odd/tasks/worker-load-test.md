@@ -1,7 +1,7 @@
 # Reproducible worker load test
 
 ## Objective and authorization
-Measure 5,000 private HTTP monitors at 60-second frequency against a local synthetic target without changing API/worker code or weakening SSRF. User authorized this feature, small `test:`/`docs:` commits, and a two-minute validation only. Full 15-minute steady-state runs at 10 ms and 300 ms belong to the user and remain pending.
+Measure 5,000 private HTTP monitors at 60-second frequency against a local synthetic target without changing API/worker code or weakening SSRF. User authorized this feature, small `test:`/`docs:` commits, and a two-minute validation only. Full 15-minute observation runs at 10 ms and 300 ms were executed by the user; their supplied artifacts are now independently verified. Update the evidence document without running new workloads or modifying harness/API/worker code.
 
 ## Scope and constraints
 - Worktree `/home/eliott/Projects/sentinel-project-loadtest`, branch `chore/load-test`, based on updated `origin/main` at `9bc49de` (clean, 0/0 divergence).
@@ -16,7 +16,9 @@ Measure 5,000 private HTTP monitors at 60-second frequency against a local synth
 ## Tasks
 - [x] T1 (done): Implement isolated target/Compose, safe seeding and reproducible measurement scripts with focused tests and procedural README. Commit `c64b4d7eae9043b4f54e1837b3afd4efbd0981bf` (`test: add isolated reproducible worker load test`).
 - [x] T3 (done): Fix no-healthcheck inspection, sampler failure propagation and teardown, preserve failed data with opt-in fresh volume for repeat runs, and calendar-minute metric grouping. Commit `7030004f9726463c153be41bb2f74cdad07c69a5` (`test: make load test sampling and repeat runs reliable`); 19 regression tests independently passed, Bash/AST/Compose/whitespace checks passed.
-- [x] T2 (done): Independent two-minute fresh-volume validation completed at clean `5ef5fdbcd5e47c05fead4933cb5658e13a396222`; observed data documented and independently cross-checked in `docs/load-test.md`. Commit `6c77dbe4921d50d4764c52888563b0bfcf418a7b` (`docs: report measured worker load test validation`). Full 900-second runs remain operator-owned and pending.
+- [x] T2 (done): Independent two-minute fresh-volume validation completed at clean `5ef5fdbcd5e47c05fead4933cb5658e13a396222`; observed data documented and independently cross-checked in `docs/load-test.md`. Commit `6c77dbe4921d50d4764c52888563b0bfcf418a7b` (`docs: report measured worker load test validation`). Full 900-second runs were subsequently supplied by the user; see T4.
+
+- [x] T4 (done): Replaced pending full-run evidence with independently verified results and strict UTC resource recomputations, disclosed phase-only summary race and unmeasured startup transients. Commit `a1fda0f078bf724c0139d2821f5e663d222388df` (`docs: report verified full worker load test results`). No harness or application changes. Native assessment passive: parent structural readback and git diff --check passed; no new tests or workloads needed for documentation.
 
 ## Acceptance checks
 - Applicable script/target deterministic tests with observed RED/GREEN; syntax and Compose structural validation.
@@ -42,5 +44,12 @@ Measure 5,000 private HTTP monitors at 60-second frequency against a local synth
 - Independent final readback cross-checked tables and raw artifacts, repeated all 19 passing tests and whitespace checks, verified no API/worker/dev Compose changes and final worker exited(0). DB/API/target healthy; new and failed-run volumes retained. No secrets serialized in summaries, no `.env*` read/edited, no push/PR.
 - Native assessment of new docs was unassessable due untracked scope; conservative independent verification performed. No native review approval claimed, RDD remains clone-local off. API/worker suites not rerun because source unchanged; real harness SQL/Compose/HTTP validated. Full runs/CI/external behavior remain unverified.
 
+## Supplied full-run evidence
+- 10 ms: `scripts/loadtest/results/20261007T035935Z/`; 300 ms: `scripts/loadtest/results/20261007T041737Z/`. Both completed at clean `6db4d0171da10c3edf7f08f2b2c87b738d9b9541`, identical images/host, 5,000 monitors, 900-second windows, zero worker restarts and final exited state.
+- Raw result totals: 70,960 and 28,270, all healthy. Window overdue maxima 0 and 2,340 (15 samples each). Interval medians 61.994875 and 190.9495485 seconds; p95 62.055171099999995 and 210.26961054999998 seconds.
+- Strict raw timestamp resource filter gives 90 samples/container/run; worker window memory medians 37,654,364 and 32,033,996 display-derived bytes; peaks 52,785,315 (50.34 MiB) and 36,458,987 (34.77 MiB).
+- Independent verification discovered summarize_samples filters phase tags only while sampler remains running; original summary has snapshot-count asymmetry. Recompute documented window metrics from final raw timestamps; preserve original artifacts. Prior claim that summary enforces timestamps was incorrect and must be corrected in docs.
+- No measured attribution of throughput gap to SQL/ticker/locks; no assertion transient startup peak was definitely missed. Only sampled limits and capacity formula are supported.
+
 ## Next step
-User runs sequentially `./scripts/loadtest/loadtest.sh --duration 900 --delay 10 --fresh-volume` and `./scripts/loadtest/loadtest.sh --duration 900 --delay 300 --fresh-volume`, then supplies summary.json and raw CSVs to replace pending evidence rows. Keep sample coverage, exact counts and memory units explicit. No full run, destructive cleanup or delivery operation is authorized for the agent.
+Full-run evidence now committed. Use the measured 10 ms scenario (5,000 monitors; 70,960 healthy checks in 900 seconds; median worker memory 37,654,364 display-derived bytes; sampled peak 52,785,315 bytes) instead of the unsupported combined claim. Sampler timestamp-boundary fix, CI, external targets and profiling remain follow-ups; no new run, harness fix, destructive cleanup, push or PR is authorized.

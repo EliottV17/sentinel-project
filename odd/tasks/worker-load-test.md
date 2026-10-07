@@ -15,6 +15,7 @@ Measure 5,000 private HTTP monitors at 60-second frequency against a local synth
 
 ## Tasks
 - [x] T1 (done): Implement isolated target/Compose, safe seeding and reproducible measurement scripts with focused tests and procedural README. Commit `c64b4d7eae9043b4f54e1837b3afd4efbd0981bf` (`test: add isolated reproducible worker load test`).
+- [x] T3 (done): Fix no-healthcheck inspection, sampler failure propagation and teardown, preserve failed data with opt-in fresh volume for repeat runs, and calendar-minute metric grouping. Commit `7030004f9726463c153be41bb2f74cdad07c69a5` (`test: make load test sampling and repeat runs reliable`); 19 regression tests independently passed, Bash/AST/Compose/whitespace checks passed.
 - [ ] T2 (in progress): Independently execute two-minute validation; write observed numbers and limitations in docs/load-test.md; full run rows pending; commit `docs:` evidence work unit.
 
 ## Acceptance checks
@@ -32,5 +33,9 @@ Measure 5,000 private HTTP monitors at 60-second frequency against a local synth
 - Harness is one coherent work unit (1,256 added lines including tests/docs); larger than the planning heuristic, with no code compression or omitted checks. No delivery authorized beyond commits.
 - Full runs and remote CI are pending, not acceptance evidence for the short validation.
 
+- First runtime attempt at `6eb47a2` failed: no-healthcheck worker inspection crashed sampler and final metadata; `finally` raised before worker stop. Worker samples absent, so no memory evidence. Raw failed artifacts remain at `scripts/loadtest/results/20261007T024129Z/`.
+- Parent verified exact Docker ownership and stopped only sentinel-load-worker-1. No volumes/data removed; failed DB retained. SQL window produced 7,023 healthy results in 120 seconds, but this is not a completed measurement and must not be used to claim memory or sustained full-run throughput.
+- Authorized scoped correction adds opt-in new project-specific volume to repeat runs without deleting failed evidence; previous volumes retained. Calendar-minute counts must match requested date_trunc grouping rather than relative buckets.
+
 ## Next step
-Run the independent two-minute validation from a clean committed tree; preserve ignored raw artifacts and isolated database. Then record measured data in docs/load-test.md. Do not run either full 15-minute scenario.
+T3 independently verified and committed; native assessment high risk routed to independent verification. Human approved exact metrics.py edit surface. Repeat independent short validation with `--fresh-volume` from a clean committed tree, retaining failed evidence. Then record actual data in docs/load-test.md. Do not run either full 15-minute scenario.

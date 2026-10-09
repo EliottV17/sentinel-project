@@ -7,16 +7,16 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { user, isDemo, logout } = useAuth();
   return (
     <div className="min-h-screen bg-canvas text-ink">
-      <header className="sticky top-0 z-10 flex items-center justify-between border-b border-line bg-canvas/90 px-4 py-4 backdrop-blur sm:px-6">
+      <header className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 border-b border-line bg-canvas/90 px-4 py-4 backdrop-blur sm:px-6">
         <SentinelBrand compact />
-        <div className="flex items-center gap-3">
+        <div className="flex max-w-full flex-wrap items-center justify-end gap-3">
           {user !== null && (
-            <span className="text-sm text-muted">{user}</span>
+            <span className="min-w-0 break-all text-sm text-muted">{user}</span>
           )}
           <button
             type="button"
             onClick={logout}
-            className="rounded-control border border-line-strong px-3 py-2 text-sm text-muted hover:border-accent hover:bg-raised hover:text-ink"
+            className="shrink-0 whitespace-nowrap rounded-control border border-line-strong px-3 py-2 text-sm text-muted hover:border-accent hover:bg-raised hover:text-ink"
           >
             Log out
           </button>

@@ -38,6 +38,31 @@ const createSchema = z.object({
 
 type CreateValues = z.infer<typeof createSchema>;
 
+type MonitorField = "name" | "target" | "frequency";
+
+function apiErrorMessage(error: ApiError): string {
+  if (error.status === 429) return "Too many requests. Please wait before creating a monitor.";
+  if (error.status === 403) return "You do not have permission to create this monitor.";
+  if (error.status === 409) return "Your monitor limit has been reached.";
+  if (error.status === 400 || error.status === 422) {
+    if (/already exists/i.test(error.message)) return "Target already exists";
+    return "Check the monitor details and try again.";
+  }
+  if (error.status >= 500) return "The monitor service is temporarily unavailable. Try again in a moment.";
+  return "Unable to create this monitor. Check the details and try again.";
+}
+
+function fieldErrorMessage(field: MonitorField, detail?: string): string {
+  if (detail && !/[áéíóúñ¿¡]|error|debe|deben|inválid|obligatori|superior|inferior|mínim|máxim/i.test(detail)) {
+    if (field === "frequency" && /greater than or equal to 10/i.test(detail)) {
+      return "value must be greater than or equal to 10";
+    }
+  }
+  if (field === "name") return "Enter a valid monitor name.";
+  if (field === "target") return "Enter a valid public HTTP or HTTPS URL.";
+  return "Choose a check frequency allowed for your account.";
+}
+
 export function CreateMonitorForm() {
   const createMonitor = useCreateMonitor();
   const {
@@ -67,14 +92,14 @@ export function CreateMonitorForm() {
           },
           onError: (err) => {
             if (err instanceof ApiError) {
-              for (const [field, message] of Object.entries(err.fields ?? {})) {
+              for (const [field, detail] of Object.entries(err.fields ?? {})) {
                 if (field === "name" || field === "target" || field === "frequency") {
-                  setError(field, { message });
+                  setError(field, { message: fieldErrorMessage(field, detail) });
                 }
               }
-              setError("root", { message: err.fields?._form ?? err.message });
+              setError("root", { message: apiErrorMessage(err) });
             } else {
-              setError("root", { message: "API unreachable" });
+              setError("root", { message: "Unable to reach the monitor service. Check your connection and try again." });
             }
           },
         },

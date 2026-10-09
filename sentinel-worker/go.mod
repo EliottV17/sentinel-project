@@ -1,6 +1,6 @@
 module github.com/EliottV17/sentinel-worker
 
-go 1.25.0
+go 1.26.9
 
 require github.com/jackc/pgx/v5 v5.10.0
 

@@ -25,10 +25,12 @@ const NEVER_CHECKED: PillStyle = {
 export function StatusPill({ lastState }: { lastState: LastState }) {
   const style =
     (lastState !== null && PILL_STYLES[lastState]) || NEVER_CHECKED;
+  const icon = style.label === "Healthy" ? "✓" : style.label === "Unhealthy" ? "×" : "?";
   return (
     <span
-      className={`inline-block rounded-full border border-white/5 px-2.5 py-1 text-xs font-semibold ${style.className} pill-status`}
+      className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border border-white/5 px-2.5 py-1 text-xs font-semibold ${style.className} pill-status`}
     >
+      <span aria-hidden="true">{icon}</span>
       {style.label}
     </span>
   );

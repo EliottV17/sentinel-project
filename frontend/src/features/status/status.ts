@@ -5,7 +5,7 @@ export interface PublicStatusMonitor {
   last_checked_at: string | null;
 }
 
-export type StatusLabel = "Operacional" | "Degradado" | "Caído" | "Sin datos";
+export type StatusLabel = "Operational" | "Degraded" | "Down" | "No data";
 
 export interface StatusOptions {
   now?: Date;
@@ -48,29 +48,29 @@ export function classifyStatus(
     now - checkedAt > staleAfterMinutes * 60_000 ||
     (monitor.last_state !== "healthy" && monitor.last_state !== "unhealthy")
   ) {
-    return "Sin datos";
+    return "No data";
   }
-  if (monitor.last_state === "unhealthy") return "Caído";
+  if (monitor.last_state === "unhealthy") return "Down";
   if (monitor.uptime_percentage === null || !Number.isFinite(monitor.uptime_percentage)) {
-    return "Sin datos";
+    return "No data";
   }
-  return monitor.uptime_percentage < threshold ? "Degradado" : "Operacional";
+  return monitor.uptime_percentage < threshold ? "Degraded" : "Operational";
 }
 
 export function summarizeStatus(
   monitors: PublicStatusMonitor[],
   options: StatusOptions = {},
 ): StatusSummary {
-  if (monitors.length === 0) return { label: "Sin datos", allOperational: false };
+  if (monitors.length === 0) return { label: "No data", allOperational: false };
   const labels = monitors.map((monitor) => classifyStatus(monitor, options));
-  if (labels.every((label) => label === "Operacional")) {
-    return { label: "Todos los sistemas operativos", allOperational: true };
+  if (labels.every((label) => label === "Operational")) {
+    return { label: "All systems operational", allOperational: true };
   }
   const severity: Record<StatusLabel, number> = {
-    "Operacional": 0,
-    "Sin datos": 1,
-    "Degradado": 2,
-    "Caído": 3,
+    "Operational": 0,
+    "No data": 1,
+    "Degraded": 2,
+    "Down": 3,
   };
   return {
     label: labels.reduce((worst, label) => severity[label] > severity[worst] ? label : worst),

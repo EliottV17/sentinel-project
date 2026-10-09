@@ -43,7 +43,7 @@ describe("public status page", () => {
       return HttpResponse.json(items);
     }));
     renderApp();
-    expect(await screen.findByRole("heading", { name: "Estado del sistema" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "System status" })).toBeInTheDocument();
     expect(await screen.findByText("API")).toBeInTheDocument();
     expect(authorization).toBeNull();
     expect(tokenStore.get()).not.toBeNull();
@@ -56,16 +56,16 @@ describe("public status page", () => {
       HttpResponse.json({ message: "Unauthorized" }, { status: 401 }),
     ));
     renderApp();
-    expect(await screen.findByRole("alert")).toHaveTextContent("No se pudo cargar el estado");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Unable to load service status");
     expect(tokenStore.get()).not.toBeNull();
-    expect(screen.getByRole("heading", { name: "Estado del sistema" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "System status" })).toBeInTheDocument();
   });
 
   it("keeps /status public when a stored token is expired", async () => {
     tokenStore.set(makeJwt({ sub: "user", exp: 1 }));
     server.use(http.get("/api/v1/public/status", () => HttpResponse.json(items)));
     renderApp();
-    expect(await screen.findByRole("heading", { name: "Estado del sistema" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "System status" })).toBeInTheDocument();
     expect(tokenStore.get()).not.toBeNull();
   });
 
@@ -85,43 +85,43 @@ describe("public status page", () => {
       expect.stringContaining("Uptime: 25%"),
     ]));
     expect(rows.map((row) => row.textContent)).toEqual(expect.arrayContaining([
-      expect.stringContaining("Operacional"),
-      expect.stringContaining("Caído"),
+      expect.stringContaining("Operational"),
+      expect.stringContaining("Down"),
     ]));
     expect(consoleError.mock.calls.flat().join(" ")).not.toMatch(/unique.*key.*prop/i);
     consoleError.mockRestore();
   });
 
-  it("shows Spanish text labels and summary independent of color", async () => {
+  it("shows English text labels and summary independent of color", async () => {
     server.use(http.get("/api/v1/public/status", () => HttpResponse.json([
       ...items,
       { name: "Database", last_state: "unhealthy", uptime_percentage: 50, last_checked_at: checkedAt },
     ])));
     renderApp();
-    expect(await screen.findAllByText("Caído")).toHaveLength(2);
-    expect(screen.getByRole("heading", { name: "Estado del sistema" })).toBeInTheDocument();
-    expect(screen.getAllByRole("status", { name: /Caído/ })).toHaveLength(2);
+    expect(await screen.findAllByText("Down")).toHaveLength(2);
+    expect(screen.getByRole("heading", { name: "System status" })).toBeInTheDocument();
+    expect(screen.getAllByRole("status", { name: /Down/ })).toHaveLength(2);
   });
 
   it("shows an explicit empty state", async () => {
     server.use(http.get("/api/v1/public/status", () => HttpResponse.json([])));
     renderApp();
-    expect(await screen.findByText(/No hay servicios públicos configurados/)).toBeInTheDocument();
+    expect(await screen.findByText(/No public services are configured/)).toBeInTheDocument();
   });
 
   it("shows friendly loading and error states, including 429 retry guidance", async () => {
     server.use(http.get("/api/v1/public/status", () => new HttpResponse(null, { status: 429, headers: { "Retry-After": "12" } })));
     renderApp();
-    expect(screen.getByText("Cargando estado de los servicios…")).toBeInTheDocument();
-    expect(await screen.findByRole("alert")).toHaveTextContent("Demasiadas solicitudes");
+    expect(screen.getByText("Loading service status…")).toBeInTheDocument();
+    expect(await screen.findByRole("alert")).toHaveTextContent("Too many requests");
     expect(screen.getByRole("alert")).toHaveTextContent("12");
-    expect(screen.getByRole("button", { name: "Reintentar" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
   });
 
   it("shows a friendly message for non-rate-limit network errors", async () => {
     server.use(http.get("/api/v1/public/status", () => HttpResponse.error()));
     renderApp();
-    expect(await screen.findByRole("alert")).toHaveTextContent("Comprueba tu conexión");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Check your connection");
     expect(screen.getByRole("alert").textContent).not.toContain("NetworkError");
   });
 
@@ -135,7 +135,7 @@ describe("public status page", () => {
     renderApp();
     expect(await screen.findByText("API")).toBeInTheDocument();
     await act(async () => { await vi.advanceTimersByTimeAsync(30_000); });
-    expect(await screen.findByText(/No se pudo actualizar/)).toBeInTheDocument();
+    expect(await screen.findByText(/Unable to update status/)).toBeInTheDocument();
     expect(screen.getByText("API")).toBeInTheDocument();
     expect(count).toBe(2);
   });
@@ -149,9 +149,9 @@ describe("public status page", () => {
       return HttpResponse.json([{ ...items[0], last_checked_at: nearStale }]);
     }));
     renderApp();
-    expect(await screen.findAllByText("Operacional")).toHaveLength(1);
+    expect(await screen.findAllByText("Operational")).toHaveLength(1);
     await act(async () => { await vi.advanceTimersByTimeAsync(30_000); });
-    expect(await screen.findAllByText("Sin datos")).toHaveLength(2);
+    expect(await screen.findAllByText("No data")).toHaveLength(2);
     expect(count).toBe(2);
   });
 
@@ -164,10 +164,10 @@ describe("public status page", () => {
     }));
     renderApp();
     await waitFor(() => expect(screen.getByText("API")).toBeInTheDocument());
-    expect(screen.getByText("Última verificación hace 1 minuto")).toBeInTheDocument();
+    expect(screen.getByText("Last checked 1 minute ago")).toBeInTheDocument();
     await act(async () => { await vi.advanceTimersByTimeAsync(30_000); });
     await waitFor(() => expect(count).toBe(2));
     await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
-    expect(screen.getByText("Última verificación hace 2 minutos")).toBeInTheDocument();
+    expect(screen.getByText("Last checked 2 minutes ago")).toBeInTheDocument();
   });
 });

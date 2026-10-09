@@ -1,13 +1,14 @@
 import type { ReactNode } from "react";
 import { useAuth } from "./auth/AuthProvider";
+import { SentinelBrand } from "../components/SentinelBrand";
 
-/** Header with the app name and Logout, wrapping the protected outlet. */
+/** Header with the app brand and Logout, wrapping the protected outlet. */
 export function AppShell({ children }: { children: ReactNode }) {
   const { user, isDemo, logout } = useAuth();
   return (
     <div className="min-h-screen bg-canvas text-ink">
       <header className="sticky top-0 z-10 flex items-center justify-between border-b border-line bg-canvas/90 px-4 py-4 backdrop-blur sm:px-6">
-        <span className="text-lg font-semibold tracking-tight text-ink">Sentinel</span>
+        <SentinelBrand compact />
         <div className="flex items-center gap-3">
           {user !== null && (
             <span className="text-sm text-muted">{user}</span>
@@ -17,7 +18,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             onClick={logout}
             className="rounded-control border border-line-strong px-3 py-2 text-sm text-muted hover:border-accent hover:bg-raised hover:text-ink"
           >
-            Logout
+            Log out
           </button>
         </div>
       </header>

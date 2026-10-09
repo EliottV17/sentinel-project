@@ -18,7 +18,7 @@ export function MonitorRow({ monitor, now }: { monitor: MonitorRead; now: Date }
     <li className="rounded-panel border border-line bg-surface p-5 shadow-panel transition duration-150 hover:border-line-strong hover:shadow-glow sm:p-6">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <span className="font-semibold text-ink">{monitor.name}</span>
+          <a href={`/monitors/${monitor.id}`} className="font-semibold text-ink hover:text-accent focus-visible:outline-accent">{monitor.name}</a>
           <p className="mt-1 truncate font-mono text-xs text-muted">{monitor.target}</p>
         </div>
         <StatusPill lastState={monitor.last_state} />

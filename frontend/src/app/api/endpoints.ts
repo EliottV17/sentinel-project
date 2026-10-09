@@ -22,6 +22,28 @@ type MonitorCreateResponse =
 type MonitorDeleteResponse =
   operations["delete_monitor_by_id_api_v1_monitors__monitor_id__delete"]["responses"][200]["content"]["application/json"];
 
+/** Local contracts reflect the live worker/API response, not generated OpenAPI metadata. */
+export interface MonitorHistoryRow {
+  id: number;
+  monitor_id: number;
+  state: string;
+  status_code: number | null;
+  latency_ms: number | null;
+  error_message: string | null;
+  created_at: string;
+}
+
+export interface MonitorAlertRow {
+  id: number;
+  monitor_id: number;
+  alert_type: string;
+  message: string;
+  created_at: string;
+}
+
+export const MAX_MONITOR_HISTORY_LIMIT = 200;
+const HISTORY_LIMITS = new Set([50, 100, 150, 200]);
+
 /**
  * POST /api/v1/auth/login — the endpoint is an OAuth2PasswordRequestForm, so
  * the body MUST be form-encoded (`URLSearchParams`), never JSON. A 401 here
@@ -71,4 +93,38 @@ export function deleteMonitor(monitorId: number): Promise<MonitorDeleteResponse>
   return apiFetch<MonitorDeleteResponse>(`/api/v1/monitors/${monitorId}`, {
     method: "DELETE",
   });
+}
+
+function assertMonitorLimit(monitorId: number, limit: number): void {
+  if (!Number.isInteger(monitorId) || monitorId <= 0) {
+    throw new RangeError("Monitor id must be a positive integer");
+  }
+  if (!Number.isInteger(limit) || limit < 1 || limit > MAX_MONITOR_HISTORY_LIMIT) {
+    throw new RangeError(`Limit must be an integer between 1 and ${MAX_MONITOR_HISTORY_LIMIT}`);
+  }
+}
+
+/** GET /api/v1/monitors/{id}/history — history limits grow in steps of 50. */
+export function fetchMonitorHistory(
+  monitorId: number,
+  limit: number,
+): Promise<MonitorHistoryRow[]> {
+  assertMonitorLimit(monitorId, limit);
+  if (!HISTORY_LIMITS.has(limit)) {
+    throw new RangeError("History limit must be 50, 100, 150, or 200");
+  }
+  return apiFetch<MonitorHistoryRow[]>(
+    `/api/v1/monitors/${monitorId}/history?limit=${limit}`,
+  );
+}
+
+/** GET /api/v1/monitors/{id}/alerts — the service default is 20. */
+export function fetchMonitorAlerts(
+  monitorId: number,
+  limit = 20,
+): Promise<MonitorAlertRow[]> {
+  assertMonitorLimit(monitorId, limit);
+  return apiFetch<MonitorAlertRow[]>(
+    `/api/v1/monitors/${monitorId}/alerts?limit=${limit}`,
+  );
 }

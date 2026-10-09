@@ -42,7 +42,7 @@ function renderLoginPage(from?: string) {
 }
 
 function submitForm(username: string, password: string) {
-  fireEvent.change(screen.getByLabelText("Username"), {
+  fireEvent.change(screen.getByLabelText("Username or email"), {
     target: { value: username },
   });
   fireEvent.change(screen.getByLabelText("Password"), {
@@ -71,7 +71,7 @@ describe("LoginPage", () => {
     );
     const { loc } = renderLoginPage("/monitors");
 
-    expect(screen.getByRole("link", { name: "Estado del sistema" })).toHaveAttribute("href", "/status");
+    expect(screen.getByRole("link", { name: /view system status/i })).toHaveAttribute("href", "/status");
     await act(async () => {
       submitForm("eliott", "pw");
     });
@@ -96,7 +96,7 @@ describe("LoginPage", () => {
       expect(screen.getByText("Invalid credentials or email")).toBeInTheDocument(),
     );
     expect(loc()).toBe("/login");
-    expect(screen.getByLabelText("Username")).toHaveValue("bad");
+    expect(screen.getByLabelText("Username or email")).toHaveValue("bad");
   });
 
   it("network/5xx failures show the API-unreachable message", async () => {
@@ -132,7 +132,7 @@ describe("LoginPage", () => {
 
     expect(screen.getByText(/Demo credentials: demo@sentinel\.dev \/ DemoPassword123!/)).toBeInTheDocument();
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Probar demo" }));
+      fireEvent.click(screen.getByRole("button", { name: "Try the demo" }));
     });
 
     await waitFor(() => expect(loc()).toBe("/monitors"));
@@ -149,7 +149,7 @@ describe("LoginPage", () => {
     const { loc } = renderLoginPage();
 
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Probar demo" }));
+      fireEvent.click(screen.getByRole("button", { name: "Try the demo" }));
     });
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/demo.*unavailable|unavailable.*demo/i);

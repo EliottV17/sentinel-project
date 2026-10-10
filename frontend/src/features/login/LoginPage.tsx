@@ -87,7 +87,7 @@ export function LoginPage() {
   });
 
   return (
-    <main className="relative flex min-h-screen items-center overflow-hidden px-5 py-8 text-ink sm:px-8 sm:py-12">
+    <main className="relative flex min-h-screen items-center overflow-hidden px-4 py-8 text-ink sm:px-8 sm:py-12">
       <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
         <div className="absolute -left-56 top-1/2 size-[34rem] -translate-y-1/2 rounded-full border border-accent/10" />
         <div className="absolute -left-36 top-1/2 size-[24rem] -translate-y-1/2 rounded-full border border-accent/10" />
@@ -95,7 +95,7 @@ export function LoginPage() {
         <div className="absolute bottom-12 left-0 h-px w-1/4 bg-line" />
       </div>
 
-      <div className="relative mx-auto grid w-full max-w-6xl gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(24rem,28rem)] lg:items-center lg:gap-16">
+      <div className="relative mx-auto grid w-full max-w-6xl min-w-0 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(24rem,28rem)] lg:items-center lg:gap-16">
         <section className="flex flex-col">
           <div className="mb-8 flex items-center justify-between lg:justify-start lg:gap-5">
             <SentinelBrand />
@@ -116,25 +116,25 @@ export function LoginPage() {
           </div>
         </section>
 
-        <section className="w-full rounded-panel border border-line bg-surface p-6 shadow-panel sm:p-8">
-          <div className="mb-7">
-            <p className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-accent">
+        <section className="w-full min-w-0 rounded-panel border border-line bg-surface p-5 shadow-panel sm:p-6">
+          <div className="mb-6">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-accent">
               Welcome back
             </p>
-            <h1 className="text-3xl font-semibold tracking-tight text-ink">
+            <h1 className="font-serif text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
               Sign in to Sentinel
             </h1>
-            <p className="mt-2 text-sm leading-6 text-muted">
+            <p className="mt-2 text-base leading-7 text-muted">
               Access your monitors and observability workspace.
             </p>
           </div>
 
           {accountCreated && (
-            <p role="status" className="mb-5 rounded-control border border-success/30 bg-success/10 px-3 py-2 text-sm text-ink">
+            <p role="status" className="mb-5 rounded-control border border-success/30 bg-success-soft px-3 py-2 text-sm text-success">
               Account created successfully. Sign in with your new credentials.
             </p>
           )}
-          <form onSubmit={onSubmit} className="flex flex-col gap-5" noValidate>
+          <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
             <div className="flex flex-col gap-2">
               <label htmlFor="username" className="text-sm font-medium text-ink">
                 Username or email
@@ -147,7 +147,7 @@ export function LoginPage() {
                 aria-invalid={errors.username !== undefined}
                 aria-describedby={errors.username ? "username-error" : undefined}
                 {...register("username")}
-                className="h-11 w-full rounded-control border border-line-strong bg-canvas px-3 text-sm text-ink outline-none placeholder:text-subtle focus:border-accent focus:ring-2 focus:ring-accent/20"
+                className="h-11 w-full rounded-control border border-line-strong bg-canvas px-3 text-sm text-ink outline-none placeholder:text-subtle transition duration-150 hover:border-accent/40 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
               />
               {errors.username !== undefined && (
                 <span id="username-error" className="text-xs text-danger">
@@ -167,7 +167,7 @@ export function LoginPage() {
                 aria-invalid={errors.password !== undefined}
                 aria-describedby={errors.password ? "password-error" : undefined}
                 {...register("password")}
-                className="h-11 w-full rounded-control border border-line-strong bg-canvas px-3 text-sm text-ink outline-none placeholder:text-subtle focus:border-accent focus:ring-2 focus:ring-accent/20"
+                className="h-11 w-full rounded-control border border-line-strong bg-canvas px-3 text-sm text-ink outline-none placeholder:text-subtle transition duration-150 hover:border-accent/40 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
               />
               {errors.password !== undefined && (
                 <span id="password-error" className="text-xs text-danger">
@@ -176,14 +176,14 @@ export function LoginPage() {
               )}
             </div>
             {errors.root !== undefined && (
-              <p role="alert" className="text-sm text-danger">
+              <p role="alert" className="rounded-control border border-danger/30 bg-danger-soft px-3 py-2 text-sm text-danger">
                 {errors.root.message}
               </p>
             )}
             <button
               type="submit"
               disabled={isSubmitting}
-              className="mt-1 h-11 w-full rounded-control bg-accent-strong px-4 text-sm font-semibold text-canvas shadow-sm hover:bg-accent hover:shadow-glow disabled:cursor-not-allowed disabled:opacity-50"
+              className="mt-1 h-11 w-full rounded-control bg-accent-strong px-4 text-sm font-semibold text-canvas shadow-sm transition duration-150 hover:bg-accent hover:shadow-glow active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100"
             >
               Sign in
             </button>
@@ -195,7 +195,7 @@ export function LoginPage() {
             <span className="h-px flex-1 bg-line" />
           </div>
           {demoError !== null && (
-            <p role="alert" className="mb-3 text-center text-sm text-danger">
+            <p role="alert" className="mb-3 rounded-control border border-danger/30 bg-danger-soft px-3 py-2 text-center text-sm text-danger">
               {demoError}
             </p>
           )}
@@ -203,7 +203,7 @@ export function LoginPage() {
             type="button"
             disabled={demoSubmitting}
             onClick={onDemoLogin}
-            className="h-11 w-full rounded-control border border-accent/40 bg-accent-soft px-4 text-sm font-semibold text-accent hover:border-accent hover:bg-accent/15 disabled:cursor-not-allowed disabled:opacity-50"
+            className="h-11 w-full rounded-control border border-accent/40 bg-accent-soft px-4 text-sm font-semibold text-accent transition duration-150 hover:border-accent hover:bg-accent/20 hover:shadow-glow active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100"
           >
             {demoSubmitting ? "Opening demo…" : "Try the demo"}
           </button>
@@ -213,13 +213,13 @@ export function LoginPage() {
 
           <div className="mt-7 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 border-t border-line pt-5 text-center text-sm text-muted">
             <span>New to Sentinel?</span>
-            <Link to="/register" className="font-medium text-accent hover:underline">
+            <Link to="/register" className="font-medium text-accent underline-offset-4 transition duration-150 hover:text-accent-strong hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40">
               Create account
             </Link>
           </div>
           <Link
             to="/status"
-            className="mt-5 flex w-full items-center justify-center border-t border-line pt-4 text-sm text-muted hover:text-accent"
+            className="mt-5 flex w-full items-center justify-center border-t border-line pt-4 text-sm text-muted transition duration-150 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
           >
             View system status <span aria-hidden="true" className="ml-2">↗</span>
           </Link>

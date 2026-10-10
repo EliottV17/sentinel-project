@@ -156,6 +156,17 @@ describe("LoginPage", () => {
     expect(loc()).toBe("/login");
   });
 
+  it("shows the account-created confirmation and links to registration", () => {
+    render(
+      <MemoryRouter initialEntries={[{ pathname: "/login", state: { accountCreated: true } }]}>
+        <AuthProvider><LoginPage /></AuthProvider>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole("status")).toHaveTextContent(/account created.*sign in/i);
+    expect(screen.getByRole("link", { name: "Create account" })).toHaveAttribute("href", "/register");
+  });
+
   it("redirects to / when already authenticated", () => {
     tokenStore.set(makeJwt({ sub: "u", exp: BASE_TS + 1800 }));
     const { loc } = renderLoginPage();

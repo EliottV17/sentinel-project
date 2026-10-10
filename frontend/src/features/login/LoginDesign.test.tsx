@@ -24,12 +24,9 @@ describe("LoginPage design", () => {
     expect(screen.getByRole("button", { name: "Sign in" })).toBeInTheDocument();
   });
 
-  it("shows account creation as disabled with an associated coming-soon explanation", () => {
+  it("links to account creation", () => {
     renderLoginPage();
 
-    const createAccount = screen.getByRole("button", { name: "Create account" });
-    expect(createAccount).toBeDisabled();
-    expect(createAccount).toHaveAccessibleDescription("Coming soon");
-    expect(screen.getByText("Coming soon")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Create account" })).toHaveAttribute("href", "/register");
   });
 });

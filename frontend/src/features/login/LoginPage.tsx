@@ -23,6 +23,11 @@ export function LoginPage() {
   const [demoError, setDemoError] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
+  const accountCreated =
+    location.state !== null &&
+    typeof location.state === "object" &&
+    "accountCreated" in location.state &&
+    (location.state as { accountCreated: unknown }).accountCreated === true;
   const from =
     location.state !== null &&
     typeof location.state === "object" &&
@@ -124,6 +129,11 @@ export function LoginPage() {
             </p>
           </div>
 
+          {accountCreated && (
+            <p role="status" className="mb-5 rounded-control border border-success/30 bg-success/10 px-3 py-2 text-sm text-ink">
+              Account created successfully. Sign in with your new credentials.
+            </p>
+          )}
           <form onSubmit={onSubmit} className="flex flex-col gap-5" noValidate>
             <div className="flex flex-col gap-2">
               <label htmlFor="username" className="text-sm font-medium text-ink">
@@ -203,17 +213,9 @@ export function LoginPage() {
 
           <div className="mt-7 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 border-t border-line pt-5 text-center text-sm text-muted">
             <span>New to Sentinel?</span>
-            <button
-              type="button"
-              disabled
-              aria-describedby="registration-note"
-              className="cursor-not-allowed font-medium text-accent opacity-70"
-            >
+            <Link to="/register" className="font-medium text-accent hover:underline">
               Create account
-            </button>
-            <span id="registration-note" className="w-full text-xs text-subtle">
-              Coming soon
-            </span>
+            </Link>
           </div>
           <Link
             to="/status"

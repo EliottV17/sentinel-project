@@ -37,7 +37,10 @@ export function useAuth(): AuthContextValue {
 const EXP_WATCH_INTERVAL_MS = 30_000;
 
 function isPublicRoute(pathname: string): boolean {
-  return matchPath({ path: "/status", end: true }, pathname) !== null;
+  return (
+    matchPath({ path: "/status", end: true }, pathname) !== null ||
+    matchPath({ path: "/register", end: true }, pathname) !== null
+  );
 }
 
 interface AuthSnapshot {

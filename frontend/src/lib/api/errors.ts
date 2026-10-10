@@ -26,7 +26,12 @@ export function normalizeDetail(detail: unknown): NormalizedDetail {
         const lower = item.toLowerCase();
         if (lower.includes("target")) fields.target = item;
         if (lower.includes("frequency")) fields.frequency = item;
-        if (lower.includes("name")) fields.name = item;
+        const isLastName = lower.includes("last_name") || lower.includes("last name");
+        if (isLastName) fields.last_name = item;
+        if (lower.includes("username")) fields.username = item;
+        if (lower.includes("email")) fields.email = item;
+        if (lower.includes("password")) fields.password = item;
+        if (!isLastName && /\bname\b/.test(lower)) fields.name = item;
       } else if (item !== null && typeof item === "object" && "msg" in item) {
         const loc = (item as { loc?: unknown }).loc;
         const field = Array.isArray(loc)

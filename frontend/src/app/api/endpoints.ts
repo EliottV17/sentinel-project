@@ -1,4 +1,4 @@
-import type { operations } from "../../lib/api/schema";
+import type { components, operations } from "../../lib/api/schema";
 import { apiFetch } from "./client";
 
 /**
@@ -9,6 +9,9 @@ import { apiFetch } from "./client";
 
 type LoginResponse =
   operations["login_api_v1_auth_login_post"]["responses"][200]["content"]["application/json"];
+
+type UserCreate = components["schemas"]["UserCreate"];
+type UserRead = operations["register_user_api_v1_users__post"]["responses"][201]["content"]["application/json"];
 
 type MonitorListResponse =
   operations["get_user_monitors_api_v1_monitors__get"]["responses"][200]["content"]["application/json"];
@@ -43,6 +46,19 @@ export interface MonitorAlertRow {
 
 export const MAX_MONITOR_HISTORY_LIMIT = 200;
 const HISTORY_LIMITS = new Set([50, 100, 150, 200]);
+
+/** POST /api/v1/users/ — public registration returns a user, never a token. */
+export function registerUser(body: UserCreate): Promise<UserRead> {
+  return apiFetch<UserRead>(
+    "/api/v1/users/",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+    { anonymous: true },
+  );
+}
 
 /**
  * POST /api/v1/auth/login — the endpoint is an OAuth2PasswordRequestForm, so

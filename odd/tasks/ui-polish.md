@@ -17,7 +17,7 @@ Raise the visual quality of the existing frontend (modern, premium, professional
 - [x] T3 — Login and Register pages. **Done in this commit** (see git log `style(ui): polish login and register`); typecheck, lint, 175 tests green.
 - [x] T4 — Monitors: MonitorsPage, CreateMonitorForm, MonitorList, MonitorRow, StatusPill, DeleteButton (+ test update). **Done in `style(ui): polish monitors dashboard`**; StatusPill migrated to tokens, 3 class assertions updated; 175 tests green.
 - [x] T5 — Public Status page. **Done in `style(ui): polish public status page`**; legacy badge class removed, 175 tests green.
-- [ ] T6 — Monitor history page.
+- [x] T6 — Monitor history page. **Done in `style(ui): polish monitor history page`**; className-only diff verified; 175 tests green.
 - [ ] T7 — Verification: typecheck, lint, tests, build, responsive visual check, globals.css untouched.
 
 ## Design language (all tasks follow this; tokens only)

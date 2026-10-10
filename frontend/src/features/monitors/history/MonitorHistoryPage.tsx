@@ -34,9 +34,9 @@ function retryMessage(error: unknown): string {
 function FailureMessage({ error, hasData, onRetry }: { error: unknown; hasData: boolean; onRetry?: () => void }) {
   const rateLimited = error instanceof ApiError && error.status === 429;
   return (
-    <div role="alert" className="rounded-control border border-warning/30 bg-warning-soft p-4 text-sm text-warning">
+    <div role="alert" className="rounded-control border border-warning/30 bg-warning-soft p-4 text-sm leading-6 text-warning">
       <p>{retryMessage(error)}{hasData ? " Previously loaded data is still shown." : ""}</p>
-      {!rateLimited && onRetry && <button type="button" onClick={onRetry} className="mt-3 underline underline-offset-2">Retry</button>}
+      {!rateLimited && onRetry && <button type="button" onClick={onRetry} className="mt-3 rounded-control px-2 py-1 font-medium underline underline-offset-2 transition duration-150 hover:bg-warning/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40">Retry</button>}
     </div>
   );
 }
@@ -45,7 +45,7 @@ function CheckState({ state }: { state: string }) {
   const healthy = state === "healthy";
   const unhealthy = state === "unhealthy";
   const label = healthy ? "Healthy" : unhealthy ? "Down" : "Unknown";
-  return <span className={`inline-flex items-center gap-2 text-sm ${healthy ? "text-success" : unhealthy ? "text-danger" : "text-muted"}`}>
+  return <span className={`inline-flex items-center gap-2 rounded-control border px-2.5 py-1 text-xs font-semibold ${healthy ? "border-success/30 bg-success-soft text-success" : unhealthy ? "border-danger/30 bg-danger-soft text-danger" : "border-line bg-raised text-muted"}`}>
     <span aria-hidden="true">{healthy ? "✓" : unhealthy ? "×" : "?"}</span>{label}
   </span>;
 }
@@ -57,7 +57,7 @@ function LatencyChart({ rows }: { rows: readonly MonitorHistoryRow[] }) {
     row.state === "unhealthy" && (row.latency_ms === null || !Number.isFinite(row.latency_ms)),
   );
   if (ordered.length === 0 || (measured.length === 0 && !hasUnavailableDown)) {
-    return <p className="rounded-control border border-dashed border-line-strong p-6 text-center text-sm text-muted">No latency data to chart.</p>;
+    return <p className="rounded-control border border-dashed border-line-strong bg-canvas/30 p-6 text-center text-sm leading-6 text-muted">No latency data to chart.</p>;
   }
   const width = 640;
   const height = 180;
@@ -82,7 +82,7 @@ function LatencyChart({ rows }: { rows: readonly MonitorHistoryRow[] }) {
   const points = ordered.map((row, index) => ({ row, x: xFor(index) }));
   const summary = `${ordered.length} checks in chronological order. ${measured.length} measured latency values. ${ordered.filter((row) => row.state === "unhealthy" && row.latency_ms === null).length} down checks had no latency measurement.`;
   return (
-    <svg role="img" aria-labelledby="latency-title" aria-describedby="latency-description" viewBox={`0 0 ${width} ${height}`} className="h-48 w-full overflow-visible">
+    <svg role="img" aria-labelledby="latency-title" aria-describedby="latency-description" viewBox={`0 0 ${width} ${height}`} className="h-48 w-full overflow-visible rounded-control">
       <title id="latency-title">Latency history</title>
       <desc id="latency-description">{summary}</desc>
       <line x1={padX} y1={height - padY} x2={width - padX} y2={height - padY} stroke="currentColor" className="text-line-strong" />
@@ -107,14 +107,14 @@ function LatencyChart({ rows }: { rows: readonly MonitorHistoryRow[] }) {
 }
 
 function HistoryTable({ rows }: { rows: readonly MonitorHistoryRow[] }) {
-  return <div className="overflow-x-auto">
+  return <div className="min-w-0 overflow-x-auto rounded-control border border-line">
     <table className="w-full min-w-[680px] border-collapse text-left">
-      <thead><tr className="border-b border-line text-xs uppercase tracking-wide text-muted">
+      <thead><tr className="border-b border-line bg-raised/50 text-xs font-medium uppercase tracking-wider text-muted">
         <th className="px-3 py-3 font-medium">Checked at</th><th className="px-3 py-3 font-medium">State</th><th className="px-3 py-3 font-medium">HTTP code</th><th className="px-3 py-3 font-medium">Latency</th><th className="px-3 py-3 font-medium">Error</th>
       </tr></thead>
       <tbody>{rows.map((row) => {
         const date = parseApiDate(row.created_at);
-        return <tr key={row.id} className="border-b border-line/70 text-sm text-ink">
+        return <tr key={row.id} className="border-b border-line/70 text-sm text-ink transition-colors duration-150 last:border-b-0 hover:bg-raised/40">
           <td className="px-3 py-3"><time dateTime={row.created_at} title={row.created_at}>{date.toLocaleString()}</time></td>
           <td className="px-3 py-3"><CheckState state={row.state} /></td>
           <td className="px-3 py-3 font-mono">{row.status_code ?? "—"}</td>
@@ -133,7 +133,7 @@ function AlertsTimeline({ alerts }: { alerts: NonNullable<ReturnType<typeof useM
     const recovery = alert.alert_type === "recovery";
     const label = down ? "Down" : recovery ? "Recovery" : "Unknown alert";
     const date = parseApiDate(alert.created_at);
-    return <li key={alert.id} className="flex gap-3">
+    return <li key={alert.id} className="flex min-w-0 gap-3 rounded-control border border-line/70 bg-canvas/30 p-3 sm:p-4">
       <span aria-hidden="true" className={`mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full ${down ? "bg-danger/10 text-danger" : recovery ? "bg-success/10 text-success" : "bg-raised text-muted"}`}>{down ? "×" : recovery ? "✓" : "?"}</span>
       <div className="min-w-0"><p className="font-medium text-ink">{label}</p><p className="mt-1 break-words text-sm text-muted">{alert.message}</p><time className="mt-1 block font-mono text-xs text-muted" dateTime={alert.created_at} title={alert.created_at}>{date.toLocaleString()} · {formatRelativeTime(date)}</time></div>
     </li>;
@@ -148,8 +148,8 @@ function formatRelativeTime(date: Date): string {
 }
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
-  return <section className="rounded-panel border border-line bg-surface p-5 shadow-panel sm:p-6" aria-label={title}>
-    <h2 className="mb-4 font-serif text-2xl text-ink">{title}</h2>{children}
+  return <section className="min-w-0 rounded-panel border border-line bg-surface p-5 shadow-panel sm:p-6" aria-label={title}>
+    <h2 className="mb-4 font-serif text-xl font-semibold tracking-tight text-ink sm:text-2xl">{title}</h2>{children}
   </section>;
 }
 
@@ -159,17 +159,17 @@ export function MonitorHistoryPage() {
   const historyData = useMonitorHistory(monitorId ?? 0);
   const terminal = terminalFailure(historyData.metadataError) || terminalFailure(historyData.historyError) || terminalFailure(historyData.alertsError);
   if (monitorId === null || terminal || (historyData.metadataLoaded && !historyData.monitor)) {
-    return <main className="mx-auto max-w-3xl py-10">
-      <section className="rounded-panel border border-line bg-surface p-8 text-center shadow-panel">
+    return <main className="mx-auto w-full max-w-3xl min-w-0 py-8 sm:py-10">
+      <section className="rounded-panel border border-line bg-surface p-5 text-center shadow-panel sm:p-8">
         <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-accent">Monitor history</p>
-        <h1 className="font-serif text-4xl text-ink">Monitor not found</h1>
+        <h1 className="font-serif text-3xl font-semibold tracking-tight text-ink sm:text-4xl">Monitor not found</h1>
         <p className="mt-3 text-muted">This monitor is unavailable.</p>
-        <a className="mt-6 inline-flex rounded-control border border-line-strong px-4 py-2 text-sm text-ink hover:border-accent hover:text-accent" href="/">Back to monitors</a>
+        <a className="mt-6 inline-flex rounded-control border border-line-strong px-4 py-2 text-sm font-medium text-muted transition duration-150 hover:border-accent hover:bg-raised hover:text-ink active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40" href="/">Back to monitors</a>
       </section>
     </main>;
   }
   if (historyData.metadataIsLoading && !historyData.metadataLoaded) {
-    return <p role="status" className="rounded-control border border-line bg-surface p-4 text-sm text-muted">Loading monitor…</p>;
+    return <p role="status" className="rounded-control border border-line bg-surface p-4 text-sm text-muted shadow-panel">Loading monitor…</p>;
   }
   const monitor = historyData.monitor;
   const rows = historyData.history ?? [];
@@ -178,24 +178,24 @@ export function MonitorHistoryPage() {
   const historyHasError = historyData.historyError !== null && historyData.historyError !== undefined;
   const alertsHasError = historyData.alertsError !== null && historyData.alertsError !== undefined;
   const historyPending = historyData.historyIsLoading && !historyData.history;
-  return <div className="space-y-6">
-    <a href="/" className="inline-flex items-center gap-2 text-sm text-muted hover:text-accent"><span aria-hidden="true">←</span> All monitors</a>
+  return <div className="min-w-0 space-y-6 sm:space-y-8">
+    <a href="/" className="inline-flex items-center gap-2 rounded-control text-sm font-medium text-muted transition duration-150 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"><span aria-hidden="true">←</span> All monitors</a>
     {Boolean(historyData.metadataError) && <FailureMessage error={historyData.metadataError} hasData={Boolean(monitor)} />}
-    {monitor && <header className="rounded-panel border border-line bg-surface p-5 shadow-panel sm:p-7">
+    {monitor && <header className="rounded-panel border border-line bg-surface p-5 shadow-panel sm:p-6">
       <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-accent">Monitor history</p>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0"><h1 className="break-words font-serif text-3xl text-ink sm:text-4xl">{monitor.name}</h1><p className="mt-2 break-all font-mono text-sm text-muted">{monitor.target}</p></div>
+        <div className="min-w-0"><h1 className="break-words font-serif text-3xl font-semibold tracking-tight text-ink sm:text-4xl">{monitor.name}</h1><p className="mt-2 break-all font-mono text-sm text-muted">{monitor.target}</p></div>
         <StatusPill lastState={monitor.last_state} />
       </div>
-      <p className="mt-4 text-sm text-muted">Checks run every <span className="font-mono text-ink">{monitor.frequency} seconds</span>.</p>
+      <p className="mt-4 border-t border-line pt-4 text-sm leading-6 text-muted">Checks run every <span className="font-mono font-medium text-ink">{monitor.frequency} seconds</span>.</p>
     </header>}
-    <section aria-label="Check summary" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <section aria-label="Check summary" className="grid min-w-0 grid-cols-2 gap-3 lg:grid-cols-4">
       {[
         ["Checks", historyPending ? "Loading…" : summary.loadedCount === 0 ? "No data" : `${summary.loadedCount}`, historyPending ? "Loading check summary…" : summary.loadedCount === 0 ? "In the last checks" : `In the last ${summary.loadedCount} checks`],
         ["Healthy checks", historyPending ? "Loading…" : summary.healthyPercentage === null ? "No data" : `${Math.round(summary.healthyPercentage)}%`, "Of loaded checks"],
         ["Median latency", historyPending ? "Loading…" : summary.medianLatencyMs === null ? "No data" : `${summary.medianLatencyMs} ms`, "Measured checks"],
         ["95th percentile", historyPending ? "Loading…" : summary.p95LatencyMs === null ? "No data" : `${summary.p95LatencyMs} ms`, "Measured checks"],
-      ].map(([label, value, caption]) => <article key={label} className="rounded-panel border border-line bg-surface p-4 shadow-panel sm:p-5"><p className="text-xs uppercase tracking-wide text-muted">{label}</p><p className="mt-3 font-mono text-2xl text-ink">{value}</p><p className="mt-1 text-xs text-muted">{caption}</p></article>)}
+      ].map(([label, value, caption]) => <article key={label} className="min-w-0 rounded-panel border border-line bg-surface p-4 shadow-panel sm:p-5"><p className="break-words text-xs font-medium uppercase tracking-wider text-muted">{label}</p><p className="mt-3 break-words font-mono text-xl font-medium tracking-tight text-ink sm:text-2xl">{value}</p><p className="mt-1 break-words text-xs leading-5 text-muted">{caption}</p></article>)}
     </section>
     <Section title="Latency over time">
       {historyData.historyIsLoading && !historyData.history && <p role="status" className="text-sm text-muted">Loading check history…</p>}
@@ -208,7 +208,7 @@ export function MonitorHistoryPage() {
       {historyHasError && <FailureMessage error={historyData.historyError} hasData={Boolean(historyData.history)} onRetry={() => { void historyData.refetchHistory(); }} />}
       {historyData.history && rows.length === 0 && <p className="text-sm text-muted">No checks yet. The worker checks this monitor every {monitor?.frequency ?? "configured"} seconds.</p>}
       {historyData.history && rows.length > 0 && <HistoryTable rows={rows} />}
-      {historyData.history && historyData.canLoadMore && <button type="button" disabled={historyData.historyIsFetching} onClick={historyData.loadMoreHistory} className="mt-4 rounded-control border border-line-strong px-4 py-2 text-sm text-ink hover:border-accent hover:text-accent disabled:cursor-wait disabled:opacity-60">{historyData.historyIsFetching ? "Loading more…" : "Load 50 more"}</button>}
+      {historyData.history && historyData.canLoadMore && <button type="button" disabled={historyData.historyIsFetching} onClick={historyData.loadMoreHistory} className="mt-4 rounded-control border border-line-strong px-4 py-2 text-sm font-medium text-muted transition duration-150 hover:border-accent hover:bg-raised hover:text-ink active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100">{historyData.historyIsFetching ? "Loading more…" : "Load 50 more"}</button>}
     </Section>
     <Section title="Alerts">
       {historyData.alertsIsLoading && !alerts && <p role="status" className="text-sm text-muted">Loading alerts…</p>}

@@ -47,6 +47,7 @@ function renderAt(path: string) {
           />
           <Route path="/login" element={<LocationProbe />} />
           <Route path="/status" element={<LocationProbe />} />
+          <Route path="/register" element={<LocationProbe />} />
         </Routes>
       </AuthProvider>
     </MemoryRouter>,
@@ -182,7 +183,7 @@ describe("AuthProvider", () => {
     expect(loc()).toBe("/login");
   });
 
-  it.each(["/status/", "/STATUS"])(
+  it.each(["/status/", "/STATUS", "/register"])(
     "keeps an expiring stored session on router-public %s after the 30s expiry check",
     async (path) => {
       vi.useFakeTimers();

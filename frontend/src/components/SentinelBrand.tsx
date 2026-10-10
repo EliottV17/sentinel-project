@@ -8,7 +8,7 @@ export function SentinelBrand({ compact = false }: SentinelBrandProps) {
     <span className="inline-flex items-center gap-3">
       <span
         aria-hidden="true"
-        className={`flex shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent ${compact ? "size-8" : "size-10"}`}
+        className={`flex shrink-0 items-center justify-center rounded-control bg-accent-soft text-accent ring-1 ring-accent/20 shadow-sm ${compact ? "size-8" : "size-10"}`}
       >
         <svg viewBox="0 0 32 32" fill="none" className="size-6" focusable="false">
           <circle cx="16" cy="16" r="11.5" stroke="currentColor" strokeWidth="1.5" />
@@ -17,7 +17,7 @@ export function SentinelBrand({ compact = false }: SentinelBrandProps) {
           <circle cx="23.5" cy="8.5" r="2" fill="currentColor" />
         </svg>
       </span>
-      <span className="font-serif text-xl font-semibold tracking-tight text-ink">Sentinel</span>
+      <span className="font-serif text-xl font-semibold tracking-wide text-ink">Sentinel</span>
     </span>
   );
 }

@@ -54,13 +54,13 @@ describe("MonitorList", () => {
   it("maps last_state only: healthy → green Healthy pill", () => {
     renderList([monitor({ last_state: "healthy" })]);
     const pill = screen.getByText("Healthy");
-    expect(pill.className).toContain("bg-green");
+    expect(pill.className).toContain("bg-success-soft");
   });
 
   it("maps last_state only: unhealthy → red Unhealthy pill", () => {
     renderList([monitor({ last_state: "unhealthy", consecutive_failures: 3 })]);
     const pill = screen.getByText("Unhealthy");
-    expect(pill.className).toContain("bg-red");
+    expect(pill.className).toContain("bg-danger-soft");
   });
 
   it("maps last_state null → muted 'Never checked' pill", () => {
@@ -68,7 +68,7 @@ describe("MonitorList", () => {
       monitor({ last_state: null, last_checked_at: null, consecutive_failures: 0 }),
     ]);
     const pill = screen.getByText("Never checked");
-    expect(pill.className).toContain("bg-slate");
+    expect(pill.className).toContain("bg-raised");
     // A never-checked monitor is not "stale" — the pill already says it.
     expect(screen.queryByText(/engine may be down/i)).not.toBeInTheDocument();
   });

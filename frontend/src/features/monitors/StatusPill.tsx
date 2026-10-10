@@ -13,13 +13,13 @@ interface PillStyle {
  * surfaced anywhere in the row.
  */
 const PILL_STYLES: Record<string, PillStyle> = {
-  healthy: { label: "Healthy", className: "bg-green-100 text-green-700" },
-  unhealthy: { label: "Unhealthy", className: "bg-red-100 text-red-700" },
+  healthy: { label: "Healthy", className: "border-success/30 bg-success-soft text-success" },
+  unhealthy: { label: "Unhealthy", className: "border-danger/30 bg-danger-soft text-danger" },
 };
 
 const NEVER_CHECKED: PillStyle = {
   label: "Never checked",
-  className: "bg-slate-100 text-slate-500",
+  className: "border-line bg-raised text-muted",
 };
 
 export function StatusPill({ lastState }: { lastState: LastState }) {
@@ -28,7 +28,7 @@ export function StatusPill({ lastState }: { lastState: LastState }) {
   const icon = style.label === "Healthy" ? "✓" : style.label === "Unhealthy" ? "×" : "?";
   return (
     <span
-      className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border border-white/5 px-2.5 py-1 text-xs font-semibold ${style.className} pill-status`}
+      className={`inline-flex shrink-0 items-center gap-1.5 rounded-control border px-2.5 py-1 text-xs font-semibold ${style.className}`}
     >
       <span aria-hidden="true">{icon}</span>
       {style.label}

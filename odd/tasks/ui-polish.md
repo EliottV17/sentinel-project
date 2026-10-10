@@ -15,7 +15,7 @@ Raise the visual quality of the existing frontend (modern, premium, professional
 - [x] T1 — Shared primitives: Button, Card, Input, Spinner, SentinelBrand, AppShell. **Done in `d214040`**; typecheck, lint, 175 tests green.
 - [ ] T2 — Typography and spacing system. Defined as the design language below and applied inside T1/T3–T6 (no separate code unit; closed when T6 is done and consistency is checked).
 - [x] T3 — Login and Register pages. **Done in this commit** (see git log `style(ui): polish login and register`); typecheck, lint, 175 tests green.
-- [ ] T4 — Monitors: MonitorsPage, CreateMonitorForm, MonitorList, MonitorRow, StatusPill, DeleteButton (+ test update).
+- [x] T4 — Monitors: MonitorsPage, CreateMonitorForm, MonitorList, MonitorRow, StatusPill, DeleteButton (+ test update). **Done in `style(ui): polish monitors dashboard`**; StatusPill migrated to tokens, 3 class assertions updated; 175 tests green.
 - [ ] T5 — Public Status page.
 - [ ] T6 — Monitor history page.
 - [ ] T7 — Verification: typecheck, lint, tests, build, responsive visual check, globals.css untouched.

@@ -11,10 +11,10 @@ export function MonitorList({
   now?: Date;
 }) {
   if (monitors.length === 0) {
-    return <p className="rounded-panel border border-dashed border-line-strong bg-surface px-5 py-10 text-center text-sm text-muted shadow-panel">No monitors yet. Create your first monitor to get started.</p>;
+    return <p className="rounded-panel border border-dashed border-line-strong bg-surface px-5 py-10 text-center text-sm leading-6 text-muted shadow-panel">No monitors yet. Create your first monitor to get started.</p>;
   }
   return (
-    <ul className="flex flex-col gap-3">
+    <ul className="flex min-w-0 flex-col gap-3">
       {monitors.map((monitor) => (
         <MonitorRow key={monitor.id} monitor={monitor} now={now} />
       ))}

@@ -72,7 +72,7 @@ function Field({
   );
 }
 
-const inputClass = "h-11 w-full rounded-control border border-line-strong bg-canvas px-3 text-sm text-ink outline-none placeholder:text-subtle focus:border-accent focus:ring-2 focus:ring-accent/20 aria-[invalid=true]:border-danger";
+const inputClass = "h-11 w-full rounded-control border border-line-strong bg-canvas px-3 text-sm text-ink outline-none placeholder:text-subtle transition duration-150 hover:border-accent/40 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 aria-[invalid=true]:border-danger";
 
 export function RegisterPage() {
   const { demoLogin } = useAuth();
@@ -140,14 +140,14 @@ export function RegisterPage() {
   });
 
   return (
-    <main className="relative flex min-h-screen items-center overflow-hidden px-5 py-10 text-ink sm:px-8">
+    <main className="relative flex min-h-screen items-center overflow-hidden px-4 py-8 text-ink sm:px-8 sm:py-12">
       <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
         <div className="absolute -left-48 top-1/2 size-[34rem] -translate-y-1/2 rounded-full border border-accent/10" />
         <div className="absolute -left-28 top-1/2 size-[24rem] -translate-y-1/2 rounded-full border border-accent/10" />
         <div className="absolute right-0 top-0 h-px w-2/5 bg-line" />
         <div className="absolute bottom-16 left-0 h-px w-1/4 bg-line" />
       </div>
-      <div className="relative mx-auto grid w-full max-w-6xl gap-8 lg:grid-cols-[minmax(0,1fr)_440px] lg:items-center lg:gap-24">
+      <div className="relative mx-auto grid w-full max-w-6xl min-w-0 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(24rem,28rem)] lg:items-center lg:gap-16">
         <section className="hidden lg:block">
           <div className="mb-8 flex items-center gap-5 text-sm text-muted"><SentinelBrand /><span className="border-l border-line pl-5 font-mono text-xs uppercase tracking-[0.18em]">Access portal</span></div>
           <p className="mb-5 max-w-xl font-serif text-5xl font-semibold leading-[1.05] tracking-[-0.07em] text-ink xl:text-6xl">Make every signal<span className="block italic text-accent">visible.</span></p>
@@ -155,12 +155,12 @@ export function RegisterPage() {
           <div className="mt-12 flex items-center gap-3 text-xs text-muted"><span className="size-2 rounded-full bg-success" aria-hidden="true" />Monitoring layer operational</div>
         </section>
 
-        <section className="w-full rounded-panel border border-line bg-surface p-6 shadow-panel sm:p-8">
+        <section className="w-full min-w-0 rounded-panel border border-line bg-surface p-5 shadow-panel sm:p-6">
           <div className="mb-8 flex items-center justify-between lg:hidden"><SentinelBrand compact /><span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted">Access portal</span></div>
-          <div className="mb-7">
-            <p className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-accent">Create workspace</p>
-            <h1 className="text-3xl font-semibold tracking-tight text-ink">Register for Sentinel</h1>
-            <p className="mt-2 text-sm leading-6 text-muted">Set up your observability workspace in a few seconds.</p>
+          <div className="mb-6">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-accent">Create workspace</p>
+            <h1 className="font-serif text-3xl font-semibold tracking-tight text-ink sm:text-4xl">Register for Sentinel</h1>
+            <p className="mt-2 text-base leading-7 text-muted">Set up your observability workspace in a few seconds.</p>
           </div>
           <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
             <div className="grid gap-4 sm:grid-cols-2">
@@ -171,14 +171,14 @@ export function RegisterPage() {
             <Field id="email" label="Email" error={errors.email?.message}>{(describedBy) => <input id="email" type="email" autoComplete="email" placeholder="you@example.com" {...register("email")} {...onFieldError("email")} aria-describedby={describedBy} className={inputClass} />}</Field>
             <Field id="password" label="Password" error={errors.password?.message}>{(describedBy) => <div className="relative"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted"><rect x="5" y="10" width="14" height="11" rx="2" stroke="currentColor" strokeWidth="1.5" /><path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg><input id="password" type="password" autoComplete="new-password" placeholder="Create a password" {...register("password")} {...onFieldError("password")} aria-describedby={describedBy} className={`${inputClass} pl-10`} /></div>}</Field>
             <Field id="confirmPassword" label="Confirm password" error={errors.confirmPassword?.message}>{(describedBy) => <div className="relative"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted"><rect x="5" y="10" width="14" height="11" rx="2" stroke="currentColor" strokeWidth="1.5" /><path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg><input id="confirmPassword" type="password" autoComplete="new-password" placeholder="Repeat your password" {...register("confirmPassword")} {...onFieldError("confirmPassword")} aria-describedby={describedBy} className={`${inputClass} pl-10`} /></div>}</Field>
-            {errors.root && <p role="alert" className="text-sm text-danger">{errors.root.message}</p>}
-            <button type="submit" disabled={disabled} className="mt-2 flex h-11 w-full items-center justify-center rounded-control bg-accent-strong px-4 text-sm font-semibold text-canvas shadow-sm hover:bg-accent hover:shadow-glow disabled:cursor-not-allowed disabled:opacity-50">{isSubmitting ? "Creating account…" : <>Create account <Arrow /></>}</button>
+            {errors.root && <p role="alert" className="rounded-control border border-danger/30 bg-danger-soft px-3 py-2 text-sm text-danger">{errors.root.message}</p>}
+            <button type="submit" disabled={disabled} className="mt-2 flex h-11 w-full items-center justify-center rounded-control bg-accent-strong px-4 text-sm font-semibold text-canvas shadow-sm transition duration-150 hover:bg-accent hover:shadow-glow active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100">{isSubmitting ? "Creating account…" : <>Create account <Arrow /></>}</button>
           </form>
           <div className="my-7 flex items-center gap-3 text-[10px] uppercase tracking-[0.18em] text-muted"><span className="h-px flex-1 bg-line" />Or use demo<span className="h-px flex-1 bg-line" /></div>
-          {demoError && <p role="alert" className="mb-3 text-center text-sm text-danger">{demoError}</p>}
-          <button type="button" disabled={disabled} onClick={onDemo} className="flex h-11 w-full items-center justify-center rounded-control border border-accent/40 bg-surface px-4 text-sm font-semibold text-accent hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-50">{demoSubmitting ? "Opening demo…" : <>Try the demo <Arrow /></>}</button>
-          <p className="mt-7 text-center text-sm text-muted">Already have an account? <Link to="/login" className="font-medium text-accent underline-offset-4 hover:underline">Sign in</Link></p>
-          <Link to="/status" className="mt-6 flex w-full items-center justify-center border-t border-line pt-5 text-sm text-muted transition hover:text-accent">System Status <Arrow /></Link>
+          {demoError && <p role="alert" className="mb-3 rounded-control border border-danger/30 bg-danger-soft px-3 py-2 text-center text-sm text-danger">{demoError}</p>}
+          <button type="button" disabled={disabled} onClick={onDemo} className="flex h-11 w-full items-center justify-center rounded-control border border-accent/40 bg-accent-soft px-4 text-sm font-semibold text-accent transition duration-150 hover:border-accent hover:bg-accent/20 hover:shadow-glow active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100">{demoSubmitting ? "Opening demo…" : <>Try the demo <Arrow /></>}</button>
+          <p className="mt-7 text-center text-sm text-muted">Already have an account? <Link to="/login" className="font-medium text-accent underline-offset-4 transition duration-150 hover:text-accent-strong hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40">Sign in</Link></p>
+          <Link to="/status" className="mt-6 flex w-full items-center justify-center border-t border-line pt-5 text-sm text-muted transition duration-150 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40">System Status <Arrow /></Link>
         </section>
       </div>
     </main>

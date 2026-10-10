@@ -38,13 +38,13 @@ export function DeleteButton({
 
   if (!confirming) {
     return (
-      <span className="inline-flex flex-col items-start gap-1">
+      <span className="inline-flex min-w-0 flex-col items-start gap-1">
         <button
           type="button"
           onClick={() => {
             setConfirming(true);
           }}
-          className="rounded-control px-2.5 py-1.5 text-xs font-medium text-danger hover:bg-danger-soft"
+          className="rounded-control border border-transparent px-2.5 py-1.5 text-xs font-medium text-danger transition duration-150 hover:border-danger/30 hover:bg-danger-soft active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
         >
           Delete{monitorName !== undefined ? ` ${monitorName}` : ""}
         </button>
@@ -54,13 +54,13 @@ export function DeleteButton({
   }
 
   return (
-    <span className="inline-flex items-center gap-2">
+    <span className="inline-flex min-w-0 flex-wrap items-center gap-2">
       <span className="text-xs text-muted">Confirm delete?</span>
       <button
         type="button"
         onClick={confirm}
         disabled={deleteMonitor.isPending}
-        className="rounded-control bg-danger-strong px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-danger disabled:cursor-not-allowed disabled:opacity-50"
+        className="rounded-control bg-danger-strong px-2.5 py-1.5 text-xs font-semibold text-canvas transition duration-150 hover:bg-danger active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100"
       >
         Confirm delete
       </button>
@@ -69,7 +69,7 @@ export function DeleteButton({
         onClick={() => {
           setConfirming(false);
         }}
-        className="rounded-control px-2.5 py-1.5 text-xs font-medium text-muted hover:bg-raised hover:text-ink"
+        className="rounded-control border border-line-strong px-2.5 py-1.5 text-xs font-medium text-muted transition duration-150 hover:border-accent hover:bg-raised hover:text-ink active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
       >
         Cancel
       </button>

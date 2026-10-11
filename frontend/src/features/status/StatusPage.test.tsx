@@ -81,8 +81,8 @@ describe("public status page", () => {
     const rows = await screen.findAllByRole("listitem");
     expect(rows).toHaveLength(2);
     expect(rows.map((row) => row.textContent)).toEqual(expect.arrayContaining([
-      expect.stringContaining("Uptime: 100%"),
-      expect.stringContaining("Uptime: 25%"),
+      expect.stringContaining("Healthy checks: 100%"),
+      expect.stringContaining("Healthy checks: 25%"),
     ]));
     expect(rows.map((row) => row.textContent)).toEqual(expect.arrayContaining([
       expect.stringContaining("Operational"),
@@ -90,6 +90,15 @@ describe("public status page", () => {
     ]));
     expect(consoleError.mock.calls.flat().join(" ")).not.toMatch(/unique.*key.*prop/i);
     consoleError.mockRestore();
+  });
+
+  it("keeps legacy four-field payloads and labels missing sample context explicitly", async () => {
+    server.use(http.get("/api/v1/public/status", () => HttpResponse.json(items)));
+    renderApp();
+    const card = (await screen.findByText("API")).closest("li");
+    expect(card).toHaveTextContent("Healthy checks");
+    expect(card).toHaveTextContent("Sample period unavailable");
+    expect(card).not.toHaveTextContent("Uptime");
   });
 
   it("shows English text labels and summary independent of color", async () => {

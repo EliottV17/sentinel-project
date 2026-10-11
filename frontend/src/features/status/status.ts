@@ -1,8 +1,19 @@
+export interface PublicCheckSummary {
+  window_hours: number;
+  total_checks: number;
+  healthy_checks: number;
+  window_start: string;
+  window_end: string;
+  first_check_at: string | null;
+  last_check_at: string | null;
+}
+
 export interface PublicStatusMonitor {
   name: string;
   last_state: string | null;
   uptime_percentage: number | null;
   last_checked_at: string | null;
+  check_summary?: PublicCheckSummary;
 }
 
 export type StatusLabel = "Operational" | "Degraded" | "Down" | "No data";

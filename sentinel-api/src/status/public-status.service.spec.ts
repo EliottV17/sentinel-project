@@ -18,7 +18,7 @@ describe('PublicStatusService', () => {
     );
   });
 
-  it('aggregates rows once and returns only the four public fields as JSON values', async () => {
+  it('derives public ratio and safe sampling metadata from one configured-window aggregation', async () => {
     config.get.mockImplementation((key: string, fallback: number) =>
       key === 'STATUS_UPTIME_WINDOW_HOURS' ? 6 : fallback,
     );
@@ -29,6 +29,13 @@ describe('PublicStatusService', () => {
         last_state: 'healthy',
         uptime_percentage: '87.5000',
         last_checked_at: checkedAt,
+        window_hours: 6,
+        total_checks: 8n,
+        healthy_checks: 7n,
+        window_start: new Date('2024-12-31T18:00:00.000Z'),
+        window_end: new Date('2025-01-01T00:00:00.000Z'),
+        first_check_at: new Date('2024-12-31T19:00:00.000Z'),
+        last_check_at: checkedAt,
       },
     ]);
 
@@ -39,25 +46,37 @@ describe('PublicStatusService', () => {
         last_state: 'healthy',
         uptime_percentage: 87.5,
         last_checked_at: checkedAt,
+        check_summary: {
+          window_hours: 6,
+          total_checks: 8,
+          healthy_checks: 7,
+          window_start: new Date('2024-12-31T18:00:00.000Z'),
+          window_end: new Date('2025-01-01T00:00:00.000Z'),
+          first_check_at: new Date('2024-12-31T19:00:00.000Z'),
+          last_check_at: checkedAt,
+        },
       },
     ]);
     expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
     const query = prisma.$queryRaw.mock.calls[0][0];
     expect(query.sql).toContain('m.name AS name');
     expect(query.sql).toContain('m.last_checked_at AS last_checked_at');
-    expect(query.sql).not.toContain('MAX(cr.created_at)');
+    expect(query.sql).toContain('MAX(cr.created_at) AS last_check_at');
     expect(query.values).toContain(6);
     expect(query.sql).toContain('m.is_public = TRUE');
     expect(query.sql).toContain('u.is_demo = FALSE');
     expect(query.sql).toContain("cr.state = 'healthy'");
-    expect(query.sql).toContain("cr.created_at <= NOW()");
+    expect(query.sql).toContain('window_start');
+    expect(query.sql).toContain('window_end');
+    expect(query.sql).toContain('COUNT(*) FILTER (WHERE cr.state = \'healthy\')');
     expect(query.sql).toContain('ORDER BY m.name ASC, m.id ASC');
     expect(query.sql).not.toContain('SELECT *');
-    expect(Object.keys((await service.getPublicStatus())[0])).toEqual([
-      'name',
-      'last_state',
-      'uptime_percentage',
-      'last_checked_at',
+    expect(Object.keys((await service.getPublicStatus())[0]).sort()).toEqual([
+      'check_summary', 'last_checked_at', 'last_state', 'name', 'uptime_percentage',
+    ]);
+    expect(Object.keys(((await service.getPublicStatus())[0] as any).check_summary).sort()).toEqual([
+      'first_check_at', 'healthy_checks', 'last_check_at', 'total_checks',
+      'window_end', 'window_hours', 'window_start',
     ]);
   });
 
@@ -100,11 +119,34 @@ describe('PublicStatusService', () => {
         last_state: null,
         uptime_percentage: null,
         last_checked_at: null,
+        window_hours: 24,
+        total_checks: 0n,
+        healthy_checks: 0n,
+        window_start: new Date('2024-12-31T00:00:00.000Z'),
+        window_end: new Date('2025-01-01T00:00:00.000Z'),
+        first_check_at: null,
+        last_check_at: null,
       },
     ]);
     await expect(Promise.all([first, second])).resolves.toEqual([
-      [{ name: 'No checks', last_state: null, uptime_percentage: null, last_checked_at: null }],
-      [{ name: 'No checks', last_state: null, uptime_percentage: null, last_checked_at: null }],
+      [{
+        name: 'No checks', last_state: null, uptime_percentage: null, last_checked_at: null,
+        check_summary: {
+          window_hours: 24, total_checks: 0, healthy_checks: 0,
+          window_start: new Date('2024-12-31T00:00:00.000Z'),
+          window_end: new Date('2025-01-01T00:00:00.000Z'),
+          first_check_at: null, last_check_at: null,
+        },
+      }],
+      [{
+        name: 'No checks', last_state: null, uptime_percentage: null, last_checked_at: null,
+        check_summary: {
+          window_hours: 24, total_checks: 0, healthy_checks: 0,
+          window_start: new Date('2024-12-31T00:00:00.000Z'),
+          window_end: new Date('2025-01-01T00:00:00.000Z'),
+          first_check_at: null, last_check_at: null,
+        },
+      }],
     ]);
   });
 

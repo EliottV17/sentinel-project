@@ -19,7 +19,7 @@ Implement the approved six-block plan as small verified work units while preserv
 - Dashboard uses inline Add monitor disclosure, not modal. Separate pending from failing monitors and represent administrative paused state where relevant.
 
 ## Work units and acceptance
-- [ ] T1 Timestamp-aware, scaled, accessible latency chart (approved block1).
+- [x] T1 Timestamp-aware, scaled, accessible latency chart (approved block1).
   - Numeric ms scale, width-adaptive real-time ticks, mouse/keyboard/touch selection, missing measurements and frequency-relative gaps, accessible description/table retained.
   - Tests: irregular/equal timestamps, day boundary, single/empty/all-null samples, zero/error durations, gap threshold, keyboard/touch selection. Route: delegated worker; multi-file behavior/tests and graph geometry.
 - [ ] T2 Truthful public and history metric context (block2).
@@ -51,10 +51,10 @@ Each completed unit includes behavior/tests/docs in a Conventional Commit; recor
 
 ## Progress and evidence
 - Setup: clean main5f53362, branch created, local commits explicitly authorized. No source changes yet.
-- T1: in progress — writer returned chart implementation and observed RED/GREEN (3 files/21 tests), typecheck and focused lint pass. Native ASSESS: unassessable due untracked scope, requiring independent verifier. Independent verifier repeated21tests/typecheck/lint PASS but returned PARTIAL: all-equal timestamps index spacing; all-invalid epoch ticks; initial-empty observer lifecycle; failed markers insufficient shape distinction; threshold not visible. Writer corrected all findings and added coincident-point touch control. RED observed6failing/19passing, GREEN25tests with typecheck/lint PASS. Final independent recheck pending; no commit yet. Browser verification remains T8.
-- T2-T8: pending. Public consumers inventoried: strict backend four-key unit/e2e assertions, frontend interfaces/mocks, production-smoke jq projections and current README/status README. Preserve flat array, original fields and security key allowlists; update tests for documented safe metadata. Unknown external consumers cannot be certified from repository.
+- T1: completed in8c1ecbc (feat(history): add accessible timestamp-based latency chart). RED initial module failures then6regression failures; GREEN3files/25tests, typecheck and focused eslint PASS; independent recheck same results and all5findings resolved. Parent spotcheck geometry6tests PASS. Browser/physicaltouch/screenreader limits remain T8. Rollback: only history chart component/geometry/page integration/tests/README; no API/data changes.
+- T2: in progress — one bounded API/frontend metric-context writer. T3-T8: pending. Public consumers inventoried: strict backend four-key unit/e2e assertions, frontend interfaces/mocks, production-smoke jq projections and current README/status README. Preserve flat array, original fields and security key allowlists; update tests for documented safe metadata. Unknown external consumers cannot be certified from repository.
 - Native review: RDD off; no review authority created.
 - Browser, builds and functional checks: not yet executed.
 
 ## Next step
-Implement T1 via one bounded worker; run native ASSESS and required verification before local commit.
+Implement T2 with additive public metadata, strict safe-key tests and legacy-payload fallback; preserve metric formulas. Native ASSESS and applicable verification before commit.

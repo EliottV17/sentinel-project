@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -86,7 +86,17 @@ function fieldErrorMessage(field: MonitorField, detail?: string): string {
   return "Choose a check frequency allowed for your account.";
 }
 
-export function CreateMonitorForm() {
+export function CreateMonitorForm({
+  autoFocus = false,
+  onCreated,
+  onCancel,
+  onPendingChange,
+}: {
+  autoFocus?: boolean;
+  onCreated?: () => void;
+  onCancel?: () => void;
+  onPendingChange?: (pending: boolean) => void;
+} = {}) {
   const createMonitor = useCreateMonitor();
   const submissionInFlight = useRef(false);
   const {
@@ -100,10 +110,28 @@ export function CreateMonitorForm() {
     defaultValues: { name: "", target: "", frequency: 60 },
   });
 
+  useEffect(() => {
+    if (!onCancel) return;
+    const handleKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === "Escape" && !isSubmitting && !submissionInFlight.current && !createMonitor.isPending) {
+        event.preventDefault();
+        onCancel();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [createMonitor.isPending, isSubmitting, onCancel]);
+
+  const cancel = (): void => {
+    if (isSubmitting || submissionInFlight.current || createMonitor.isPending) return;
+    onCancel?.();
+  };
+
   const onSubmit = handleSubmit(
     (values) => {
       if (submissionInFlight.current) return;
       submissionInFlight.current = true;
+      onPendingChange?.(true);
       createMonitor.mutate(
         {
           name: values.name,
@@ -115,6 +143,7 @@ export function CreateMonitorForm() {
         {
           onSuccess: () => {
             reset();
+            onCreated?.();
           },
           onError: (err) => {
             if (err instanceof ApiError) {
@@ -130,6 +159,7 @@ export function CreateMonitorForm() {
           },
           onSettled: () => {
             submissionInFlight.current = false;
+            onPendingChange?.(false);
           },
         },
       );
@@ -152,6 +182,7 @@ export function CreateMonitorForm() {
         <input
           id="monitor-name"
           type="text"
+          autoFocus={autoFocus}
           required
           aria-describedby={errors.name ? "monitor-name-error" : undefined}
           aria-invalid={errors.name !== undefined}
@@ -205,13 +236,25 @@ export function CreateMonitorForm() {
           {errors.root.message}
         </p>
       )}
-      <button
-        type="submit"
-        disabled={isSubmitting || createMonitor.isPending}
-        className="self-start rounded-control bg-accent-strong px-4 py-2.5 text-sm font-semibold text-canvas shadow-sm transition duration-150 hover:bg-accent hover:shadow-glow active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100"
-      >
-        {createMonitor.isPending ? "Creating monitor…" : "Create monitor"}
-      </button>
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="submit"
+          disabled={isSubmitting || createMonitor.isPending}
+          className="min-h-11 rounded-control bg-accent-strong px-4 py-2.5 text-sm font-semibold text-canvas shadow-sm transition duration-150 hover:bg-accent hover:shadow-glow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {createMonitor.isPending ? "Creating monitor…" : "Create monitor"}
+        </button>
+        {onCancel && (
+          <button
+            type="button"
+            onClick={cancel}
+            disabled={isSubmitting || createMonitor.isPending}
+            className="min-h-11 rounded-control border border-line-strong px-4 py-2.5 text-sm font-medium text-muted transition duration-150 hover:border-accent hover:bg-raised hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Cancel
+          </button>
+        )}
+      </div>
     </form>
   );
 }

@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { CreateMonitorForm } from "./CreateMonitorForm";
 import { MonitorList } from "./MonitorList";
 import { useMonitors } from "./useMonitors";
@@ -14,70 +15,69 @@ function initialErrorMessage(error: unknown): string {
   return "Unable to load monitors. Check your connection and try again.";
 }
 
-function MetricIcon({ kind }: { kind: "total" | "healthy" | "attention" }) {
-  if (kind === "total") {
-    return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" className="size-5" aria-hidden="true"><circle cx="12" cy="12" r="8.5" /><path d="M3.5 12h17M12 3.5c2.2 2.3 3.3 5.1 3.3 8.5s-1.1 6.2-3.3 8.5c-2.2-2.3-3.3-5.1-3.3-8.5s1.1-6.2 3.3-8.5Z" /></svg>;
-  }
-  if (kind === "healthy") {
-    return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" className="size-5" aria-hidden="true"><path d="m5 12.5 4.4 4.2L19 7.7" strokeLinecap="round" strokeLinejoin="round" /><circle cx="12" cy="12" r="9" /></svg>;
-  }
-  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" className="size-5" aria-hidden="true"><path d="M12 8v5m0 3h.01" strokeLinecap="round" /><path d="m10.3 3.9-8 14A1.4 1.4 0 0 0 3.5 20h17a1.4 1.4 0 0 0 1.2-2.1l-8-14a2 2 0 0 0-3.4 0Z" strokeLinejoin="round" /></svg>;
-}
-
-function MetricCard({
-  label,
-  value,
-  detail,
-  kind,
+function AddMonitorButton({
+  expanded,
+  onClick,
+  buttonRef,
+  pending = false,
 }: {
-  label: string;
-  value: string;
-  detail: string;
-  kind: "total" | "healthy" | "attention";
+  expanded: boolean;
+  onClick: () => void;
+  buttonRef?: RefObject<HTMLButtonElement | null>;
+  pending?: boolean;
 }) {
   return (
-    <article className="rounded-panel border border-line bg-surface p-5 shadow-panel sm:p-6">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <h2 className="text-xs font-medium uppercase tracking-wider text-muted">{label}</h2>
-        <span className="text-accent"><MetricIcon kind={kind} /></span>
-      </div>
-      <p className="text-3xl font-semibold tracking-tight text-ink">{value}</p>
-      <p className="mt-1 text-xs leading-5 text-muted">{detail}</p>
-    </article>
+    <button
+      ref={buttonRef}
+      type="button"
+      aria-expanded={expanded}
+      aria-controls="add-monitor-panel"
+      disabled={pending}
+      onClick={onClick}
+      className="min-h-11 rounded-control bg-accent-strong px-4 py-2.5 text-sm font-semibold text-canvas transition duration-150 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+    >
+      Add monitor
+    </button>
   );
 }
 
-/**
- * Protected home page: the live list (polling via useMonitors), an
- * offline/stale banner derived from the query error state, and the create
- * form. The list is never blanked on failure — TanStack Query keeps the last
- * successful data and the banner explains the staleness.
- */
 export function MonitorsPage() {
   const query = useMonitors();
   const monitors = query.data;
   const total = monitors?.length ?? 0;
-  const healthy = monitors?.filter((monitor) => monitor.last_state === "healthy").length ?? 0;
-  const needsAttention = total - healthy;
+  const active = monitors?.filter((monitor) => monitor.state === "Active") ?? [];
+  const healthy = active.filter((monitor) => monitor.last_state === "healthy").length;
+  const unhealthy = active.filter((monitor) => monitor.last_state === "unhealthy").length;
+  const pending = active.filter((monitor) => monitor.last_state === null).length;
+  const paused = monitors?.filter((monitor) => monitor.state === "Paused").length ?? 0;
+  const [formOpen, setFormOpen] = useState(false);
+  const [createPending, setCreatePending] = useState(false);
+  const addButtonRef = useRef<HTMLButtonElement>(null);
+  const restoreFocusRef = useRef(false);
+
+  useLayoutEffect(() => {
+    if (!formOpen && restoreFocusRef.current) {
+      restoreFocusRef.current = false;
+      addButtonRef.current?.focus();
+    }
+  }, [formOpen]);
+
+  const closeForm = (): void => {
+    restoreFocusRef.current = true;
+    setFormOpen(false);
+  };
+  const toggleForm = (): void => {
+    if (createPending) return;
+    if (formOpen) closeForm();
+    else setFormOpen(true);
+  };
 
   return (
     <section className="mx-auto w-full max-w-6xl min-w-0 space-y-6 sm:space-y-8">
-      <div className="flex min-w-0 flex-col justify-between gap-6 lg:flex-row lg:items-end">
-        <div>
-          <p className="mb-3 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-accent">
-            <span className="size-2 rounded-full bg-success" aria-hidden="true" /> Live overview
-          </p>
-          <h1 className="max-w-2xl font-serif text-3xl font-semibold tracking-tight text-ink sm:text-4xl">Your systems, <span className="font-normal text-accent">in view.</span></h1>
-          <p className="mt-3 max-w-xl text-base leading-7 text-muted">A dependable view of your monitors. Add a service and Sentinel will keep checking it.</p>
-        </div>
-        <div className="flex min-w-0 items-center gap-3 rounded-panel border border-line bg-surface px-4 py-3 shadow-panel">
-          <span className="flex size-9 items-center justify-center rounded-control bg-accent-soft text-accent"><MetricIcon kind="total" /></span>
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wider text-muted">Monitor overview</p>
-            <p className="text-sm font-medium text-ink">Based on your loaded monitors</p>
-          </div>
-        </div>
-      </div>
+      <header className="flex min-w-0 flex-wrap items-center justify-between gap-4">
+        <h1 className="font-serif text-3xl font-semibold tracking-tight text-ink sm:text-4xl">Monitors</h1>
+        <AddMonitorButton expanded={formOpen} onClick={toggleForm} buttonRef={addButtonRef} pending={createPending} />
+      </header>
 
       {query.isError && query.data !== undefined && (
         <p role="alert" className="rounded-control border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning">
@@ -87,50 +87,48 @@ export function MonitorsPage() {
         </p>
       )}
 
-      {query.data !== undefined && (
-        <section aria-label="Monitor summary" className="grid gap-3 sm:grid-cols-3">
-          <MetricCard label="Total monitors" value={String(total)} detail="In the loaded monitor list" kind="total" />
-          <MetricCard label="Healthy now" value={`${healthy} / ${total}`} detail="Only monitors reporting healthy status" kind="healthy" />
-          <MetricCard label="Needs attention" value={`${needsAttention} / ${total}`} detail="Unhealthy or not yet checked; unknown is not healthy" kind="attention" />
-        </section>
+      {monitors !== undefined && (
+        <div role="group" aria-label="Monitor counts" className="flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-line pb-4 text-sm">
+          <span><span className="text-muted">Total</span> <strong className="font-mono font-medium text-ink">{total}</strong></span>
+          <span><span className="text-muted">Healthy</span> <strong className="font-mono font-medium text-success">{healthy}</strong></span>
+          <span><span className="text-muted">Unhealthy</span> <strong className="font-mono font-medium text-danger">{unhealthy}</strong></span>
+          <span><span className="text-muted">Pending</span> <strong className="font-mono font-medium text-muted">{pending}</strong></span>
+          {paused > 0 && <span className="text-muted">Paused {paused}</span>}
+        </div>
       )}
 
-      <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(280px,0.72fr)_minmax(0,1.28fr)] lg:items-start">
-        <section className="min-w-0 rounded-panel border border-line bg-surface p-5 shadow-panel sm:p-6" aria-labelledby="new-monitor-heading">
-          <div className="mb-5 flex items-start justify-between gap-3">
-            <div>
-              <p className="mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-accent">New monitor</p>
-              <h2 id="new-monitor-heading" className="text-lg font-semibold tracking-tight text-ink">Add a watchpoint</h2>
-            </div>
-            <span className="rounded-control bg-accent-soft p-2 text-accent" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="size-5"><path d="M12 5v14M5 12h14" strokeLinecap="round" /></svg>
-            </span>
-          </div>
-          <CreateMonitorForm />
-        </section>
+      <section id="add-monitor-panel" aria-labelledby="add-monitor-heading" hidden={!formOpen} className="min-w-0 border-b border-line pb-6">
+        {formOpen && (
+          <>
+            <h2 id="add-monitor-heading" className="mb-4 font-serif text-xl font-semibold tracking-tight text-ink">Add monitor</h2>
+            <CreateMonitorForm
+              autoFocus
+              onCancel={closeForm}
+              onCreated={closeForm}
+              onPendingChange={setCreatePending}
+            />
+          </>
+        )}
+      </section>
 
-        <section className="min-w-0" aria-labelledby="monitors-heading">
-          <div className="mb-4 flex items-end justify-between gap-3">
-            <div>
-              <p className="mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-accent">Your watchpoints</p>
-              <h2 id="monitors-heading" className="text-lg font-semibold tracking-tight text-ink">Monitors</h2>
+      <section className="min-w-0" aria-labelledby="monitors-list-heading">
+        <div className="mb-3 flex min-w-0 items-center justify-between gap-3">
+          <h2 id="monitors-list-heading" className="sr-only">Monitor list</h2>
+          {query.isPending && query.data === undefined && <Spinner />}
+        </div>
+        {monitors !== undefined ? (
+          monitors.length > 0 ? <MonitorList monitors={monitors} /> : (
+            <div className="flex flex-wrap items-center justify-between gap-4 border-y border-line py-8">
+              <p className="text-sm text-muted">No monitors yet.</p>
+              <AddMonitorButton expanded={formOpen} onClick={toggleForm} pending={createPending} />
             </div>
-            {query.data !== undefined && <span className="text-sm text-muted">{total} total</span>}
-            {query.isPending && query.data === undefined && <Spinner />}
+          )
+        ) : query.isError ? (
+          <div role="alert" className="rounded-panel border border-danger/30 bg-danger-soft p-5 text-sm leading-6 text-danger">
+            {initialErrorMessage(query.error)}
           </div>
-          {query.data !== undefined ? (
-            <MonitorList monitors={query.data} />
-          ) : query.isError ? (
-            <div role="alert" className="rounded-panel border border-danger/30 bg-danger-soft p-5 text-sm leading-6 text-danger">
-              {initialErrorMessage(query.error)}
-            </div>
-          ) : null}
-        </section>
-      </div>
-      <footer className="flex flex-wrap items-center justify-between gap-4 border-t border-line pt-5 text-xs text-muted">
-        <span>Sentinel observability platform</span>
-        <span className="inline-flex items-center gap-1.5"><span aria-hidden="true">?</span> Need help?</span>
-      </footer>
+        ) : null}
+      </section>
     </section>
   );
 }

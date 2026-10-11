@@ -29,6 +29,28 @@ function relativeCheckTime(value: string | null, now: number): string {
   return `Last checked ${formatter.format(-minutes, "minute")}`;
 }
 
+function formatPercentage(value: number | null): string {
+  if (value === null || !Number.isFinite(value)) return "—";
+  const bounded = Math.min(100, Math.max(0, value));
+  const roundedDown = Math.floor(bounded * 100) / 100;
+  return `${new Intl.NumberFormat("en", { maximumFractionDigits: 2 }).format(roundedDown)}%`;
+}
+
+function formatSampleDate(value: string | null): string | null {
+  if (value === null) return null;
+  const date = new Date(value);
+  return Number.isFinite(date.getTime())
+    ? new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(date)
+    : null;
+}
+
+function sampleCoverage(summary: NonNullable<PublicStatusMonitor["check_summary"]>): string {
+  if (summary.total_checks === 0) return "—";
+  const first = formatSampleDate(summary.first_check_at);
+  const last = formatSampleDate(summary.last_check_at);
+  return first && last ? `${first} – ${last}` : "unavailable";
+}
+
 function friendlyError(error: unknown): string {
   if (error instanceof ApiError && error.status === 429) {
     return error.retryAfter
@@ -151,11 +173,23 @@ export function StatusPage() {
                     <div className="mt-5 flex min-w-0 items-end justify-between gap-3 border-t border-line pt-4 sm:mt-6 sm:gap-4 sm:pt-5">
                       <div className="min-w-0">
                         <p className="break-words font-mono text-xl font-medium tracking-tight text-ink sm:text-2xl">
-                          {monitor.uptime_percentage === null || !Number.isFinite(monitor.uptime_percentage)
-                            ? "Uptime: —"
-                            : `Uptime: ${monitor.uptime_percentage}%`}
+                          Healthy checks: {monitor.check_summary?.total_checks === 0 ? "—" : formatPercentage(monitor.uptime_percentage)}
                         </p>
-                        <p className="sr-only">Reported uptime</p>
+                        {monitor.check_summary ? (
+                          <>
+                            <p className="mt-1 text-xs leading-5 text-muted">
+                              {Number.isFinite(monitor.check_summary.window_hours) && monitor.check_summary.window_hours > 0
+                                ? `${new Intl.NumberFormat("en", { maximumFractionDigits: 2 }).format(monitor.check_summary.window_hours)}-hour window`
+                                : "Sample period unavailable"}
+                              {" · "}{Number.isSafeInteger(monitor.check_summary.total_checks) && monitor.check_summary.total_checks >= 0
+                                ? `${monitor.check_summary.total_checks.toLocaleString("en")} checks`
+                                : "sample count unavailable"}
+                            </p>
+                            <p className="mt-1 text-xs leading-5 text-muted">
+                              Sample coverage: {sampleCoverage(monitor.check_summary)}
+                            </p>
+                          </>
+                        ) : <p className="mt-1 text-xs leading-5 text-muted">Sample period unavailable</p>}
                       </div>
                       <p className="max-w-[45%] text-right text-xs leading-5 text-muted">{relativeCheckTime(monitor.last_checked_at, now)}</p>
                     </div>

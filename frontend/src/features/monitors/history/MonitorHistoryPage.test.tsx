@@ -76,8 +76,13 @@ describe("MonitorHistoryPage", () => {
     expect(await screen.findByRole("heading", { name: "Primary API" })).toBeInTheDocument();
     expect(screen.getByText("Unhealthy")).toBeInTheDocument();
     expect(screen.getByText("In the last 3 checks")).toBeInTheDocument();
+    expect(screen.getByText(/Metrics use 3 loaded checks/)).toBeInTheDocument();
+    expect(screen.getByText(/Jan 15, 2025/)).toBeInTheDocument();
+    expect(screen.getByText(/local time zone/)).toBeInTheDocument();
+    expect(screen.getByText("Latency summaries include measured checks, including failed checks.")).toBeInTheDocument();
     expect(screen.getByText("33%")).toBeInTheDocument();
-    expect(screen.getAllByText("20 ms").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText("10.0 ms")).toBeInTheDocument();
+    expect(screen.getAllByText("20 ms").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("0 ms")).toBeInTheDocument();
     expect(screen.getByText("<script>escaped()</script>")).toBeInTheDocument();
     expect(screen.queryByRole("img", { name: /escaped/ })).not.toBeInTheDocument();
@@ -140,6 +145,17 @@ describe("MonitorHistoryPage", () => {
     await waitFor(() => expect(resolveHistory).toBeTypeOf("function"));
     resolveHistory(HttpResponse.json([check()]));
     expect(await screen.findByRole("table")).toBeInTheDocument();
+  });
+
+  it("does not invent a sample interval when loaded check timestamps are invalid", async () => {
+    server.use(
+      http.get("/api/v1/monitors", () => HttpResponse.json([monitor])),
+      http.get("/api/v1/monitors/7/history", () => HttpResponse.json([check({ created_at: "not-a-date" })])),
+      http.get("/api/v1/monitors/7/alerts", () => HttpResponse.json([])),
+    );
+    renderPage();
+    expect(await screen.findByText(/Metrics use 1 loaded check\. Check time interval unavailable/)).toBeInTheDocument();
+    expect(screen.getByText(/local time zone/)).toBeInTheDocument();
   });
 
   it("shows independent empty states and no-data metrics", async () => {
@@ -295,7 +311,7 @@ describe("MonitorHistoryPage", () => {
     expect(screen.getByRole("button", { name: /loading more/i })).toBeDisabled();
     await waitFor(() => expect(resolveExpanded).toBeTypeOf("function"));
     resolveExpanded!(HttpResponse.json([check(), ...Array.from({ length: 50 }, (_, id) => check({ id: id + 2 }))]));
-    await waitFor(() => expect(screen.getByText("In the last 51 checks")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/Metrics use 51 loaded checks/)).toBeInTheDocument());
     expect(screen.getByRole("button", { name: /load 50 more/i })).toBeInTheDocument();
   });
 });

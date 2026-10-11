@@ -9,6 +9,13 @@ interface PublicStatusRow {
   last_state: string | null;
   uptime_percentage: number | string | null;
   last_checked_at: Date | null;
+  window_hours: number | string;
+  total_checks: bigint;
+  healthy_checks: bigint;
+  window_start: Date;
+  window_end: Date;
+  first_check_at: Date | null;
+  last_check_at: Date | null;
 }
 
 @Injectable()
@@ -62,17 +69,27 @@ export class PublicStatusService implements OnModuleInit {
           WHEN checks.total_checks = 0 THEN NULL
           ELSE checks.healthy_checks::numeric * 100 / checks.total_checks
         END AS uptime_percentage,
-        m.last_checked_at AS last_checked_at
+        m.last_checked_at AS last_checked_at,
+        ${this.uptimeWindowHours} AS window_hours,
+        checks.total_checks AS total_checks,
+        checks.healthy_checks AS healthy_checks,
+        boundaries.window_end - (${this.uptimeWindowHours} * INTERVAL '1 hour') AS window_start,
+        boundaries.window_end AS window_end,
+        checks.first_check_at AS first_check_at,
+        checks.last_check_at AS last_check_at
       FROM monitor AS m
       INNER JOIN users AS u ON u.id = m.user_id
+      CROSS JOIN (SELECT NOW() AS window_end) AS boundaries
       CROSS JOIN LATERAL (
         SELECT
           COUNT(*) AS total_checks,
-          COUNT(*) FILTER (WHERE cr.state = 'healthy') AS healthy_checks
+          COUNT(*) FILTER (WHERE cr.state = 'healthy') AS healthy_checks,
+          MIN(cr.created_at) AS first_check_at,
+          MAX(cr.created_at) AS last_check_at
         FROM check_result AS cr
         WHERE cr.monitor_id = m.id
-          AND cr.created_at >= NOW() - (${this.uptimeWindowHours} * INTERVAL '1 hour')
-          AND cr.created_at <= NOW()
+          AND cr.created_at >= boundaries.window_end - (${this.uptimeWindowHours} * INTERVAL '1 hour')
+          AND cr.created_at <= boundaries.window_end
       ) AS checks
       WHERE m.state = 'Active'
         AND m.is_public = TRUE
@@ -86,6 +103,15 @@ export class PublicStatusService implements OnModuleInit {
       uptime_percentage:
         row.uptime_percentage === null ? null : Number(row.uptime_percentage),
       last_checked_at: row.last_checked_at,
+      check_summary: {
+        window_hours: Number(row.window_hours),
+        total_checks: Number(row.total_checks),
+        healthy_checks: Number(row.healthy_checks),
+        window_start: row.window_start,
+        window_end: row.window_end,
+        first_check_at: row.first_check_at,
+        last_check_at: row.last_check_at,
+      },
     }));
   }
 

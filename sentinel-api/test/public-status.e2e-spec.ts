@@ -152,7 +152,7 @@ describe('Public status endpoint (e2e)', () => {
     await app?.close();
   });
 
-  it('returns anonymous active public non-demo status with exactly four fields and windowed uptime', async () => {
+  it('returns anonymous active public non-demo status with five safe fields and windowed uptime metadata', async () => {
     const response = await request(app.getHttpServer()).get('/api/v1/public/status');
     expect(response.status).toBe(200);
     expect(response.headers['content-type']).toContain('application/json');
@@ -167,10 +167,26 @@ describe('Public status endpoint (e2e)', () => {
       last_state: 'healthy',
       uptime_percentage: 100,
       last_checked_at: expect.any(String),
+      check_summary: {
+        window_hours: (statusService as any).uptimeWindowHours,
+        total_checks: 2,
+        healthy_checks: 2,
+        window_start: expect.any(String),
+        window_end: expect.any(String),
+        first_check_at: expect.any(String),
+        last_check_at: expect.any(String),
+      },
     });
     expect(Object.keys(healthy).sort()).toEqual([
-      'last_checked_at', 'last_state', 'name', 'uptime_percentage',
+      'check_summary', 'last_checked_at', 'last_state', 'name', 'uptime_percentage',
     ]);
+    expect(Object.keys(healthy.check_summary).sort()).toEqual([
+      'first_check_at', 'healthy_checks', 'last_check_at', 'total_checks',
+      'window_end', 'window_hours', 'window_start',
+    ]);
+    expect(Date.parse(healthy.check_summary.window_start)).toBeLessThan(Date.parse(healthy.check_summary.window_end));
+    expect(Date.parse(healthy.check_summary.first_check_at)).toBeLessThanOrEqual(Date.parse(healthy.check_summary.last_check_at));
+    expect(JSON.stringify(healthy)).not.toMatch(/monitor_id|target|user_id|check_config/i);
     expect((byName.get(names.mixed) as any).uptime_percentage).toBe(50);
     expect((byName.get(names.empty) as any).uptime_percentage).toBeNull();
     expect((byName.get(names.empty) as any).last_checked_at).toBe(emptyCheckedAt.toISOString());
@@ -182,7 +198,16 @@ describe('Public status endpoint (e2e)', () => {
     expect(response.body.map((monitor: any) => monitor.name)).toEqual(
       [...response.body.map((monitor: any) => monitor.name)].sort(),
     );
-    expect(response.body.every((monitor: any) => Object.keys(monitor).length === 4)).toBe(true);
+    expect(response.body.every((monitor: any) => Object.keys(monitor).sort().join(',') === 'check_summary,last_checked_at,last_state,name,uptime_percentage')).toBe(true);
+    expect(response.body.find((monitor: any) => monitor.name === names.never).check_summary).toEqual({
+      window_hours: (statusService as any).uptimeWindowHours,
+      total_checks: 0,
+      healthy_checks: 0,
+      window_start: expect.any(String),
+      window_end: expect.any(String),
+      first_check_at: null,
+      last_check_at: null,
+    });
   });
 
   it('caches results briefly and refreshes after cache expiry', async () => {

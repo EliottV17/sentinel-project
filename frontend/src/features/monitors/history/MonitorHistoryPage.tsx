@@ -86,6 +86,25 @@ function AlertsTimeline({ alerts }: { alerts: NonNullable<ReturnType<typeof useM
   })}</ol>;
 }
 
+function formatLatency(value: number | null): string {
+  return value === null ? "No data" : `${value.toFixed(1)} ms`;
+}
+
+function loadedCheckInterval(rows: readonly MonitorHistoryRow[]): string {
+  const countLabel = `${rows.length.toLocaleString("en")} loaded ${rows.length === 1 ? "check" : "checks"}`;
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "local time";
+  const validDates = rows
+    .map((row) => parseApiDate(row.created_at))
+    .filter((date) => Number.isFinite(date.getTime()))
+    .sort((a, b) => a.getTime() - b.getTime());
+  if (validDates.length === 0) {
+    return `Metrics use ${countLabel}. Check time interval unavailable (local time zone: ${timeZone}).`;
+  }
+  const oldest = new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(validDates[0]);
+  const newest = new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(validDates[validDates.length - 1]);
+  return `Metrics use ${countLabel}, from ${oldest} to ${newest} (local time zone: ${timeZone}).`;
+}
+
 function formatRelativeTime(date: Date): string {
   const seconds = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000));
   if (seconds < 60) return `${seconds}s ago`;
@@ -139,10 +158,11 @@ export function MonitorHistoryPage() {
       {[
         ["Checks", historyPending ? "Loading…" : summary.loadedCount === 0 ? "No data" : `${summary.loadedCount}`, historyPending ? "Loading check summary…" : summary.loadedCount === 0 ? "In the last checks" : `In the last ${summary.loadedCount} checks`],
         ["Healthy checks", historyPending ? "Loading…" : summary.healthyPercentage === null ? "No data" : `${Math.round(summary.healthyPercentage)}%`, "Of loaded checks"],
-        ["Median latency", historyPending ? "Loading…" : summary.medianLatencyMs === null ? "No data" : `${summary.medianLatencyMs} ms`, "Measured checks"],
-        ["95th percentile", historyPending ? "Loading…" : summary.p95LatencyMs === null ? "No data" : `${summary.p95LatencyMs} ms`, "Measured checks"],
+        ["Median latency", historyPending ? "Loading…" : formatLatency(summary.medianLatencyMs), "Measured checks"],
+        ["95th percentile", historyPending ? "Loading…" : formatLatency(summary.p95LatencyMs), "Measured checks"],
       ].map(([label, value, caption]) => <article key={label} className="min-w-0 rounded-panel border border-line bg-surface p-4 shadow-panel sm:p-5"><p className="break-words text-xs font-medium uppercase tracking-wider text-muted">{label}</p><p className="mt-3 break-words font-mono text-xl font-medium tracking-tight text-ink sm:text-2xl">{value}</p><p className="mt-1 break-words text-xs leading-5 text-muted">{caption}</p></article>)}
     </section>
+    {!historyPending && <div className="-mt-4 space-y-1 text-xs leading-5 text-muted"><p>{loadedCheckInterval(rows)}</p><p>Latency summaries include measured checks, including failed checks.</p></div>}
     <Section title="Latency over time">
       {historyData.historyIsLoading && !historyData.history && <p role="status" className="text-sm text-muted">Loading check history…</p>}
       {historyHasError && <FailureMessage error={historyData.historyError} hasData={Boolean(historyData.history)} onRetry={() => { void historyData.refetchHistory(); }} />}

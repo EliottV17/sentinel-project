@@ -7,9 +7,6 @@ import { ApiError } from "../../app/api/client";
 import { useAuth } from "../../app/auth/AuthProvider";
 import { SentinelBrand } from "../../components/SentinelBrand";
 
-const demoEmail = import.meta.env.VITE_DEMO_USER_EMAIL || "demo@sentinel.dev";
-const demoPassword = import.meta.env.VITE_DEMO_USER_PASSWORD || "DemoPassword123!";
-
 const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
   password: z.string().min(1, "Password is required"),
@@ -87,45 +84,15 @@ export function LoginPage() {
   });
 
   return (
-    <main className="relative flex min-h-screen items-center overflow-hidden px-4 py-8 text-ink sm:px-8 sm:py-12">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
-        <div className="absolute -left-56 top-1/2 size-[34rem] -translate-y-1/2 rounded-full border border-accent/10" />
-        <div className="absolute -left-36 top-1/2 size-[24rem] -translate-y-1/2 rounded-full border border-accent/10" />
-        <div className="absolute right-0 top-0 h-px w-2/5 bg-line" />
-        <div className="absolute bottom-12 left-0 h-px w-1/4 bg-line" />
-      </div>
-
-      <div className="relative mx-auto grid w-full max-w-6xl min-w-0 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(24rem,28rem)] lg:items-center lg:gap-16">
-        <section className="flex flex-col">
-          <div className="mb-8 flex items-center justify-between lg:justify-start lg:gap-5">
-            <SentinelBrand />
-            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted lg:border-l lg:border-line lg:pl-5 lg:text-xs">
-              Access portal
-            </span>
-          </div>
-          <p className="mb-4 max-w-xl font-serif text-4xl leading-tight tracking-tight text-ink sm:text-5xl xl:text-6xl">
-            Keep every signal
-            <span className="block italic text-accent">within sight.</span>
-          </p>
-          <p className="max-w-lg text-sm leading-7 text-muted sm:text-base">
-            A calm control room for availability, uptime, and the details that keep your systems dependable.
-          </p>
-          <div className="mt-8 flex items-center gap-3 text-xs text-muted sm:mt-10">
-            <span className="size-2 rounded-full bg-success" aria-hidden="true" />
-            Built for a clearer view of your systems
-          </div>
-        </section>
-
-        <section className="w-full min-w-0 rounded-panel border border-line bg-surface p-5 shadow-panel sm:p-6">
+    <main className="flex min-h-screen items-center justify-center px-4 py-8 text-ink sm:px-8 sm:py-12">
+      <section className="w-full max-w-md min-w-0 rounded-panel border border-line bg-surface p-5 shadow-panel sm:p-6">
           <div className="mb-6">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-accent">
-              Welcome back
-            </p>
-            <h1 className="font-serif text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
-              Sign in to Sentinel
+            <SentinelBrand />
+            <h1 className="mt-6 font-serif text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
+              Sign in
             </h1>
             <p className="mt-2 text-base leading-7 text-muted">
-              Access your monitors and observability workspace.
+              Sign in to manage your monitors.
             </p>
           </div>
 
@@ -210,10 +177,7 @@ export function LoginPage() {
           >
             {demoSubmitting ? "Opening demo…" : "Try the demo"}
           </button>
-          <p className="mt-3 break-all text-center font-mono text-[11px] leading-5 text-muted">
-            Demo credentials: {demoEmail} / {demoPassword}
-          </p>
-
+          <p className="mt-3 text-center text-xs text-muted">Explore the demo. Data resets every hour.</p>
           <div className="mt-7 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 border-t border-line pt-5 text-center text-sm text-muted">
             <span>New to Sentinel?</span>
             <Link to="/register" className="font-medium text-accent underline-offset-4 transition duration-150 hover:text-accent-strong hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40">
@@ -224,10 +188,9 @@ export function LoginPage() {
             to="/status"
             className="mt-5 flex w-full items-center justify-center border-t border-line pt-4 text-sm text-muted transition duration-150 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
           >
-            View system status <span aria-hidden="true" className="ml-2">↗</span>
+            View system status
           </Link>
-        </section>
-      </div>
+      </section>
     </main>
   );
 }

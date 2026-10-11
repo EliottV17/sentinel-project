@@ -1,6 +1,7 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import type { components } from "../../lib/api/schema";
 import { MonitorRow } from "./MonitorRow";
 
@@ -25,15 +26,33 @@ function monitor(overrides: Partial<MonitorRead> = {}): MonitorRead {
   };
 }
 
+function LocationProbe() {
+  const location = useLocation();
+  return <p data-testid="location">{location.pathname}</p>;
+}
+
 function renderRow(value: MonitorRead) {
   return render(
-    <QueryClientProvider client={new QueryClient()}>
-      <ul><MonitorRow monitor={value} now={NOW} /></ul>
-    </QueryClientProvider>,
+    <MemoryRouter initialEntries={["/"]}>
+      <QueryClientProvider client={new QueryClient()}>
+        <Routes>
+          <Route path="/" element={<ul><MonitorRow monitor={value} now={NOW} /></ul>} />
+          <Route path="/monitors/:id" element={<LocationProbe />} />
+        </Routes>
+      </QueryClientProvider>
+    </MemoryRouter>,
   );
 }
 
 describe("MonitorRow", () => {
+  it("navigates internally to monitor details without a document link", () => {
+    renderRow(monitor());
+    const link = screen.getByRole("link", { name: "A long monitor name" });
+    expect(link).toHaveAttribute("href", "/monitors/1");
+    fireEvent.click(link);
+    expect(screen.getByTestId("location")).toHaveTextContent("/monitors/1");
+  });
+
   it("keeps the complete target available while bounding its displayed line", () => {
     renderRow(monitor());
     const target = screen.getByText(monitor().target);

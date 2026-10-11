@@ -34,7 +34,7 @@ Implement the approved six-block plan as small verified work units while preserv
 - [x] T5 Accessible secondary deletion confirmation (block4b).
   - Keep two-step protection, named confirmation, focus transition/restoration, Escape, announcements and touch sizing.
   - Tests: keyboard confirmation/cancel, target name, pending/errors. Route: delegated worker; DeleteButton/tests.
-- [ ] T6 Monitor-first dashboard and inline creation (block5).
+- [x] T6 Monitor-first dashboard and inline creation (block5).
   - Direct Monitors heading, remove redundant overview, compact accurate counters, pending vs failures, admin state, disclosure with focus and retained error input; preserve operational fields.
   - Tests: statuses/counters, empty/populated lists, disclosure open/close, create success/error and focus. Route: delegated worker; dashboard/rows/form/tests.
 - [ ] T7 Direct copy and decluttering (block6a).
@@ -56,9 +56,10 @@ Each completed unit includes behavior/tests/docs in a Conventional Commit; recor
 - T3: completedabc6347 (fix(history): stop exhausted loads and retry failed expansions). RED5fail14pass; GREEN23integrationtests/typecheck/focusedlint PASS; parent23tests PASS. Successfulrows+monitor+limit guard, short/full/cap states distinct, samefailedlimit retry, rapidactivation/429/terminal401403404/refresh/navigation covered. Native ASSESS medium/large selfverificationstands. Rollback: historyhook exhaustion/retry state+page messages/tests/docs only.
 - T4: completed924fbea (fix(forms): expose requirements and guard pending submissions). InitialRED7fail26pass; correctionRED4fail32pass (3POST instead1), finalGREEN36tests/typecheck/focusedlint PASS; parentcreate13tests PASS. All3monitorfieldsrequired/errorassociated, visibleguidance in3forms, username/password upfront, HTTP/localhostfeedback, pendingmutation/refguardreleasedonsettlement. ASSESSmedium/large selfverificationstands. Rollback: guidance/semantics/clientfeedback/pendingguard in3forms/tests; no serverpolicychange.
 - T5: completed0f7a4fc (fix(monitors): make delete confirmation keyboard accessible). RED5fail4pass/GREEN9tests,typecheck,lint PASS; parent9PASS; ASSESSmedium/large. Two-step retained, Cancel-firstfocus/restoration, namedpoliteconfirmation,44pxtargets,pendingduplicate andCancel/Escapeprotection,errorretry/queryinvalidation. Rollback: DeleteButton/tests only. Actualbrowserfocusafterrowremoval pendingT8.
-- T6: in progress — initialRED10fail18pass, GREEN29tests/typecheck/lint PASS. Parent found header/empty Addtoggle bypassing pendingformguard; correctionRED2fail28pass, finalGREEN30tests/typecheck/lint PASS; allAddcontrolsdisabled + parentguard whilepending, successclose/focus anderrorcancelretainverifiedbywriter. Independentverifier runningbeforecommit. ASSESSunassessable(untrackedtests) -> highverificationpath. T7-T8: pending.
+- T6: completed7d7f89c (feat(monitors): prioritize status list and inline creation). InitialRED10fail, correctionRED2fail28pass; GREEN30tests/typecheck/lint independentlyrepeated PASS; parentdashboard11PASS. Activehealth/Pending/Paused separate, pausedenginewarningssuppressed, listprimary, inlineformNamefocus/CancelEscapeSuccessrestore, errorsretain, allAddcontrols pendinglocked. ASSESSunassessable -> requiredindependentverifier satisfied. Cohesiveunit~527changedlinesincludingtests/progress, noartificialminification. Rollback: dashboard/disclosure/statusrow/pill andoptionalformcallbacks/tests; no API/datachanges.
+- T7: in progress — directcopy/decluttering writer. T8: pending.
 - Native review: RDD off; no review authority created.
 - Browser, builds and functional checks: not yet executed.
 
 ## Next step
-Implement T6 monitor-first hierarchy, accurate counters/status and focus-safe inlinecreation disclosure; preserveoperationalfields/deletes, assess andverify beforecommit.
+Implement T7 directauth/statuscopy, removegenericclaims/redundancy anddemo credential display, preservefunctionalnotices/routes/identity. Assess andverify beforecommit.

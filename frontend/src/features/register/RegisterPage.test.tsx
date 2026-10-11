@@ -57,6 +57,7 @@ describe("RegisterPage", () => {
     renderRegisterPage();
     expect(screen.getByText("All fields are required.")).toBeInTheDocument();
     expect(screen.getByText("At least 8 characters, including letters and numbers.")).toBeInTheDocument();
+    expect(screen.getByText("Explore the demo. Data resets every hour.")).toBeInTheDocument();
     expect(screen.getByText("3 to 20 letters or numbers.")).toBeInTheDocument();
     for (const label of ["Name", "Last name", "Username", "Email", "Password", "Confirm password"]) {
       expect(screen.getByLabelText(label)).toBeRequired();
@@ -201,11 +202,11 @@ describe("RegisterPage", () => {
     expect(calls).toBe(1);
   });
 
-  it("links to login and system status", () => {
+  it("uses the direct account heading and links to login and system status", () => {
     renderRegisterPage();
     expect(screen.getByRole("link", { name: /sign in/i })).toHaveAttribute("href", "/login");
     expect(screen.getByRole("link", { name: /system status/i })).toHaveAttribute("href", "/status");
-    expect(screen.getByRole("heading", { name: "Register for Sentinel" })).toBeInTheDocument();
-    expect(screen.getByText(/Make every signal/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Create your account." })).toBeInTheDocument();
+    expect(screen.queryByText(/Make every signal|quiet control room|Monitoring layer operational/i)).not.toBeInTheDocument();
   });
 });

@@ -147,7 +147,6 @@ export function MonitorHistoryPage() {
     <a href="/" className="inline-flex items-center gap-2 rounded-control text-sm font-medium text-muted transition duration-150 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"><span aria-hidden="true">←</span> All monitors</a>
     {Boolean(historyData.metadataError) && <FailureMessage error={historyData.metadataError} hasData={Boolean(monitor)} />}
     {monitor && <header className="rounded-panel border border-line bg-surface p-5 shadow-panel sm:p-6">
-      <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-accent">Monitor history</p>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0"><h1 className="break-words font-serif text-3xl font-semibold tracking-tight text-ink sm:text-4xl">{monitor.name}</h1><p className="mt-2 break-all font-mono text-sm text-muted">{monitor.target}</p></div>
         <StatusPill lastState={monitor.last_state} />

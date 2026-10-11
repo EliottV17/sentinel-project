@@ -32,7 +32,7 @@ function renderPage() {
 }
 
 describe("monitor dashboard design", () => {
-  it("derives truthful metrics from the loaded monitor states, counting unknown as attention", async () => {
+  it("derives truthful counters from loaded Active monitor states", async () => {
     server.use(http.get("/api/v1/monitors", () => HttpResponse.json([
       monitor({ id: 1, name: "Healthy API" }),
       monitor({ id: 2, name: "Down API", last_state: "unhealthy", consecutive_failures: 2 }),
@@ -41,10 +41,12 @@ describe("monitor dashboard design", () => {
 
     renderPage();
 
-    expect(await screen.findByText("3")).toBeInTheDocument();
-    expect(screen.getByText("1 / 3")).toBeInTheDocument();
-    expect(screen.getByText("2 / 3")).toBeInTheDocument();
-    expect(screen.getByText(/unknown is not healthy/i)).toBeInTheDocument();
+    const counts = await screen.findByRole("group", { name: "Monitor counts" });
+    expect(counts).toHaveTextContent("Total 3");
+    expect(counts).toHaveTextContent("Healthy 1");
+    expect(counts).toHaveTextContent("Unhealthy 1");
+    expect(counts).toHaveTextContent("Pending 1");
+    expect(screen.getByText("Never checked")).toBeInTheDocument();
     expect(screen.queryByText(/average uptime/i)).not.toBeInTheDocument();
   });
 

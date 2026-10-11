@@ -60,13 +60,13 @@ describe("monitor history navigation", () => {
 
   it("links every monitor card to its history with a real href", () => {
     const client = new QueryClient();
-    render(<QueryClientProvider client={client}><ul><MonitorRow monitor={monitor} now={new Date("2025-01-15T10:00:00Z")} /></ul></QueryClientProvider>);
+    render(<MemoryRouter><QueryClientProvider client={client}><ul><MonitorRow monitor={monitor} now={new Date("2025-01-15T10:00:00Z")} /></ul></QueryClientProvider></MemoryRouter>);
     expect(screen.getByRole("link", { name: "Primary API" })).toHaveAttribute("href", "/monitors/42");
   });
 
   it("redirects an unauthenticated visit to the full app login route", async () => {
     renderAppAtDetail();
-    expect(await screen.findByRole("heading", { name: "Sign in to Sentinel" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Sign in" })).toBeInTheDocument();
   });
 
   it("mounts the authenticated detail through App routes, AuthProvider, and AppShell", async () => {

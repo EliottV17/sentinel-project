@@ -26,6 +26,12 @@ const alertRow = {
   created_at: "2025-02-03T04:05:06.000Z",
 };
 
+const historyRows = Array.from({ length: 100 }, (_, index) => ({
+  ...historyRow,
+  id: index + 1,
+  created_at: new Date(Date.parse(historyRow.created_at) + index * 1_000).toISOString(),
+}));
+
 describe("monitor history endpoints", () => {
   afterEach(() => server.resetHandlers());
 
@@ -135,7 +141,7 @@ describe("useMonitorHistory", () => {
         const limit = new URL(request.url).searchParams.get("limit") ?? "";
         requestedLimits.push(limit);
         return limit === "50"
-          ? HttpResponse.json([historyRow])
+          ? HttpResponse.json(historyRows.slice(0, 50))
           : HttpResponse.json({ detail: "temporarily unavailable" }, { status: 500 });
       }),
       http.get("*/api/v1/monitors/8/alerts", () => HttpResponse.json([alertRow])),
@@ -148,49 +154,99 @@ describe("useMonitorHistory", () => {
     expect(await screen.findByText("first")).toBeInTheDocument();
     expect(screen.getByTestId("metadata-loading")).toHaveTextContent("false");
     expect(screen.getByTestId("metadata-loaded")).toHaveTextContent("true");
-    await waitFor(() => expect(screen.getByTestId("rows")).toHaveTextContent("4"));
+    await waitFor(() => expect(screen.getByTestId("rows").textContent?.split(",")).toHaveLength(50));
     expect(screen.getByTestId("history-fetching")).toHaveTextContent("false");
     expect(await screen.findByTestId("alerts")).toHaveTextContent("1");
     await act(async () => screen.getByRole("button", { name: "more" }).click());
     expect(screen.getByTestId("limit")).toHaveTextContent("100");
     await waitFor(() => expect(requestedLimits).toEqual(["50", "100"]));
-    expect(screen.getByTestId("rows")).toHaveTextContent("4");
+    expect(screen.getByTestId("rows").textContent?.split(",")).toHaveLength(50);
 
     view.rerender(createElement(QueryClientProvider, { client }, createElement(HistoryProbe, { monitorId: 9 })));
     expect(await screen.findByText("second")).toBeInTheDocument();
-    expect(screen.getByTestId("rows")).not.toHaveTextContent("4");
+    await waitFor(() => expect(screen.getByTestId("history-fetching")).toHaveTextContent("false"));
+    expect(screen.getByTestId("rows")).toHaveTextContent(/^$/);
     client.clear();
   });
 
-  it("blocks limit growth during a short Retry-After, then enables it at cooldown expiry", async () => {
-    vi.useFakeTimers();
+  it("keeps the full initial batch when an expanded history request fails", async () => {
+    const historyLimits: string[] = [];
+    server.use(
+      http.get("*/api/v1/monitors/", () => HttpResponse.json([])),
+      http.get("*/api/v1/monitors/8/history", ({ request }) => {
+        const limit = new URL(request.url).searchParams.get("limit") ?? "";
+        historyLimits.push(limit);
+        return limit === "50"
+          ? HttpResponse.json(historyRows.slice(0, 50))
+          : HttpResponse.json({ detail: "slow down" }, {
+              status: 429,
+              headers: { "Retry-After": "5" },
+            });
+      }),
+      http.get("*/api/v1/monitors/8/alerts", () => HttpResponse.json([])),
+    );
+    render(createElement(QueryClientProvider, { client: makeQueryClient() }, createElement(HistoryProbe, { monitorId: 8 })));
+    await waitFor(() => expect(screen.getByTestId("rows").textContent?.split(",")).toHaveLength(50));
+    expect(screen.getByTestId("can-load-more")).toHaveTextContent("true");
+
+    await act(async () => screen.getByRole("button", { name: "more" }).click());
+    await waitFor(() => expect(historyLimits).toEqual(["50", "100"]));
+    expect(screen.getByTestId("limit")).toHaveTextContent("100");
+    expect(screen.getByTestId("rows").textContent?.split(",")).toHaveLength(50);
+    expect(screen.getByTestId("can-load-more")).toHaveTextContent("false");
+
+    await act(async () => screen.getByRole("button", { name: "direct more" }).click());
+    expect(historyLimits).toEqual(["50", "100"]);
+    expect(screen.getByTestId("rows").textContent?.split(",")).toHaveLength(50);
+  });
+
+  it("expands a full 50-row batch to 100 distinct rows before allowing another page", async () => {
+    const requestedLimits: string[] = [];
+    server.use(
+      http.get("*/api/v1/monitors/", () => HttpResponse.json([])),
+      http.get("*/api/v1/monitors/8/history", ({ request }) => {
+        const limit = new URL(request.url).searchParams.get("limit") ?? "";
+        requestedLimits.push(limit);
+        return HttpResponse.json(historyRows.slice(0, Number(limit)));
+      }),
+      http.get("*/api/v1/monitors/8/alerts", () => HttpResponse.json([])),
+    );
+    render(createElement(QueryClientProvider, { client: makeQueryClient() }, createElement(HistoryProbe, { monitorId: 8 })));
+    await waitFor(() => expect(screen.getByTestId("rows").textContent?.split(",")).toHaveLength(50));
+    await act(async () => screen.getByRole("button", { name: "more" }).click());
+    await waitFor(() => expect(screen.getByTestId("rows").textContent?.split(",")).toHaveLength(100));
+    const ids = screen.getByTestId("rows").textContent?.split(",") ?? [];
+    expect(new Set(ids).size).toBe(100);
+    expect(screen.getByTestId("limit")).toHaveTextContent("100");
+    expect(screen.getByTestId("can-load-more")).toHaveTextContent("true");
+    expect(requestedLimits).toEqual(["50", "100"]);
+  });
+
+  it("does not expand a short history batch and keeps monitor-scoped exhaustion", async () => {
     const historyLimits: string[] = [];
     server.use(
       http.get("*/api/v1/monitors/", () => HttpResponse.json([])),
       http.get("*/api/v1/monitors/8/history", ({ request }) => {
         historyLimits.push(new URL(request.url).searchParams.get("limit") ?? "");
-        return HttpResponse.json({ detail: "slow down" }, {
-          status: 429,
-          headers: { "Retry-After": "5" },
-        });
+        return HttpResponse.json(historyRows.slice(0, 4));
       }),
       http.get("*/api/v1/monitors/8/alerts", () => HttpResponse.json([])),
+      http.get("*/api/v1/monitors/9/history", () => HttpResponse.json(historyRows.slice(0, 4))),
+      http.get("*/api/v1/monitors/9/alerts", () => HttpResponse.json([])),
     );
-    render(createElement(QueryClientProvider, { client: makeQueryClient() }, createElement(HistoryProbe, { monitorId: 8 })));
-    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
-    expect(historyLimits).toEqual(["50"]);
+    const client = makeQueryClient();
+    const view = render(createElement(QueryClientProvider, { client }, createElement(HistoryProbe, { monitorId: 8 })));
+    await waitFor(() => expect(screen.getByTestId("rows").textContent?.split(",")).toHaveLength(4));
     expect(screen.getByTestId("can-load-more")).toHaveTextContent("false");
+    expect(screen.getByTestId("limit")).toHaveTextContent("50");
     await act(async () => screen.getByRole("button", { name: "direct more" }).click());
     expect(historyLimits).toEqual(["50"]);
-    expect(screen.getByTestId("limit")).toHaveTextContent("50");
 
-    await act(async () => { await vi.advanceTimersByTimeAsync(5_000); });
-    expect(historyLimits).toEqual(["50"]); // a short Retry-After cannot shorten the 30 s poll cadence
-    expect(screen.getByTestId("can-load-more")).toHaveTextContent("true");
-    await act(async () => screen.getByRole("button", { name: "more" }).click());
-    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
-    expect(historyLimits).toEqual(["50", "100"]);
-    expect(screen.getByTestId("limit")).toHaveTextContent("100");
+    view.rerender(createElement(QueryClientProvider, { client }, createElement(HistoryProbe, { monitorId: 9 })));
+    await waitFor(() => expect(screen.getByTestId("monitor")).toHaveTextContent("missing"));
+    expect(screen.getByTestId("can-load-more")).toHaveTextContent("false");
+    expect(screen.getByTestId("limit")).toHaveTextContent("50");
+    client.clear();
   });
 
   it("honors Retry-After for manual and focus refetches", async () => {

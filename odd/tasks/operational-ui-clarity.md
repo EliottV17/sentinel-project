@@ -28,7 +28,7 @@ Implement the approved six-block plan as small verified work units while preserv
 - [x] T3 History exhaustion, retry and inflight correctness (block3).
   - Distinct exhaustion/cap/loading/error, retain data, retry same limit, preserve429 cooldown and monitor switching.
   - Tests: counts0/14/15/49/50/51/200, loading placeholders, failed expansion, duplicate activation, refresh and monitor switch. Route: delegated worker; hook/page/tests.
-- [ ] T4 Upfront form requirements and semantic validation (block4a).
+- [x] T4 Upfront form requirements and semantic validation (block4a).
   - Real password/username hints, required semantics, associated hints/errors, preserve autocomplete and keyboard submit; early HTTP/HTTPS feedback without cloning security policy.
   - Tests: requirements, accessible description, errors, invalid targets, submission and busy states. Route: delegated worker; auth/create forms/tests.
 - [ ] T5 Accessible secondary deletion confirmation (block4b).
@@ -54,9 +54,10 @@ Each completed unit includes behavior/tests/docs in a Conventional Commit; recor
 - T1: completed in8c1ecbc (feat(history): add accessible timestamp-based latency chart). RED initial module failures then6regression failures; GREEN3files/25tests, typecheck and focused eslint PASS; independent recheck same results and all5findings resolved. Parent spotcheck geometry6tests PASS. Browser/physicaltouch/screenreader limits remain T8. Rollback: only history chart component/geometry/page integration/tests/README; no API/data changes.
 - T2: completed91a94b2 (feat(status): expose truthful check sampling context). RED API2fail/frontend5fail; GREEN API8tests/frontend45tests, APIbuild/frontendtypecheck/focusedlint PASS. Parent API8tests PASS. Native ASSESS medium/large, no independent verifier required. Flatarray/legacy4fields preserved, optional safe nested check_summary with consistent SQL snapshot; strict allowlists/legacyfixtures tested. E2E updated NOTRUN pending isolatedDB T8. Rollback: remove addedmetadata andUIcontext, preserve existingmetricformulas/classification.
 - T3: completedabc6347 (fix(history): stop exhausted loads and retry failed expansions). RED5fail14pass; GREEN23integrationtests/typecheck/focusedlint PASS; parent23tests PASS. Successfulrows+monitor+limit guard, short/full/cap states distinct, samefailedlimit retry, rapidactivation/429/terminal401403404/refresh/navigation covered. Native ASSESS medium/large selfverificationstands. Rollback: historyhook exhaustion/retry state+page messages/tests/docs only.
-- T4: in progress — initial RED7fail26pass then34tests/typecheck/lint PASS; ASSESS medium/large. Parent found missing frequency required/error association and visual required guidance plus pending mutation submit guard. Bounded correction with regressions running before commit. T5-T8: pending. Public consumers inventoried: strict backend four-key unit/e2e assertions, frontend interfaces/mocks, production-smoke jq projections and current README/status README. Preserve flat array, original fields and security key allowlists; update tests for documented safe metadata. Unknown external consumers cannot be certified from repository.
+- T4: completed924fbea (fix(forms): expose requirements and guard pending submissions). InitialRED7fail26pass; correctionRED4fail32pass (3POST instead1), finalGREEN36tests/typecheck/focusedlint PASS; parentcreate13tests PASS. All3monitorfieldsrequired/errorassociated, visibleguidance in3forms, username/password upfront, HTTP/localhostfeedback, pendingmutation/refguardreleasedonsettlement. ASSESSmedium/large selfverificationstands. Rollback: guidance/semantics/clientfeedback/pendingguard in3forms/tests; no serverpolicychange.
+- T5: in progress — accessible inline delete confirmation writer. T6-T8: pending.
 - Native review: RDD off; no review authority created.
 - Browser, builds and functional checks: not yet executed.
 
 ## Next step
-Implement T4 upfront field requirements, accessible hints/errors and earlyHTTPtarget validation; preserve fields, keyboard submission and server authority. Assess andverify beforecommit.
+Implement T5 accessible two-step deletion, focus/Escape/name/announcements/touch targets; preserve safeguards, assess andverify beforecommit.

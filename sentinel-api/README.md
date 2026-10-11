@@ -66,6 +66,10 @@ Todos los endpoints (excepto el healthcheck) tienen el prefijo `/api/v1`:
 
 ## Tests y Build
 
+Las suites E2E comparten una base de datos y el seed de estado reconcilia la publicación de los monitores de forma global. Por eso Jest las ejecuta secuencialmente (`maxWorkers: 1`).
+
+El comando habitual `bun run test:e2e` mantiene las fixtures aisladas entre suites sin cambiar la política de publicación de producción.
+
 ```bash
 # Compilar TypeScript
 bun run build

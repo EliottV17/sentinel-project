@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { Link, MemoryRouter, Route, Routes } from "react-router-dom";
 import { http, HttpResponse } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { server } from "../../../test/mocks/server";
@@ -158,6 +158,48 @@ describe("MonitorHistoryPage", () => {
     expect(screen.getByText(/local time zone/)).toBeInTheDocument();
   });
 
+  it("reevaluates earlier exhaustion after an automatic-style successful refresh", async () => {
+    let historyCalls = 0;
+    server.use(
+      http.get("/api/v1/monitors", () => HttpResponse.json([monitor])),
+      http.get("/api/v1/monitors/7/history", () => {
+        historyCalls += 1;
+        return HttpResponse.json(historyCalls === 1 ? [check()] : Array.from({ length: 50 }, (_, id) => check({ id: id + 1 })));
+      }),
+      http.get("/api/v1/monitors/7/alerts", () => HttpResponse.json([])),
+    );
+    const { client } = renderPage();
+    expect(await screen.findByText("No older checks available.")).toBeInTheDocument();
+    await client.refetchQueries({ queryKey: ["monitor-history", "rows", 7, 50], exact: true });
+    expect(await screen.findByRole("button", { name: /load 50 more/i })).toBeInTheDocument();
+    expect(screen.queryByText("No older checks available.")).not.toBeInTheDocument();
+  });
+
+  it("isolates history exhaustion when navigating between monitors", async () => {
+    const secondMonitor = { ...monitor, id: 8, name: "Secondary API" };
+    server.use(
+      http.get("/api/v1/monitors", () => HttpResponse.json([monitor, secondMonitor])),
+      http.get("/api/v1/monitors/:id/history", ({ params }) => HttpResponse.json(
+        params.id === "7" ? [] : Array.from({ length: 50 }, (_, id) => check({ id: id + 1, monitor_id: 8 })),
+      )),
+      http.get("/api/v1/monitors/:id/alerts", () => HttpResponse.json([])),
+    );
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={["/monitors/7"]}>
+          <Link to="/monitors/8">Next monitor</Link>
+          <Routes><Route path="/monitors/:id" element={<MonitorHistoryPage />} /></Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText("No older checks available.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("link", { name: "Next monitor" }));
+    expect(await screen.findByRole("heading", { name: "Secondary API" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /load 50 more/i })).toBeInTheDocument();
+    expect(screen.queryByText("No older checks available.")).not.toBeInTheDocument();
+  });
+
   it("shows independent empty states and no-data metrics", async () => {
     server.use(
       http.get("/api/v1/monitors", () => HttpResponse.json([monitor])),
@@ -167,10 +209,23 @@ describe("MonitorHistoryPage", () => {
     renderPage();
     expect(await screen.findByText("No checks yet. The worker checks this monitor every 60 seconds.")).toBeInTheDocument();
     expect(screen.getAllByText("No data").length).toBeGreaterThanOrEqual(3);
+    expect(screen.getByText("No older checks available.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /load 50 more/i })).not.toBeInTheDocument();
     expect(screen.getByText("No alerts yet.")).toBeInTheDocument();
   });
 
-  it.each([403, 404])("does not reveal data after a %s history failure", async (status) => {
+  it.each([0, 14, 15, 49])("marks a successful short first batch of %s rows exhausted", async (count) => {
+    server.use(
+      http.get("/api/v1/monitors", () => HttpResponse.json([monitor])),
+      http.get("/api/v1/monitors/7/history", () => HttpResponse.json(Array.from({ length: count }, (_, id) => check({ id: id + 1 })))),
+      http.get("/api/v1/monitors/7/alerts", () => HttpResponse.json([])),
+    );
+    renderPage();
+    expect(await screen.findByText("No older checks available.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /load 50 more/i })).not.toBeInTheDocument();
+  });
+
+  it.each([401, 403, 404])("does not reveal data after a %s history failure", async (status) => {
     server.use(
       http.get("/api/v1/monitors", () => HttpResponse.json([monitor])),
       http.get("/api/v1/monitors/7/history", () => HttpResponse.json({ detail: "private server detail" }, { status })),
@@ -274,13 +329,17 @@ describe("MonitorHistoryPage", () => {
     expect(historyRequest).not.toHaveBeenCalled();
   });
 
-  it("keeps old rows and shows a friendly error when expanding the limit fails", async () => {
-    let historyCalls = 0;
+  it("retains 50 rows and retries a failed expansion at the same 100-row limit", async () => {
+    const requestedLimits: string[] = [];
     server.use(
       http.get("/api/v1/monitors", () => HttpResponse.json([monitor])),
-      http.get("/api/v1/monitors/7/history", () => {
-        historyCalls += 1;
-        return historyCalls === 1 ? HttpResponse.json([check()]) : HttpResponse.json({ detail: "private query failure" }, { status: 500 });
+      http.get("/api/v1/monitors/7/history", ({ request }) => {
+        const limit = new URL(request.url).searchParams.get("limit") ?? "";
+        requestedLimits.push(limit);
+        if (limit === "50") return HttpResponse.json(Array.from({ length: 50 }, (_, id) => check({ id: id + 1 })));
+        return requestedLimits.filter((requested) => requested === "100").length === 1
+          ? HttpResponse.json({ detail: "private query failure" }, { status: 500 })
+          : HttpResponse.json(Array.from({ length: 100 }, (_, id) => check({ id: id + 1 })));
       }),
       http.get("/api/v1/monitors/7/alerts", () => HttpResponse.json([])),
     );
@@ -290,16 +349,22 @@ describe("MonitorHistoryPage", () => {
     const messages = await screen.findAllByRole("alert");
     expect(messages[0]).toHaveTextContent("temporarily unavailable");
     expect(screen.getByRole("table")).toBeInTheDocument();
+    expect(screen.getByText("50", { selector: "p" })).toBeInTheDocument();
     expect(messages[0]).not.toHaveTextContent("private query failure");
+    fireEvent.click(screen.getAllByRole("button", { name: "Retry" })[0]);
+    expect(await screen.findByText(/Metrics use 100 loaded checks/)).toBeInTheDocument();
+    expect(requestedLimits).toEqual(["50", "100", "100"]);
   });
 
   it("offers bounded load-more and preserves existing rows while the larger limit fetches", async () => {
     let resolveExpanded!: (response: Response) => void;
+    const requestedLimits: string[] = [];
     server.use(
       http.get("/api/v1/monitors", () => HttpResponse.json([monitor])),
       http.get("/api/v1/monitors/7/history", ({ request }) => {
-        const limit = new URL(request.url).searchParams.get("limit");
-        if (limit === "50") return HttpResponse.json([check()]);
+        const limit = new URL(request.url).searchParams.get("limit") ?? "";
+        requestedLimits.push(limit);
+        if (limit === "50") return HttpResponse.json(Array.from({ length: 50 }, (_, id) => check({ id: id + 1 })));
         return new Promise<Response>((resolve) => { resolveExpanded = resolve; });
       }),
       http.get("/api/v1/monitors/7/alerts", () => HttpResponse.json([])),
@@ -307,11 +372,34 @@ describe("MonitorHistoryPage", () => {
     renderPage();
     expect(await screen.findByRole("table")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /load 50 more/i }));
+    fireEvent.click(screen.getByRole("button", { name: /loading more/i }));
     expect(screen.getByRole("table")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /loading more/i })).toBeDisabled();
     await waitFor(() => expect(resolveExpanded).toBeTypeOf("function"));
+    expect(requestedLimits).toEqual(["50", "100"]);
     resolveExpanded!(HttpResponse.json([check(), ...Array.from({ length: 50 }, (_, id) => check({ id: id + 2 }))]));
     await waitFor(() => expect(screen.getByText(/Metrics use 51 loaded checks/)).toBeInTheDocument());
-    expect(screen.getByRole("button", { name: /load 50 more/i })).toBeInTheDocument();
+    expect(screen.getByText("No older checks available.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /load 50 more/i })).not.toBeInTheDocument();
+  });
+
+  it("distinguishes a full 200-check client cap from history exhaustion", async () => {
+    server.use(
+      http.get("/api/v1/monitors", () => HttpResponse.json([monitor])),
+      http.get("/api/v1/monitors/7/history", ({ request }) => {
+        const limit = Number(new URL(request.url).searchParams.get("limit"));
+        return HttpResponse.json(Array.from({ length: limit }, (_, id) => check({ id: id + 1 })));
+      }),
+      http.get("/api/v1/monitors/7/alerts", () => HttpResponse.json([])),
+    );
+    renderPage();
+    expect(await screen.findByRole("table")).toBeInTheDocument();
+    for (const count of [100, 150, 200]) {
+      fireEvent.click(screen.getByRole("button", { name: /load 50 more/i }));
+      expect(await screen.findByText(new RegExp(`Metrics use ${count} loaded checks`))).toBeInTheDocument();
+    }
+    expect(screen.getByText("Showing the latest 200 checks.")).toBeInTheDocument();
+    expect(screen.queryByText("No older checks available.")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /load 50 more/i })).not.toBeInTheDocument();
   });
 });

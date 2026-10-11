@@ -15,7 +15,7 @@ function parseMonitorId(value: string | undefined): number | null {
 }
 
 function terminalFailure(error: unknown): boolean {
-  return error instanceof ApiError && (error.status === 403 || error.status === 404);
+  return error instanceof ApiError && (error.status === 401 || error.status === 403 || error.status === 404);
 }
 
 function retryMessage(error: unknown): string {
@@ -174,7 +174,9 @@ export function MonitorHistoryPage() {
       {historyHasError && <FailureMessage error={historyData.historyError} hasData={Boolean(historyData.history)} onRetry={() => { void historyData.refetchHistory(); }} />}
       {historyData.history && rows.length === 0 && <p className="text-sm text-muted">No checks yet. The worker checks this monitor every {monitor?.frequency ?? "configured"} seconds.</p>}
       {historyData.history && rows.length > 0 && <HistoryTable rows={rows} />}
-      {historyData.history && historyData.canLoadMore && <button type="button" disabled={historyData.historyIsFetching} onClick={historyData.loadMoreHistory} className="mt-4 rounded-control border border-line-strong px-4 py-2 text-sm font-medium text-muted transition duration-150 hover:border-accent hover:bg-raised hover:text-ink active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100">{historyData.historyIsFetching ? "Loading more…" : "Load 50 more"}</button>}
+      {historyData.historyExhausted && <p className="mt-4 text-sm text-muted">No older checks available.</p>}
+      {historyData.historyAtLimit && <p className="mt-4 text-sm text-muted">Showing the latest 200 checks.</p>}
+      {historyData.history && (historyData.canLoadMore || historyData.historyExpansionPending) && <button type="button" disabled={historyData.historyIsFetching} onClick={historyData.loadMoreHistory} className="mt-4 rounded-control border border-line-strong px-4 py-2 text-sm font-medium text-muted transition duration-150 hover:border-accent hover:bg-raised hover:text-ink active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100">{historyData.historyIsFetching ? "Loading more…" : "Load 50 more"}</button>}
     </Section>
     <Section title="Alerts">
       {historyData.alertsIsLoading && !alerts && <p role="status" className="text-sm text-muted">Loading alerts…</p>}

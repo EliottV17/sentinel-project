@@ -15,6 +15,7 @@ describe('Public status endpoint (e2e)', () => {
   let fixtureUserId: number;
   let demoUserId: number;
   let fixtureMonitorIds: number[] = [];
+  let healthyMonitorId: number | undefined;
   let demoMonitorId: number;
   let emptyCheckedAt: Date;
   let staleCheckedAt: Date;
@@ -106,6 +107,8 @@ describe('Public status endpoint (e2e)', () => {
     });
     fixtureMonitorIds = fixtures.map(({ id }) => id);
     const fixtureIdsByName = new Map(fixtures.map(({ id, name }) => [name, id]));
+    expect(fixtureIdsByName.has(names.healthy)).toBe(true);
+    healthyMonitorId = fixtureIdsByName.get(names.healthy)!;
 
     await prisma.check_result.createMany({
       data: [
@@ -211,24 +214,50 @@ describe('Public status endpoint (e2e)', () => {
   });
 
   it('caches results briefly and refreshes after cache expiry', async () => {
-    (statusService as any).cacheTtlMilliseconds = 150;
-    (statusService as any).cached = undefined;
-    const first = await request(app.getHttpServer()).get('/api/v1/public/status');
-    const fixture = await prisma.check_result.create({
-      data: {
-        monitor_id: fixtureMonitorIds[0],
-        state: 'unhealthy',
-        created_at: new Date(),
-      },
-    });
-    const cached = await request(app.getHttpServer()).get('/api/v1/public/status');
-    expect(cached.body.find((monitor: any) => monitor.name === names.healthy).uptime_percentage)
-      .toBe(first.body.find((monitor: any) => monitor.name === names.healthy).uptime_percentage);
-    await new Promise((resolve) => setTimeout(resolve, 200));
-    const refreshed = await request(app.getHttpServer()).get('/api/v1/public/status');
-    expect(refreshed.body.find((monitor: any) => monitor.name === names.healthy).uptime_percentage)
-      .toBeLessThan(100);
-    await prisma.check_result.delete({ where: { id: fixture.id } });
+    const originalCache = (statusService as any).cached;
+    const originalTtl = (statusService as any).cacheTtlMilliseconds;
+    let clock: jest.SpyInstance | undefined;
+    let fixtureId: number | undefined;
+    try {
+      const cacheTime = { value: Date.now() };
+      clock = jest.spyOn(Date, 'now').mockImplementation(() => cacheTime.value);
+      (statusService as any).cached = undefined;
+
+      const first = await request(app.getHttpServer()).get('/api/v1/public/status');
+      expect(first.status).toBe(200);
+      const firstHealthy = first.body.find((monitor: any) => monitor.name === names.healthy);
+      expect(firstHealthy).toBeDefined();
+      expect(firstHealthy.uptime_percentage).toBe(100);
+
+      const fixture = await prisma.check_result.create({
+        data: {
+          monitor_id: healthyMonitorId!,
+          state: 'unhealthy',
+          created_at: new Date(),
+        },
+      });
+      fixtureId = fixture.id;
+
+      const cached = await request(app.getHttpServer()).get('/api/v1/public/status');
+      expect(cached.status).toBe(200);
+      const cachedHealthy = cached.body.find((monitor: any) => monitor.name === names.healthy);
+      expect(cachedHealthy).toBeDefined();
+      expect(cachedHealthy.uptime_percentage).toBe(firstHealthy.uptime_percentage);
+
+      cacheTime.value += originalTtl + 1;
+      const refreshed = await request(app.getHttpServer()).get('/api/v1/public/status');
+      expect(refreshed.status).toBe(200);
+      const refreshedHealthy = refreshed.body.find((monitor: any) => monitor.name === names.healthy);
+      expect(refreshedHealthy).toBeDefined();
+      expect(refreshedHealthy.uptime_percentage).toBeLessThan(100);
+    } finally {
+      clock?.mockRestore();
+      (statusService as any).cacheTtlMilliseconds = originalTtl;
+      (statusService as any).cached = originalCache;
+      if (fixtureId !== undefined) {
+        await prisma.check_result.delete({ where: { id: fixtureId } });
+      }
+    }
   });
 
   it('serves normal 35-request polling without hitting the default IP limit', async () => {

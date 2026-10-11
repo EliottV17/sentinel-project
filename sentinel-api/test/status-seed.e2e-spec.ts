@@ -182,7 +182,8 @@ describe('Status seed (PostgreSQL e2e)', () => {
       await seed.seed(manifest);
       expect(await prisma.monitor.findMany({ where: { id: { in: privateMonitors.map(({ id }) => id) } }, orderBy: { id: 'asc' } })).toEqual(privateSnapshot);
       expect(await prisma.check_result.findMany({ where: { monitor_id: { in: privateMonitors.map(({ id }) => id) } }, orderBy: { id: 'asc' } })).toEqual(historySnapshot);
-      expect(historySnapshot.map(({ id }) => id)).toEqual(historyRows.map(({ id }) => id));
+      const expectedHistoryIds = historyRows.map(({ id }) => id).sort((left, right) => left - right);
+      expect(historySnapshot.map(({ id }) => id)).toEqual(expectedHistoryIds);
       expect(privateSnapshot.every((monitor) => !monitor.is_public)).toBe(true);
       expect(log).toHaveBeenCalledWith('Status publication reconciliation hid 0 monitor(s)');
     } finally {

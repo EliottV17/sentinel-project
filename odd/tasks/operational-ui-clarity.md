@@ -25,7 +25,7 @@ Implement the approved six-block plan as small verified work units while preserv
 - [x] T2 Truthful public and history metric context (block2).
   - Add backwards-compatible public sample metadata; inventory all consumers; old-response fallback. Count/window/interval/timezone,1decimal latency cards, unchanged formulas.
   - Tests: configured nondefault window, null/partial/mixed samples, compatibility, sampling scope updates. Route: delegated worker; API/frontend contract change.
-- [ ] T3 History exhaustion, retry and inflight correctness (block3).
+- [x] T3 History exhaustion, retry and inflight correctness (block3).
   - Distinct exhaustion/cap/loading/error, retain data, retry same limit, preserve429 cooldown and monitor switching.
   - Tests: counts0/14/15/49/50/51/200, loading placeholders, failed expansion, duplicate activation, refresh and monitor switch. Route: delegated worker; hook/page/tests.
 - [ ] T4 Upfront form requirements and semantic validation (block4a).
@@ -53,9 +53,10 @@ Each completed unit includes behavior/tests/docs in a Conventional Commit; recor
 - Setup: clean main5f53362, branch created, local commits explicitly authorized. No source changes yet.
 - T1: completed in8c1ecbc (feat(history): add accessible timestamp-based latency chart). RED initial module failures then6regression failures; GREEN3files/25tests, typecheck and focused eslint PASS; independent recheck same results and all5findings resolved. Parent spotcheck geometry6tests PASS. Browser/physicaltouch/screenreader limits remain T8. Rollback: only history chart component/geometry/page integration/tests/README; no API/data changes.
 - T2: completed91a94b2 (feat(status): expose truthful check sampling context). RED API2fail/frontend5fail; GREEN API8tests/frontend45tests, APIbuild/frontendtypecheck/focusedlint PASS. Parent API8tests PASS. Native ASSESS medium/large, no independent verifier required. Flatarray/legacy4fields preserved, optional safe nested check_summary with consistent SQL snapshot; strict allowlists/legacyfixtures tested. E2E updated NOTRUN pending isolatedDB T8. Rollback: remove addedmetadata andUIcontext, preserve existingmetricformulas/classification.
-- T3: in progress — bounded history hook/page/tests writer. T4-T8: pending. Public consumers inventoried: strict backend four-key unit/e2e assertions, frontend interfaces/mocks, production-smoke jq projections and current README/status README. Preserve flat array, original fields and security key allowlists; update tests for documented safe metadata. Unknown external consumers cannot be certified from repository.
+- T3: completedabc6347 (fix(history): stop exhausted loads and retry failed expansions). RED5fail14pass; GREEN23integrationtests/typecheck/focusedlint PASS; parent23tests PASS. Successfulrows+monitor+limit guard, short/full/cap states distinct, samefailedlimit retry, rapidactivation/429/terminal401403404/refresh/navigation covered. Native ASSESS medium/large selfverificationstands. Rollback: historyhook exhaustion/retry state+page messages/tests/docs only.
+- T4: in progress — initial RED7fail26pass then34tests/typecheck/lint PASS; ASSESS medium/large. Parent found missing frequency required/error association and visual required guidance plus pending mutation submit guard. Bounded correction with regressions running before commit. T5-T8: pending. Public consumers inventoried: strict backend four-key unit/e2e assertions, frontend interfaces/mocks, production-smoke jq projections and current README/status README. Preserve flat array, original fields and security key allowlists; update tests for documented safe metadata. Unknown external consumers cannot be certified from repository.
 - Native review: RDD off; no review authority created.
 - Browser, builds and functional checks: not yet executed.
 
 ## Next step
-Implement T3 history exhaustion/retry/inflight states using last successful rows+limit; preserve429cooldown andloadeddata. Assess and verify before commit.
+Implement T4 upfront field requirements, accessible hints/errors and earlyHTTPtarget validation; preserve fields, keyboard submission and server authority. Assess andverify beforecommit.

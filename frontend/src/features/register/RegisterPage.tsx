@@ -55,18 +55,23 @@ function Field({
   id,
   label,
   error,
+  hint,
   children,
 }: {
   id: RegisterField;
   label: string;
   error?: string;
+  hint?: string;
   children: (descriptionId: string | undefined) => ReactNode;
 }) {
   const errorId = `${id}-error`;
+  const hintId = hint ? `${id}-hint` : undefined;
+  const descriptionId = [hintId, error ? errorId : undefined].filter(Boolean).join(" ") || undefined;
   return (
     <div className="flex min-w-0 flex-col gap-2 text-sm font-medium text-ink">
       <label htmlFor={id}>{label}</label>
-      {children(error ? errorId : undefined)}
+      {children(descriptionId)}
+      {hint && <span id={hintId} className="text-xs text-muted">{hint}</span>}
       {error && <span id={errorId} className="text-xs text-danger">{error}</span>}
     </div>
   );
@@ -163,14 +168,15 @@ export function RegisterPage() {
             <p className="mt-2 text-base leading-7 text-muted">Set up your observability workspace in a few seconds.</p>
           </div>
           <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
+            <p className="text-xs text-muted">All fields are required.</p>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field id="name" label="Name" error={errors.name?.message}>{(describedBy) => <input id="name" autoComplete="given-name" placeholder="Alex" {...register("name")} {...onFieldError("name")} aria-describedby={describedBy} className={inputClass} />}</Field>
-              <Field id="last_name" label="Last name" error={errors.last_name?.message}>{(describedBy) => <input id="last_name" autoComplete="family-name" placeholder="Morgan" {...register("last_name")} {...onFieldError("last_name")} aria-describedby={describedBy} className={inputClass} />}</Field>
+              <Field id="name" label="Name" error={errors.name?.message}>{(describedBy) => <input id="name" required autoComplete="given-name" placeholder="Alex" {...register("name")} {...onFieldError("name")} aria-describedby={describedBy} className={inputClass} />}</Field>
+              <Field id="last_name" label="Last name" error={errors.last_name?.message}>{(describedBy) => <input id="last_name" required autoComplete="family-name" placeholder="Morgan" {...register("last_name")} {...onFieldError("last_name")} aria-describedby={describedBy} className={inputClass} />}</Field>
             </div>
-            <Field id="username" label="Username" error={errors.username?.message}>{(describedBy) => <input id="username" autoComplete="username" placeholder="alexmorgan" {...register("username")} {...onFieldError("username")} aria-describedby={describedBy} className={inputClass} />}</Field>
-            <Field id="email" label="Email" error={errors.email?.message}>{(describedBy) => <input id="email" type="email" autoComplete="email" placeholder="you@example.com" {...register("email")} {...onFieldError("email")} aria-describedby={describedBy} className={inputClass} />}</Field>
-            <Field id="password" label="Password" error={errors.password?.message}>{(describedBy) => <div className="relative"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted"><rect x="5" y="10" width="14" height="11" rx="2" stroke="currentColor" strokeWidth="1.5" /><path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg><input id="password" type="password" autoComplete="new-password" placeholder="Create a password" {...register("password")} {...onFieldError("password")} aria-describedby={describedBy} className={`${inputClass} pl-10`} /></div>}</Field>
-            <Field id="confirmPassword" label="Confirm password" error={errors.confirmPassword?.message}>{(describedBy) => <div className="relative"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted"><rect x="5" y="10" width="14" height="11" rx="2" stroke="currentColor" strokeWidth="1.5" /><path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg><input id="confirmPassword" type="password" autoComplete="new-password" placeholder="Repeat your password" {...register("confirmPassword")} {...onFieldError("confirmPassword")} aria-describedby={describedBy} className={`${inputClass} pl-10`} /></div>}</Field>
+            <Field id="username" label="Username" hint="3 to 20 letters or numbers." error={errors.username?.message}>{(describedBy) => <input id="username" required autoComplete="username" placeholder="alexmorgan" {...register("username")} {...onFieldError("username")} aria-describedby={describedBy} className={inputClass} />}</Field>
+            <Field id="email" label="Email" error={errors.email?.message}>{(describedBy) => <input id="email" required type="email" autoComplete="email" placeholder="you@example.com" {...register("email")} {...onFieldError("email")} aria-describedby={describedBy} className={inputClass} />}</Field>
+            <Field id="password" label="Password" hint="At least 8 characters, including letters and numbers." error={errors.password?.message}>{(describedBy) => <div className="relative"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted"><rect x="5" y="10" width="14" height="11" rx="2" stroke="currentColor" strokeWidth="1.5" /><path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg><input id="password" required type="password" autoComplete="new-password" placeholder="Create a password" {...register("password")} {...onFieldError("password")} aria-describedby={describedBy} className={`${inputClass} pl-10`} /></div>}</Field>
+            <Field id="confirmPassword" label="Confirm password" error={errors.confirmPassword?.message}>{(describedBy) => <div className="relative"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted"><rect x="5" y="10" width="14" height="11" rx="2" stroke="currentColor" strokeWidth="1.5" /><path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg><input id="confirmPassword" required type="password" autoComplete="new-password" placeholder="Repeat your password" {...register("confirmPassword")} {...onFieldError("confirmPassword")} aria-describedby={describedBy} className={`${inputClass} pl-10`} /></div>}</Field>
             {errors.root && <p role="alert" className="rounded-control border border-danger/30 bg-danger-soft px-3 py-2 text-sm text-danger">{errors.root.message}</p>}
             <button type="submit" disabled={disabled} className="mt-2 flex h-11 w-full items-center justify-center rounded-control bg-accent-strong px-4 text-sm font-semibold text-canvas shadow-sm transition duration-150 hover:bg-accent hover:shadow-glow active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100">{isSubmitting ? "Creating account…" : <>Create account <Arrow /></>}</button>
           </form>

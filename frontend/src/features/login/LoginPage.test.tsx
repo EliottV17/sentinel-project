@@ -60,6 +60,14 @@ describe("LoginPage", () => {
     tokenStore.clear();
   });
 
+  it("marks the existing sign-in fields as required without extra password rules", () => {
+    renderLoginPage();
+    expect(screen.getByText("All fields are required.")).toBeInTheDocument();
+    expect(screen.getByLabelText("Username or email")).toBeRequired();
+    expect(screen.getByLabelText("Password")).toBeRequired();
+    expect(screen.getByLabelText("Password")).toHaveAttribute("autocomplete", "current-password");
+  });
+
   it("valid submit navigates to location.state.from", async () => {
     server.use(
       http.post("/api/v1/auth/login", () =>

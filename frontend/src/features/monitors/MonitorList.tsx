@@ -6,9 +6,11 @@ type MonitorRead = components["schemas"]["MonitorRead"];
 export function MonitorList({
   monitors,
   now = new Date(),
+  onDeleteSuccess,
 }: {
   monitors: MonitorRead[];
   now?: Date;
+  onDeleteSuccess?: (monitorId: number) => void;
 }) {
   if (monitors.length === 0) {
     return <p className="rounded-panel border border-dashed border-line-strong bg-surface px-5 py-10 text-center text-sm leading-6 text-muted shadow-panel">No monitors yet. Create your first monitor to get started.</p>;
@@ -16,7 +18,7 @@ export function MonitorList({
   return (
     <ul className="flex min-w-0 flex-col gap-3">
       {monitors.map((monitor) => (
-        <MonitorRow key={monitor.id} monitor={monitor} now={now} />
+        <MonitorRow key={monitor.id} monitor={monitor} now={now} onDeleteSuccess={onDeleteSuccess} />
       ))}
     </ul>
   );

@@ -9,7 +9,15 @@ type MonitorRead = components["schemas"]["MonitorRead"];
 /** Slow-monitor threshold: tooltips only appear above this frequency (s). */
 const SLOW_FREQUENCY_SECONDS = 30;
 
-export function MonitorRow({ monitor, now }: { monitor: MonitorRead; now: Date }) {
+export function MonitorRow({
+  monitor,
+  now,
+  onDeleteSuccess,
+}: {
+  monitor: MonitorRead;
+  now: Date;
+  onDeleteSuccess?: (monitorId: number) => void;
+}) {
   const lastCheckedAt = monitor.last_checked_at;
   const stale = monitor.state === "Active" && isEngineStale(lastCheckedAt, monitor.frequency, now);
   const parsed = lastCheckedAt !== null ? parseApiDate(lastCheckedAt) : null;
@@ -51,7 +59,7 @@ export function MonitorRow({ monitor, now }: { monitor: MonitorRead; now: Date }
         </p>
       )}
       <div className="mt-4 flex justify-end border-t border-line/70 pt-3">
-        <DeleteButton monitorId={monitor.id} monitorName={monitor.name} />
+        <DeleteButton monitorId={monitor.id} monitorName={monitor.name} onDeleteSuccess={onDeleteSuccess} />
       </div>
     </li>
   );

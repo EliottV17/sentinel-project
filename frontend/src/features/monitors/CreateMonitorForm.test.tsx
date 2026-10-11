@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -121,6 +121,22 @@ beforeEach(() => {
 });
 
 describe("CreateMonitorForm", () => {
+  it("shows required guidance and associates frequency validation errors", async () => {
+    renderHarness();
+    const name = screen.getByLabelText("Name");
+    const target = screen.getByLabelText("Target");
+    const frequency = screen.getByLabelText("Frequency (seconds)");
+    expect(screen.getByText("All fields are required.")).toBeInTheDocument();
+    expect(name).toBeRequired();
+    expect(target).toBeRequired();
+    expect(frequency).toBeRequired();
+
+    fireEvent.change(frequency, { target: { value: "" } });
+    fireEvent.submit(frequency.closest("form")!);
+    await screen.findByText("Frequency must be at least 10 seconds");
+    expect(frequency).toHaveAttribute("aria-describedby", "monitor-frequency-error");
+  });
+
   it("defaults frequency to 60", () => {
     renderHarness();
     expect(screen.getByLabelText("Frequency (seconds)")).toHaveValue(60);
@@ -132,6 +148,28 @@ describe("CreateMonitorForm", () => {
     await settle();
     expect(screen.getByText("Name is required")).toBeInTheDocument();
     expect(postBodies).toHaveLength(0);
+  });
+
+  it.each([
+    ["ftp://example.com", /http or https/i],
+    ["http://localhost:3000/health", /localhost.*not supported/i],
+    ["https://service.localhost/health", /localhost.*not supported/i],
+  ])("rejects unsupported target %s before posting", async (target, message) => {
+    renderHarness();
+    fillAndSubmit({ name: "x", target });
+    await settle();
+    expect(screen.getByLabelText("Target").parentElement?.querySelector("#monitor-target-error")).toHaveTextContent(message);
+    expect(postBodies).toHaveLength(0);
+  });
+
+  it("provides public URL guidance and associates target hints and errors", async () => {
+    renderHarness();
+    const target = screen.getByLabelText("Target");
+    expect(screen.getByText(/public http or https URL/i)).toBeInTheDocument();
+    expect(target).toHaveAttribute("aria-describedby", "monitor-target-hint");
+    fillAndSubmit({ name: "x", target: "ftp://example.com" });
+    await settle();
+    expect(target).toHaveAttribute("aria-describedby", "monitor-target-hint monitor-target-error");
   });
 
   it("rejects a non-URL target without posting", async () => {
@@ -148,6 +186,25 @@ describe("CreateMonitorForm", () => {
     await settle();
     expect(screen.getByText("Frequency must be at least 10 seconds")).toBeInTheDocument();
     expect(postBodies).toHaveLength(0);
+  });
+
+  it("guards rapid duplicate submissions while the create mutation is pending", async () => {
+    let release!: () => void;
+    const pending = new Promise<void>((resolve) => { release = resolve; });
+    server.use(http.post("*/api/v1/monitors/", async ({ request }) => {
+      postBodies.push(await request.json());
+      await pending;
+      return HttpResponse.json(monitor({ id: 2 }), { status: 201 });
+    }));
+    renderHarness();
+    fillAndSubmit({ name: "rapid", target: "https://rapid.example.com" });
+    const form = screen.getByRole("button", { name: /create monitor/i }).closest("form")!;
+    fireEvent.submit(form);
+    fireEvent.submit(form);
+    await waitFor(() => expect(postBodies).toHaveLength(1));
+    expect(screen.getByRole("button", { name: /creating monitor/i })).toBeDisabled();
+    await act(async () => release());
+    await waitFor(() => expect(screen.getByRole("button", { name: /create monitor/i })).toBeEnabled());
   });
 
   it("posts the locked http check and refetches the list immediately", async () => {

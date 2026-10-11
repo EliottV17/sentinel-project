@@ -53,6 +53,29 @@ describe("RegisterPage", () => {
   beforeEach(() => tokenStore.clear());
   afterEach(() => { tokenStore.clear(); vi.restoreAllMocks(); });
 
+  it("shows password and username requirements before input and exposes required fields", () => {
+    renderRegisterPage();
+    expect(screen.getByText("All fields are required.")).toBeInTheDocument();
+    expect(screen.getByText("At least 8 characters, including letters and numbers.")).toBeInTheDocument();
+    expect(screen.getByText("3 to 20 letters or numbers.")).toBeInTheDocument();
+    for (const label of ["Name", "Last name", "Username", "Email", "Password", "Confirm password"]) {
+      expect(screen.getByLabelText(label)).toBeRequired();
+    }
+    expect(screen.getByLabelText("Password")).toHaveAttribute("autocomplete", "new-password");
+  });
+
+  it("associates field hints and validation errors together", async () => {
+    renderRegisterPage();
+    const username = screen.getByLabelText("Username");
+    const password = screen.getByLabelText("Password");
+    expect(username).toHaveAttribute("aria-describedby", "username-hint");
+    expect(password).toHaveAttribute("aria-describedby", "password-hint");
+    fillRegistration({ Username: "a!", Password: "password" });
+    await submitRegistration();
+    expect(username).toHaveAttribute("aria-describedby", "username-hint username-error");
+    expect(password).toHaveAttribute("aria-describedby", "password-hint password-error");
+  });
+
   it("renders decorative lock icons inside both password fields", () => {
     renderRegisterPage();
     for (const label of ["Password", "Confirm password"]) {
@@ -68,10 +91,22 @@ describe("RegisterPage", () => {
     fillRegistration({ Username: "a!", Password: "password", "Confirm password": "different" });
     await submitRegistration();
 
-    expect(await screen.findByText(/3 to 20 letters or numbers/i)).toBeInTheDocument();
+    expect(screen.getByLabelText("Username").parentElement?.querySelector("#username-error")).toHaveTextContent(/3 to 20 letters or numbers/i);
     expect(screen.getByText(/at least one letter and one number/i)).toBeInTheDocument();
     expect(screen.getByText(/passwords must match/i)).toBeInTheDocument();
     expect(screen.getByLabelText("Username")).toHaveAttribute("aria-invalid", "true");
+  });
+
+  it("submits the existing registration form through its keyboard submit event", async () => {
+    server.use(http.post("/api/v1/users/", () => HttpResponse.json({}, { status: 201 })));
+    const { loc } = renderRegisterPage();
+    fillRegistration();
+    const form = screen.getByRole("button", { name: "Create account" }).closest("form");
+    expect(form).not.toBeNull();
+    await act(async () => {
+      fireEvent.submit(form!);
+    });
+    await waitFor(() => expect(loc()).toBe("/login"));
   });
 
   it("posts the DTO and returns to login with success without logging in", async () => {

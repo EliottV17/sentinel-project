@@ -135,6 +135,7 @@ export function LoginPage() {
             </p>
           )}
           <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
+            <p className="text-xs text-muted">All fields are required.</p>
             <div className="flex flex-col gap-2">
               <label htmlFor="username" className="text-sm font-medium text-ink">
                 Username or email
@@ -144,6 +145,7 @@ export function LoginPage() {
                 type="text"
                 autoComplete="username"
                 placeholder="you@example.com"
+                required
                 aria-invalid={errors.username !== undefined}
                 aria-describedby={errors.username ? "username-error" : undefined}
                 {...register("username")}
@@ -164,6 +166,7 @@ export function LoginPage() {
                 type="password"
                 autoComplete="current-password"
                 placeholder="Enter your password"
+                required
                 aria-invalid={errors.password !== undefined}
                 aria-describedby={errors.password ? "password-error" : undefined}
                 {...register("password")}

@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -29,6 +30,28 @@ const createSchema = z.object({
         }
       },
       { message: "Target must be a valid URL" },
+    )
+    .refine(
+      (value) => {
+        try {
+          const protocol = new URL(value).protocol;
+          return protocol === "http:" || protocol === "https:";
+        } catch {
+          return true;
+        }
+      },
+      { message: "Enter a valid HTTP or HTTPS URL." },
+    )
+    .refine(
+      (value) => {
+        try {
+          const hostname = new URL(value).hostname.toLowerCase();
+          return hostname !== "localhost" && !hostname.endsWith(".localhost");
+        } catch {
+          return true;
+        }
+      },
+      { message: "Localhost targets are not supported. Enter a public HTTP or HTTPS URL." },
     ),
   frequency: z
     .number({ message: "Frequency must be at least 10 seconds" })
@@ -65,6 +88,7 @@ function fieldErrorMessage(field: MonitorField, detail?: string): string {
 
 export function CreateMonitorForm() {
   const createMonitor = useCreateMonitor();
+  const submissionInFlight = useRef(false);
   const {
     register,
     handleSubmit,
@@ -78,6 +102,8 @@ export function CreateMonitorForm() {
 
   const onSubmit = handleSubmit(
     (values) => {
+      if (submissionInFlight.current) return;
+      submissionInFlight.current = true;
       createMonitor.mutate(
         {
           name: values.name,
@@ -102,6 +128,9 @@ export function CreateMonitorForm() {
               setError("root", { message: "Unable to reach the monitor service. Check your connection and try again." });
             }
           },
+          onSettled: () => {
+            submissionInFlight.current = false;
+          },
         },
       );
     },
@@ -115,6 +144,7 @@ export function CreateMonitorForm() {
       className="flex flex-col gap-4"
       noValidate
     >
+      <p className="text-xs text-muted">All fields are required.</p>
       <div className="flex min-w-0 flex-col gap-2">
         <label htmlFor="monitor-name" className="text-sm font-medium text-ink">
           Name
@@ -122,12 +152,14 @@ export function CreateMonitorForm() {
         <input
           id="monitor-name"
           type="text"
+          required
+          aria-describedby={errors.name ? "monitor-name-error" : undefined}
           aria-invalid={errors.name !== undefined}
           {...register("name")}
           className="h-11 w-full min-w-0 rounded-control border border-line-strong bg-canvas px-3 text-sm text-ink outline-none transition duration-150 hover:border-accent/40 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
         />
         {errors.name !== undefined && (
-          <span className="text-xs text-danger">{errors.name.message}</span>
+          <span id="monitor-name-error" className="text-xs text-danger">{errors.name.message}</span>
         )}
       </div>
       <div className="flex min-w-0 flex-col gap-2">
@@ -137,13 +169,16 @@ export function CreateMonitorForm() {
         <input
           id="monitor-target"
           type="text"
+          required
           placeholder="https://example.com"
           aria-invalid={errors.target !== undefined}
+          aria-describedby={`monitor-target-hint${errors.target ? " monitor-target-error" : ""}`}
           {...register("target")}
           className="h-11 w-full min-w-0 rounded-control border border-line-strong bg-canvas px-3 text-sm text-ink placeholder:text-subtle outline-none transition duration-150 hover:border-accent/40 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
         />
+        <span id="monitor-target-hint" className="text-xs text-muted">Use a public HTTP or HTTPS URL. Localhost targets are not supported; server-side security checks still apply.</span>
         {errors.target !== undefined && (
-          <span className="text-xs text-danger">{errors.target.message}</span>
+          <span id="monitor-target-error" className="text-xs text-danger">{errors.target.message}</span>
         )}
       </div>
       <div className="flex min-w-0 flex-col gap-2">
@@ -153,12 +188,14 @@ export function CreateMonitorForm() {
         <input
           id="monitor-frequency"
           type="number"
+          required
           aria-invalid={errors.frequency !== undefined}
+          aria-describedby={errors.frequency ? "monitor-frequency-error" : undefined}
           {...register("frequency", { valueAsNumber: true })}
           className="h-11 w-full min-w-0 rounded-control border border-line-strong bg-canvas px-3 text-sm text-ink outline-none transition duration-150 hover:border-accent/40 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
         />
         {errors.frequency !== undefined && (
-          <span className="text-xs text-danger">
+          <span id="monitor-frequency-error" className="text-xs text-danger">
             {errors.frequency.message}
           </span>
         )}
@@ -170,10 +207,10 @@ export function CreateMonitorForm() {
       )}
       <button
         type="submit"
-        disabled={isSubmitting}
+        disabled={isSubmitting || createMonitor.isPending}
         className="self-start rounded-control bg-accent-strong px-4 py-2.5 text-sm font-semibold text-canvas shadow-sm transition duration-150 hover:bg-accent hover:shadow-glow active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100"
       >
-        Create monitor
+        {createMonitor.isPending ? "Creating monitor…" : "Create monitor"}
       </button>
     </form>
   );

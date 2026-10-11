@@ -22,7 +22,7 @@ Implement the approved six-block plan as small verified work units while preserv
 - [x] T1 Timestamp-aware, scaled, accessible latency chart (approved block1).
   - Numeric ms scale, width-adaptive real-time ticks, mouse/keyboard/touch selection, missing measurements and frequency-relative gaps, accessible description/table retained.
   - Tests: irregular/equal timestamps, day boundary, single/empty/all-null samples, zero/error durations, gap threshold, keyboard/touch selection. Route: delegated worker; multi-file behavior/tests and graph geometry.
-- [ ] T2 Truthful public and history metric context (block2).
+- [x] T2 Truthful public and history metric context (block2).
   - Add backwards-compatible public sample metadata; inventory all consumers; old-response fallback. Count/window/interval/timezone,1decimal latency cards, unchanged formulas.
   - Tests: configured nondefault window, null/partial/mixed samples, compatibility, sampling scope updates. Route: delegated worker; API/frontend contract change.
 - [ ] T3 History exhaustion, retry and inflight correctness (block3).
@@ -52,9 +52,10 @@ Each completed unit includes behavior/tests/docs in a Conventional Commit; recor
 ## Progress and evidence
 - Setup: clean main5f53362, branch created, local commits explicitly authorized. No source changes yet.
 - T1: completed in8c1ecbc (feat(history): add accessible timestamp-based latency chart). RED initial module failures then6regression failures; GREEN3files/25tests, typecheck and focused eslint PASS; independent recheck same results and all5findings resolved. Parent spotcheck geometry6tests PASS. Browser/physicaltouch/screenreader limits remain T8. Rollback: only history chart component/geometry/page integration/tests/README; no API/data changes.
-- T2: in progress — one bounded API/frontend metric-context writer. T3-T8: pending. Public consumers inventoried: strict backend four-key unit/e2e assertions, frontend interfaces/mocks, production-smoke jq projections and current README/status README. Preserve flat array, original fields and security key allowlists; update tests for documented safe metadata. Unknown external consumers cannot be certified from repository.
+- T2: completed91a94b2 (feat(status): expose truthful check sampling context). RED API2fail/frontend5fail; GREEN API8tests/frontend45tests, APIbuild/frontendtypecheck/focusedlint PASS. Parent API8tests PASS. Native ASSESS medium/large, no independent verifier required. Flatarray/legacy4fields preserved, optional safe nested check_summary with consistent SQL snapshot; strict allowlists/legacyfixtures tested. E2E updated NOTRUN pending isolatedDB T8. Rollback: remove addedmetadata andUIcontext, preserve existingmetricformulas/classification.
+- T3: in progress — bounded history hook/page/tests writer. T4-T8: pending. Public consumers inventoried: strict backend four-key unit/e2e assertions, frontend interfaces/mocks, production-smoke jq projections and current README/status README. Preserve flat array, original fields and security key allowlists; update tests for documented safe metadata. Unknown external consumers cannot be certified from repository.
 - Native review: RDD off; no review authority created.
 - Browser, builds and functional checks: not yet executed.
 
 ## Next step
-Implement T2 with additive public metadata, strict safe-key tests and legacy-payload fallback; preserve metric formulas. Native ASSESS and applicable verification before commit.
+Implement T3 history exhaustion/retry/inflight states using last successful rows+limit; preserve429cooldown andloadeddata. Assess and verify before commit.

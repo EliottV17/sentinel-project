@@ -25,7 +25,7 @@ function retryAfterDeadline(error: unknown, updatedAt: number): number | null {
 }
 
 function isTerminalFailure(error: unknown): boolean {
-  return error instanceof ApiError && (error.status === 403 || error.status === 404);
+  return error instanceof ApiError && (error.status === 401 || error.status === 403 || error.status === 404);
 }
 
 type QueryStateLike = { state: { error: unknown; errorUpdatedAt: number } };
@@ -59,6 +59,9 @@ export interface MonitorHistoryBundle {
   historyIsFetching: boolean;
   historyLimit: number;
   canLoadMore: boolean;
+  historyExpansionPending: boolean;
+  historyExhausted: boolean;
+  historyAtLimit: boolean;
   loadMoreHistory(): void;
   refetchHistory(): Promise<unknown>;
   alerts: MonitorAlertRow[] | undefined;
@@ -83,10 +86,13 @@ export function useMonitorHistory(monitorId: number): MonitorHistoryBundle {
     : DEFAULT_HISTORY_LIMIT;
   const previousSuccessfulHistory = useRef<{
     monitorId: number;
+    limit: number;
     rows: MonitorHistoryRow[] | undefined;
-  }>({ monitorId, rows: undefined });
+  }>({ monitorId, limit: DEFAULT_HISTORY_LIMIT, rows: undefined });
+  const expansionInFlight = useRef<{ monitorId: number; limit: number } | null>(null);
   if (previousSuccessfulHistory.current.monitorId !== monitorId) {
-    previousSuccessfulHistory.current = { monitorId, rows: undefined };
+    previousSuccessfulHistory.current = { monitorId, limit: DEFAULT_HISTORY_LIMIT, rows: undefined };
+    expansionInFlight.current = null;
   }
   const metadataQuery = useQuery({
     queryKey: ["monitor-history", "metadata", monitorId],
@@ -138,10 +144,25 @@ export function useMonitorHistory(monitorId: number): MonitorHistoryBundle {
     enabled: Number.isInteger(monitorId) && monitorId > 0,
   });
 
-  if (historyQuery.data && !historyQuery.isPlaceholderData) {
-    previousSuccessfulHistory.current = { monitorId, rows: historyQuery.data };
+  if (historyQuery.isSuccess && historyQuery.data && !historyQuery.isPlaceholderData) {
+    previousSuccessfulHistory.current = { monitorId, limit: historyLimit, rows: historyQuery.data };
   }
   const visibleHistory = historyQuery.data ?? previousSuccessfulHistory.current.rows;
+  const successfulScope = previousSuccessfulHistory.current.monitorId === monitorId &&
+    previousSuccessfulHistory.current.limit === historyLimit
+    ? previousSuccessfulHistory.current
+    : null;
+  const historyExhausted = Boolean(successfulScope && successfulScope.rows && successfulScope.rows.length < historyLimit);
+  const historyAtLimit = historyLimit === MAX_MONITOR_HISTORY_LIMIT &&
+    Boolean(successfulScope && successfulScope.rows && successfulScope.rows.length >= historyLimit);
+  const historyExpansionPending = expansionInFlight.current?.monitorId === monitorId &&
+    expansionInFlight.current.limit === historyLimit && historyQuery.isFetching;
+
+  useEffect(() => {
+    if (expansionInFlight.current?.monitorId === monitorId && !historyQuery.isFetching) {
+      expansionInFlight.current = null;
+    }
+  }, [historyLimit, historyQuery.dataUpdatedAt, historyQuery.errorUpdatedAt, historyQuery.isFetching, monitorId]);
   const historyRetryDeadline = retryAfterDeadline(
     historyQuery.error,
     historyQuery.errorUpdatedAt,
@@ -159,19 +180,16 @@ export function useMonitorHistory(monitorId: number): MonitorHistoryBundle {
 
   const loadMoreHistory = useCallback(() => {
     if (
+      !successfulScope || !successfulScope.rows || successfulScope.rows.length < historyLimit ||
+      historyLimit >= MAX_MONITOR_HISTORY_LIMIT || historyQuery.isFetching || historyQuery.error ||
       isTerminalFailure(historyQuery.error) ||
-      isInRetryCooldown(historyQuery.error, historyQuery.errorUpdatedAt)
+      isInRetryCooldown(historyQuery.error, historyQuery.errorUpdatedAt) ||
+      expansionInFlight.current?.monitorId === monitorId
     ) return;
-    setHistoryLimitState((previous) => {
-      const currentLimit = previous.monitorId === monitorId
-        ? previous.limit
-        : DEFAULT_HISTORY_LIMIT;
-      return {
-        monitorId,
-        limit: Math.min(MAX_MONITOR_HISTORY_LIMIT, currentLimit + HISTORY_LIMIT_STEP),
-      };
-    });
-  }, [historyQuery.error, historyQuery.errorUpdatedAt, monitorId]);
+    const nextLimit = Math.min(MAX_MONITOR_HISTORY_LIMIT, historyLimit + HISTORY_LIMIT_STEP);
+    expansionInFlight.current = { monitorId, limit: nextLimit };
+    setHistoryLimitState({ monitorId, limit: nextLimit });
+  }, [historyLimit, historyQuery.error, historyQuery.errorUpdatedAt, historyQuery.isFetching, monitorId, successfulScope]);
   const refetchHistory = useCallback(async () => {
     if (isTerminalFailure(historyQuery.error) || isInRetryCooldown(historyQuery.error, historyQuery.errorUpdatedAt)) return historyQuery;
     return historyQuery.refetch();
@@ -191,9 +209,13 @@ export function useMonitorHistory(monitorId: number): MonitorHistoryBundle {
     historyIsLoading: historyQuery.isLoading,
     historyIsFetching: historyQuery.isFetching,
     historyLimit,
-    canLoadMore: historyLimit < MAX_MONITOR_HISTORY_LIMIT &&
+    canLoadMore: Boolean(successfulScope && successfulScope.rows && successfulScope.rows.length >= historyLimit) &&
+      historyLimit < MAX_MONITOR_HISTORY_LIMIT && !historyQuery.error &&
       !isTerminalFailure(historyQuery.error) &&
       !isInRetryCooldown(historyQuery.error, historyQuery.errorUpdatedAt),
+    historyExpansionPending,
+    historyExhausted,
+    historyAtLimit,
     loadMoreHistory,
     refetchHistory,
     alerts: alertsQuery.data,

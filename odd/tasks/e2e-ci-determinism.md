@@ -20,12 +20,12 @@ Make the complete API E2E command pass reliably on the CI database without weake
 - Document why shared-database suites are serialized; do not introduce a per-worker schema framework.
 
 ## Tasks and acceptance
-- [ ] T1 Correct E2E isolation and deterministic fixture assertions.
+- [x] T1 Correct E2E isolation and deterministic fixture assertions — committed as b3002d7.
   - Observe the existing complete-command failure on a freshly bootstrapped disposable DB before fixes.
   - Edit only Jest E2E configuration, the two failing specs and a brief API testing note.
   - Preserve all tests, privacy/publication checks, cache behavior, throttling and row/history retention assertions.
   - Run focused checks, build and applicable non-mutating type/lint checks. Record actual RED/GREEN, limitations and local commit.
-- [ ] T2 Verify the full CI E2E command and relevant API checks independently.
+- [x] T2 Verify the full CI E2E command and relevant API checks independently — verified candidate b3002d7; closure recorded in this document.
   - Match CI's schema push, account/monitor seed and build using isolated explicit environment.
   - Use a fresh code view with an actual empty private node_modules/.cache, build once as CI does, and assert dist/main.js plus dist/common/config/production-env.js exist before testing.
   - Run bun run test:e2e with no command-line serialization or suite filters, three consecutive times on the same newly bootstrapped DB without hidden reseeding.
@@ -37,7 +37,7 @@ Make the complete API E2E command pass reliably on the CI database without weake
 - Initial user CI report: 7 suites, 2 failed / 5 passed; 51 tests, 2 failed / 49 passed.
 - Read-only mapping confirms the seed's global updateMany, unordered healthy ID selection and Promise.all ID-order assumption.
 - CI setup: .github/workflows/ci.yml uses PostgreSQL 17, prisma db push, prisma:seed, build, unit tests and the default test:e2e script.
-- T1 corrections and mandatory independent verification passed; local commit is pending.
+- T1 complete in b3002d7 (test(api): isolate shared database E2E suites and stabilize fixtures). Writer RED/GREEN, mandatory independent structural/functional validation and parent diff/hash spot-check passed.
 - Writer bootstrap verified the disposable database URL and synced the existing schema only to owned container 3db35cf..., but Prisma announced automatic .env loading. It stopped before baseline/tests/edits. Container was removed and port 5433 is free.
 - An initial wrong-cwd bunx invocation resolved/downloaded packages outside the API local CLI; no repository changes resulted. This is a workflow deviation, not successful verification. Do not delete shared caches or retry package resolution.
 - Incident verifier mv3dz9jd-s-owzz confirmed local Prisma/client 6.19.3, Bun 1.4.3 and Node 26.7.0. Bun supports --no-env-file. Prisma CLI auto-discovers environment files, and generated client also contains baked-in relative environment paths; the latter means Bun flags alone do not prove hermetic execution.

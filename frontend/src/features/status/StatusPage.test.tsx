@@ -45,6 +45,9 @@ describe("public status page", () => {
     renderApp();
     expect(await screen.findByRole("heading", { name: "System status" })).toBeInTheDocument();
     expect(await screen.findByText("API")).toBeInTheDocument();
+    expect(screen.getByText("1 monitor")).toBeInTheDocument();
+    expect(screen.getByText("Updates every 30 seconds")).toBeInTheDocument();
+    expect(screen.queryByText(/publicly monitored service|clear view of the services/i)).not.toBeInTheDocument();
     expect(authorization).toBeNull();
     expect(tokenStore.get()).not.toBeNull();
     expect(screen.queryByRole("heading", { name: "Sign in to Sentinel" })).not.toBeInTheDocument();

@@ -125,7 +125,7 @@ describe("LoginPage", () => {
     expect(loc()).toBe("/login");
   });
 
-  it("shows demo credentials and logs in through the dedicated demo endpoint", async () => {
+  it("keeps demo credentials out of the UI and logs in through the dedicated demo endpoint", async () => {
     let requestMethod: string | undefined;
     server.use(
       http.post("/api/v1/auth/demo-login", ({ request }) => {
@@ -138,7 +138,10 @@ describe("LoginPage", () => {
     );
     const { loc } = renderLoginPage("/monitors");
 
-    expect(screen.getByText(/Demo credentials: demo@sentinel\.dev \/ DemoPassword123!/)).toBeInTheDocument();
+    expect(screen.queryByText(/Demo credentials:/i)).not.toBeInTheDocument();
+    expect(screen.getByText("Explore the demo. Data resets every hour.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Sign in" })).toBeInTheDocument();
+    expect(screen.getByText("Sign in to manage your monitors.")).toBeInTheDocument();
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Try the demo" }));
     });
@@ -173,6 +176,7 @@ describe("LoginPage", () => {
 
     expect(screen.getByRole("status")).toHaveTextContent(/account created.*sign in/i);
     expect(screen.getByRole("link", { name: "Create account" })).toHaveAttribute("href", "/register");
+    expect(screen.getByRole("heading", { name: "Sign in" })).toBeInTheDocument();
   });
 
   it("redirects to / when already authenticated", () => {

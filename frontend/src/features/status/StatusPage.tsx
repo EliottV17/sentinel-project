@@ -109,19 +109,8 @@ export function StatusPage() {
         </Link>
       </header>
 
-      <section className="grid gap-6 md:grid-cols-[1.15fr_0.85fr] md:items-end">
-        <div className="min-w-0">
-          <p className="mb-3 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-accent">
-            <span aria-hidden="true" className="size-2 rounded-full bg-success" />Live service health
-          </p>
-          <h1 className="font-serif text-3xl font-semibold tracking-tight text-ink sm:text-5xl">System status</h1>
-          <p className="mt-3 max-w-xl text-base leading-7 text-muted">A clear view of the services powering your experience with Sentinel.</p>
-        </div>
-        <div className="min-w-0 rounded-panel border border-line bg-surface p-5 shadow-panel sm:p-6 md:justify-self-end md:min-w-64">
-          <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">Current service health</p>
-          <p className="text-lg font-semibold tracking-tight text-ink">Public health data</p>
-          <p className="mt-2 text-xs text-muted">Updates every 30 seconds</p>
-        </div>
+      <section>
+        <h1 className="font-serif text-3xl font-semibold tracking-tight text-ink sm:text-5xl">System status</h1>
       </section>
 
       {query.isPending && <p role="status" className="rounded-control border border-line bg-surface p-4 text-sm text-muted shadow-panel">Loading service status…</p>}
@@ -147,7 +136,7 @@ export function StatusPage() {
             <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
                 <h2 className="text-lg font-semibold tracking-tight text-ink">Overall status</h2>
-                <p className="mt-1 text-sm text-muted">Status of all publicly monitored services</p>
+                <p className="mt-1 text-sm text-muted">{data.length} {data.length === 1 ? "monitor" : "monitors"}</p>
               </div>
               {summary.allOperational ? (
                 <p role="status" aria-label="Status: All systems operational" className="inline-flex w-fit items-center gap-2 rounded-full border border-success/30 bg-success-soft px-3 py-1.5 text-sm font-semibold text-success">
@@ -157,8 +146,8 @@ export function StatusPage() {
             </div>
           </section>
           <section aria-labelledby="services-heading">
-            <h2 id="services-heading" className="sr-only">Monitored services</h2>
-            <ul aria-label="Services" className="grid min-w-0 gap-4 md:grid-cols-2">
+            <h2 id="services-heading" className="sr-only">Monitors</h2>
+            <ul aria-label="Monitors" className="grid min-w-0 gap-4 md:grid-cols-2">
               {data.map((monitor, index) => {
                 const label = classifyStatus(monitor, { now: new Date(now) });
                 return (
@@ -166,7 +155,6 @@ export function StatusPage() {
                     <div className="flex min-w-0 items-start justify-between gap-3 sm:gap-4">
                       <div className="min-w-0">
                         <h3 className="break-words text-base font-semibold tracking-tight text-ink">{monitor.name}</h3>
-                        <p className="mt-2 text-sm text-muted">Publicly monitored service</p>
                       </div>
                       <StatusBadge label={label} />
                     </div>
@@ -207,7 +195,7 @@ export function StatusPage() {
         </p>
       )}
 
-      <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5 text-xs leading-5 text-muted">Sentinel status page · Service health refreshes continuously</footer>
+      <footer className="border-t border-line pt-5 text-xs leading-5 text-muted">Updates every 30 seconds</footer>
     </main>
   );
 }

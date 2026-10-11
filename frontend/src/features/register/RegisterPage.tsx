@@ -47,10 +47,6 @@ function errorMessage(error: unknown): string {
   return "Unable to create your account right now. Please try again.";
 }
 
-function Arrow() {
-  return <svg aria-hidden="true" viewBox="0 0 16 16" fill="none" className="ml-2 size-4"><path d="M3 13 13 3M5 3h8v8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>;
-}
-
 function Field({
   id,
   label,
@@ -145,27 +141,11 @@ export function RegisterPage() {
   });
 
   return (
-    <main className="relative flex min-h-screen items-center overflow-hidden px-4 py-8 text-ink sm:px-8 sm:py-12">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
-        <div className="absolute -left-48 top-1/2 size-[34rem] -translate-y-1/2 rounded-full border border-accent/10" />
-        <div className="absolute -left-28 top-1/2 size-[24rem] -translate-y-1/2 rounded-full border border-accent/10" />
-        <div className="absolute right-0 top-0 h-px w-2/5 bg-line" />
-        <div className="absolute bottom-16 left-0 h-px w-1/4 bg-line" />
-      </div>
-      <div className="relative mx-auto grid w-full max-w-6xl min-w-0 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(24rem,28rem)] lg:items-center lg:gap-16">
-        <section className="hidden lg:block">
-          <div className="mb-8 flex items-center gap-5 text-sm text-muted"><SentinelBrand /><span className="border-l border-line pl-5 font-mono text-xs uppercase tracking-[0.18em]">Access portal</span></div>
-          <p className="mb-5 max-w-xl font-serif text-5xl font-semibold leading-[1.05] tracking-[-0.07em] text-ink xl:text-6xl">Make every signal<span className="block italic text-accent">visible.</span></p>
-          <p className="max-w-md text-base leading-7 text-muted">Create a quiet control room for availability, uptime, and the details that keep your systems dependable.</p>
-          <div className="mt-12 flex items-center gap-3 text-xs text-muted"><span className="size-2 rounded-full bg-success" aria-hidden="true" />Monitoring layer operational</div>
-        </section>
-
-        <section className="w-full min-w-0 rounded-panel border border-line bg-surface p-5 shadow-panel sm:p-6">
-          <div className="mb-8 flex items-center justify-between lg:hidden"><SentinelBrand compact /><span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted">Access portal</span></div>
+    <main className="flex min-h-screen items-center justify-center px-4 py-8 text-ink sm:px-8 sm:py-12">
+      <section className="w-full max-w-xl min-w-0 rounded-panel border border-line bg-surface p-5 shadow-panel sm:p-6">
           <div className="mb-6">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-accent">Create workspace</p>
-            <h1 className="font-serif text-3xl font-semibold tracking-tight text-ink sm:text-4xl">Register for Sentinel</h1>
-            <p className="mt-2 text-base leading-7 text-muted">Set up your observability workspace in a few seconds.</p>
+            <SentinelBrand />
+            <h1 className="mt-6 font-serif text-3xl font-semibold tracking-tight text-ink sm:text-4xl">Create your account.</h1>
           </div>
           <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
             <p className="text-xs text-muted">All fields are required.</p>
@@ -178,15 +158,15 @@ export function RegisterPage() {
             <Field id="password" label="Password" hint="At least 8 characters, including letters and numbers." error={errors.password?.message}>{(describedBy) => <div className="relative"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted"><rect x="5" y="10" width="14" height="11" rx="2" stroke="currentColor" strokeWidth="1.5" /><path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg><input id="password" required type="password" autoComplete="new-password" placeholder="Create a password" {...register("password")} {...onFieldError("password")} aria-describedby={describedBy} className={`${inputClass} pl-10`} /></div>}</Field>
             <Field id="confirmPassword" label="Confirm password" error={errors.confirmPassword?.message}>{(describedBy) => <div className="relative"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted"><rect x="5" y="10" width="14" height="11" rx="2" stroke="currentColor" strokeWidth="1.5" /><path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg><input id="confirmPassword" required type="password" autoComplete="new-password" placeholder="Repeat your password" {...register("confirmPassword")} {...onFieldError("confirmPassword")} aria-describedby={describedBy} className={`${inputClass} pl-10`} /></div>}</Field>
             {errors.root && <p role="alert" className="rounded-control border border-danger/30 bg-danger-soft px-3 py-2 text-sm text-danger">{errors.root.message}</p>}
-            <button type="submit" disabled={disabled} className="mt-2 flex h-11 w-full items-center justify-center rounded-control bg-accent-strong px-4 text-sm font-semibold text-canvas shadow-sm transition duration-150 hover:bg-accent hover:shadow-glow active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100">{isSubmitting ? "Creating account…" : <>Create account <Arrow /></>}</button>
+            <button type="submit" disabled={disabled} className="mt-2 flex h-11 w-full items-center justify-center rounded-control bg-accent-strong px-4 text-sm font-semibold text-canvas shadow-sm transition duration-150 hover:bg-accent hover:shadow-glow active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100">{isSubmitting ? "Creating account…" : "Create account"}</button>
           </form>
           <div className="my-7 flex items-center gap-3 text-[10px] uppercase tracking-[0.18em] text-muted"><span className="h-px flex-1 bg-line" />Or use demo<span className="h-px flex-1 bg-line" /></div>
           {demoError && <p role="alert" className="mb-3 rounded-control border border-danger/30 bg-danger-soft px-3 py-2 text-center text-sm text-danger">{demoError}</p>}
-          <button type="button" disabled={disabled} onClick={onDemo} className="flex h-11 w-full items-center justify-center rounded-control border border-accent/40 bg-accent-soft px-4 text-sm font-semibold text-accent transition duration-150 hover:border-accent hover:bg-accent/20 hover:shadow-glow active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100">{demoSubmitting ? "Opening demo…" : <>Try the demo <Arrow /></>}</button>
+          <button type="button" disabled={disabled} onClick={onDemo} className="flex h-11 w-full items-center justify-center rounded-control border border-accent/40 bg-accent-soft px-4 text-sm font-semibold text-accent transition duration-150 hover:border-accent hover:bg-accent/20 hover:shadow-glow active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100">{demoSubmitting ? "Opening demo…" : "Try the demo"}</button>
+          <p className="mt-3 text-center text-xs text-muted">Explore the demo. Data resets every hour.</p>
           <p className="mt-7 text-center text-sm text-muted">Already have an account? <Link to="/login" className="font-medium text-accent underline-offset-4 transition duration-150 hover:text-accent-strong hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40">Sign in</Link></p>
-          <Link to="/status" className="mt-6 flex w-full items-center justify-center border-t border-line pt-5 text-sm text-muted transition duration-150 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40">System Status <Arrow /></Link>
-        </section>
-      </div>
+          <Link to="/status" className="mt-6 flex w-full items-center justify-center border-t border-line pt-5 text-sm text-muted transition duration-150 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40">System status</Link>
+      </section>
     </main>
   );
 }

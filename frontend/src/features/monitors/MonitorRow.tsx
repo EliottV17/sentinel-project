@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import type { components } from "../../lib/api/schema";
 import { formatDateTime, formatRelative, isEngineStale, parseApiDate } from "../../lib/datetime";
 import { DeleteButton } from "./DeleteButton";
@@ -18,7 +19,7 @@ export function MonitorRow({ monitor, now }: { monitor: MonitorRead; now: Date }
     <li className="min-w-0 rounded-panel border border-line bg-surface p-5 shadow-panel transition duration-200 hover:-translate-y-0.5 hover:border-line-strong hover:shadow-glow sm:p-6">
       <div className="flex min-w-0 items-start justify-between gap-3 sm:gap-4">
         <div className="min-w-0">
-          <a href={`/monitors/${monitor.id}`} className="break-words font-semibold text-ink transition duration-150 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40">{monitor.name}</a>
+          <Link to={`/monitors/${monitor.id}`} className="break-words font-semibold text-ink transition duration-150 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40">{monitor.name}</Link>
           <p title={monitor.target} className="mt-1 max-w-full truncate font-mono text-xs text-muted">{monitor.target}</p>
         </div>
         <StatusPill state={monitor.state} lastState={monitor.last_state} />

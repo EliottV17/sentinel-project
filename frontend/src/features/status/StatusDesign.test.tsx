@@ -37,6 +37,9 @@ it("renders healthy checks and actual sample coverage without overstating rounde
   expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute("href", "/login");
   expect(screen.getByRole("status", { name: "Status: All systems operational" })).toBeInTheDocument();
   expect(screen.getByRole("status", { name: "Status: Operational" })).toBeInTheDocument();
+  expect(screen.queryByText(/publicly monitored service/i)).not.toBeInTheDocument();
+  expect(screen.getByText("1 monitor")).toBeInTheDocument();
+  expect(screen.getByText("Updates every 30 seconds")).toBeInTheDocument();
   expect(screen.queryByText(/Estado|verificación|servicios públicos/i)).not.toBeInTheDocument();
 });
 

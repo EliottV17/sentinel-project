@@ -95,16 +95,89 @@ beforeEach(() => {
 });
 
 describe("DeleteButton", () => {
-  it("asks for confirmation on the first click and only deletes on the second", async () => {
+  it("names the monitor in confirmation and only deletes after the second action", async () => {
+    const name = "Production payments API monitor";
+    renderHarness([monitor({ name })]);
+    await settle();
+
+    fireEvent.click(screen.getByRole("button", { name: `Delete ${name}` }));
+    expect(screen.getByText(`Delete monitor ${name}?`)).toBeInTheDocument();
+    expect(deleteCalls).toBe(0);
+
+    fireEvent.click(screen.getByRole("button", { name: `Confirm delete ${name}` }));
+    await waitFor(() => expect(deleteCalls).toBe(1));
+  });
+
+  it("moves focus to safe cancel when opened and restores the trigger on cancel", async () => {
+    renderHarness([monitor()]);
+    await settle();
+    const trigger = screen.getByRole("button", { name: "Delete api" });
+    trigger.focus();
+
+    fireEvent.click(trigger);
+    const cancel = screen.getByRole("button", { name: "Cancel" });
+    await waitFor(() => expect(cancel).toHaveFocus());
+
+    fireEvent.click(cancel);
+    expect(trigger).toHaveFocus();
+  });
+
+  it("closes on Escape and restores focus without deleting", async () => {
+    renderHarness([monitor()]);
+    await settle();
+    const trigger = screen.getByRole("button", { name: "Delete api" });
+    trigger.focus();
+
+    fireEvent.click(trigger);
+    await waitFor(() => expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus());
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    expect(screen.queryByText("Delete monitor api?")).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+    expect(deleteCalls).toBe(0);
+  });
+
+  it("prevents duplicate confirmation while pending and ignores Escape until settlement", async () => {
+    renderHarness([monitor()]);
+    await settle();
+    server.use(
+      http.delete("*/api/v1/monitors/1", async () => {
+        deleteCalls++;
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        return HttpResponse.json({ detail: "deleted" });
+      }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete api" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm delete api" }));
+    const confirm = screen.getByRole("button", { name: "Confirm delete api" });
+    expect(confirm).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
+    fireEvent.click(confirm);
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() => expect(deleteCalls).toBe(1));
+    expect(screen.getByText("Delete monitor api?")).toBeInTheDocument();
+
+    await waitFor(() => expect(screen.queryByText("Delete monitor api?")).not.toBeInTheDocument());
+  });
+
+  it("keeps an error confirmation usable and permits retry", async () => {
+    deleteStatus = 500;
     renderHarness([monitor()]);
     await settle();
 
-    fireEvent.click(screen.getByRole("button", { name: /delete/i }));
-    expect(screen.getByText("Confirm delete?")).toBeInTheDocument();
-    expect(deleteCalls).toBe(0);
+    fireEvent.click(screen.getByRole("button", { name: "Delete api" }));
+    const confirm = screen.getByRole("button", { name: "Confirm delete api" });
+    confirm.focus();
+    fireEvent.click(confirm);
+    expect(await screen.findByText("Could not delete the monitor — try again")).toBeInTheDocument();
+    expect(confirm).toHaveFocus();
+    expect(screen.getByText("Delete monitor api?")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Confirm delete api" })).toBeEnabled();
 
-    fireEvent.click(screen.getByRole("button", { name: "Confirm delete" }));
-    await waitFor(() => expect(deleteCalls).toBe(1));
+    deleteStatus = 200;
+    fireEvent.click(screen.getByRole("button", { name: "Confirm delete api" }));
+    await waitFor(() => expect(deleteCalls).toBe(2));
   });
 
   it("cancels without deleting", async () => {
@@ -112,10 +185,10 @@ describe("DeleteButton", () => {
     await settle();
 
     fireEvent.click(screen.getByRole("button", { name: /delete/i }));
-    expect(screen.getByText("Confirm delete?")).toBeInTheDocument();
+    expect(screen.getByText("Delete monitor api?")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
-    expect(screen.queryByText("Confirm delete?")).not.toBeInTheDocument();
+    expect(screen.queryByText("Delete monitor api?")).not.toBeInTheDocument();
     expect(deleteCalls).toBe(0);
   });
 
@@ -123,7 +196,7 @@ describe("DeleteButton", () => {
     const confirmSpy = vi.spyOn(window, "confirm");
     renderHarness([monitor()]);
     fireEvent.click(screen.getByRole("button", { name: /delete/i }));
-    fireEvent.click(screen.getByRole("button", { name: "Confirm delete" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm delete api" }));
     expect(confirmSpy).not.toHaveBeenCalled();
     confirmSpy.mockRestore();
   });
@@ -134,7 +207,7 @@ describe("DeleteButton", () => {
     expect(screen.getByTestId("row-1")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /delete/i }));
-    fireEvent.click(screen.getByRole("button", { name: "Confirm delete" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm delete api" }));
 
     await waitFor(() =>
       expect(screen.queryByTestId("row-1")).not.toBeInTheDocument(),
@@ -147,7 +220,7 @@ describe("DeleteButton", () => {
     await settle();
 
     fireEvent.click(screen.getByRole("button", { name: /delete/i }));
-    fireEvent.click(screen.getByRole("button", { name: "Confirm delete" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm delete api" }));
 
     expect(
       await screen.findByText(/Monitor not found — refreshing list/i),

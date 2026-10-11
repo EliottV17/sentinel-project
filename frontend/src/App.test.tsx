@@ -9,6 +9,6 @@ describe("application routes", () => {
     tokenStore.clear();
     const router = createMemoryRouter(routes, { initialEntries: ["/register"] });
     render(<RouterProvider router={router} />);
-    expect(await screen.findByRole("heading", { name: "Register for Sentinel" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Create your account." })).toBeInTheDocument();
   });
 });

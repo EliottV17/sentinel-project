@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import type { components } from "../../lib/api/schema";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -28,9 +29,11 @@ function monitor(overrides: Partial<MonitorRead> = {}): MonitorRead {
 
 function renderList(monitors: MonitorRead[]) {
   return render(
-    <QueryClientProvider client={new QueryClient()}>
-      <MonitorList monitors={monitors} now={NOW} />
-    </QueryClientProvider>,
+    <MemoryRouter>
+      <QueryClientProvider client={new QueryClient()}>
+        <MonitorList monitors={monitors} now={NOW} />
+      </QueryClientProvider>
+    </MemoryRouter>,
   );
 }
 
@@ -48,7 +51,7 @@ describe("MonitorList", () => {
     expect(screen.getByText("api")).toBeInTheDocument();
     expect(screen.getByText("https://api.example.com")).toBeInTheDocument();
     expect(screen.getByText(/every 60s/)).toBeInTheDocument();
-    expect(screen.getByText(/2 consecutive failures/)).toBeInTheDocument();
+    expect(screen.getByText("Failures").parentElement?.parentElement).toHaveTextContent("Failures2 consecutive");
   });
 
   it("maps last_state only: healthy → green Healthy pill", () => {

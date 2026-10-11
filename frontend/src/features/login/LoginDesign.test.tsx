@@ -18,7 +18,7 @@ describe("LoginPage design", () => {
   it("provides English accessible sign-in labels", () => {
     renderLoginPage();
 
-    expect(screen.getByRole("heading", { name: "Sign in to Sentinel" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Sign in" })).toBeInTheDocument();
     expect(screen.getByLabelText("Username or email")).toBeInTheDocument();
     expect(screen.getByLabelText("Password")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Sign in" })).toBeInTheDocument();

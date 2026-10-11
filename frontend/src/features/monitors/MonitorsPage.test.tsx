@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { http, HttpResponse } from "msw";
+import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { server } from "../../test/mocks/server";
 import type { components } from "../../lib/api/schema";
@@ -45,9 +46,11 @@ function makeQueryClient(): QueryClient {
 
 function renderPage(): void {
   render(
-    <QueryClientProvider client={makeQueryClient()}>
-      <MonitorsPage />
-    </QueryClientProvider>,
+    <MemoryRouter>
+      <QueryClientProvider client={makeQueryClient()}>
+        <MonitorsPage />
+      </QueryClientProvider>
+    </MemoryRouter>,
   );
 }
 

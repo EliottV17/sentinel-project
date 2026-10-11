@@ -11,9 +11,11 @@ import { useDeleteMonitor } from "./useMonitorMutations";
 export function DeleteButton({
   monitorId,
   monitorName,
+  onDeleteSuccess,
 }: {
   monitorId: number;
   monitorName?: string;
+  onDeleteSuccess?: (monitorId: number) => void;
 }) {
   const [confirming, setConfirming] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -21,7 +23,7 @@ export function DeleteButton({
   const cancelRef = useRef<HTMLButtonElement>(null);
   const inFlightRef = useRef(false);
   const restoreFocusRef = useRef(false);
-  const deleteMonitor = useDeleteMonitor();
+  const deleteMonitor = useDeleteMonitor(onDeleteSuccess);
   const name = monitorName ?? "this monitor";
 
   useLayoutEffect(() => {

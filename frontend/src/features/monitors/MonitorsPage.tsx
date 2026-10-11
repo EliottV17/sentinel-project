@@ -53,6 +53,9 @@ export function MonitorsPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [createPending, setCreatePending] = useState(false);
   const addButtonRef = useRef<HTMLButtonElement>(null);
+  const monitorsHeadingRef = useRef<HTMLHeadingElement>(null);
+  const previousMonitorIdsRef = useRef<Set<number> | null>(null);
+  const successfulDeleteIdRef = useRef<number | null>(null);
   const restoreFocusRef = useRef(false);
 
   useLayoutEffect(() => {
@@ -61,6 +64,18 @@ export function MonitorsPage() {
       addButtonRef.current?.focus();
     }
   }, [formOpen]);
+
+  useLayoutEffect(() => {
+    if (monitors === undefined) return;
+    const currentIds = new Set(monitors.map((monitor) => monitor.id));
+    const previousIds = previousMonitorIdsRef.current;
+    previousMonitorIdsRef.current = currentIds;
+    const deletedId = successfulDeleteIdRef.current;
+    if (deletedId !== null && previousIds?.has(deletedId) && !currentIds.has(deletedId)) {
+      successfulDeleteIdRef.current = null;
+      if (document.activeElement === document.body) monitorsHeadingRef.current?.focus();
+    }
+  }, [monitors]);
 
   const closeForm = (): void => {
     restoreFocusRef.current = true;
@@ -75,7 +90,7 @@ export function MonitorsPage() {
   return (
     <section className="mx-auto w-full max-w-6xl min-w-0 space-y-6 sm:space-y-8">
       <header className="flex min-w-0 flex-wrap items-center justify-between gap-4">
-        <h1 className="font-serif text-3xl font-semibold tracking-tight text-ink sm:text-4xl">Monitors</h1>
+        <h1 ref={monitorsHeadingRef} tabIndex={-1} className="font-serif text-3xl font-semibold tracking-tight text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 sm:text-4xl">Monitors</h1>
         <AddMonitorButton expanded={formOpen} onClick={toggleForm} buttonRef={addButtonRef} pending={createPending} />
       </header>
 
@@ -117,7 +132,7 @@ export function MonitorsPage() {
           {query.isPending && query.data === undefined && <Spinner />}
         </div>
         {monitors !== undefined ? (
-          monitors.length > 0 ? <MonitorList monitors={monitors} /> : (
+          monitors.length > 0 ? <MonitorList monitors={monitors} onDeleteSuccess={(monitorId) => { successfulDeleteIdRef.current = monitorId; }} /> : (
             <div className="flex flex-wrap items-center justify-between gap-4 border-y border-line py-8">
               <p className="text-sm text-muted">No monitors yet.</p>
               <AddMonitorButton expanded={formOpen} onClick={toggleForm} pending={createPending} />

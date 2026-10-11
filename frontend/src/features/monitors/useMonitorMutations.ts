@@ -16,10 +16,13 @@ export function useCreateMonitor() {
   });
 }
 
-export function useDeleteMonitor() {
+export function useDeleteMonitor(onSuccess?: (monitorId: number) => void) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: deleteMonitor,
+    onSuccess: (_data, monitorId) => {
+      onSuccess?.(monitorId);
+    },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ["monitors"] });
     },

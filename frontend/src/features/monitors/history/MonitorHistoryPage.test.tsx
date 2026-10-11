@@ -82,10 +82,10 @@ describe("MonitorHistoryPage", () => {
     expect(screen.getByText("<script>escaped()</script>")).toBeInTheDocument();
     expect(screen.queryByRole("img", { name: /escaped/ })).not.toBeInTheDocument();
     expect(screen.queryByText("must-not-render")).not.toBeInTheDocument();
-    expect(screen.getByText("Down — latency unavailable")).toBeInTheDocument();
+    expect(screen.getByText(/Healthy check, 20 ms/)).toBeInTheDocument();
     const chart = screen.getByRole("img", { name: /latency history/i });
     expect(chart).toHaveAccessibleDescription(/3 checks/i);
-    expect(chart.querySelector("polyline")?.getAttribute("points")).toBe("24,18 320,162");
+    expect(chart.querySelector("polyline")?.getAttribute("points")).toBe("54,14 341,180");
     expect(screen.getByText("Unknown alert")).toBeInTheDocument();
     expect(screen.getByText("<img src=x>plain text")).toBeInTheDocument();
     const rows = screen.getAllByRole("row");
@@ -105,8 +105,8 @@ describe("MonitorHistoryPage", () => {
     );
     renderPage();
     const chart = await screen.findByRole("img", { name: /latency history/i });
-    expect(chart).toHaveAccessibleDescription(/2 checks in chronological order\. 0 measured latency values/);
-    expect(chart.querySelectorAll('g[aria-label="Down — latency unavailable"]')).toHaveLength(2);
+    expect(chart).toHaveAccessibleDescription(/2 checks, ordered chronologically\. 0 measured latency values/);
+    expect(chart.querySelectorAll("path")).toHaveLength(2);
     expect(chart.querySelectorAll("polyline")).toHaveLength(0);
     expect(screen.queryByText("0 ms")).not.toBeInTheDocument();
   });
@@ -122,8 +122,9 @@ describe("MonitorHistoryPage", () => {
     );
     renderPage();
     const chart = await screen.findByRole("img", { name: /latency history/i });
-    expect(chart.querySelector('g[aria-label="Down — latency unavailable"]')).toBeInTheDocument();
-    expect(chart.querySelector('g[aria-label="Down — 0 ms"]')).toBeInTheDocument();
+    expect(chart.querySelectorAll("path")).toHaveLength(1);
+    expect(chart.querySelectorAll('[data-marker="failed-measured"]')).toHaveLength(1);
+    expect(chart.querySelectorAll('[data-marker="healthy-measured"]')).toHaveLength(0);
   });
 
   it("shows a section loading state before history arrives", async () => {

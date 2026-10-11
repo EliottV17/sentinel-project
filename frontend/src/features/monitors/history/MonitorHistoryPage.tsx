@@ -4,7 +4,8 @@ import type { MonitorHistoryRow } from "../../../app/api/endpoints";
 import { ApiError } from "../../../app/api/client";
 import { parseApiDate } from "../../../lib/datetime";
 import { StatusPill } from "../StatusPill";
-import { chronologicalHistory, summarizeMonitorHistory } from "./summary";
+import { summarizeMonitorHistory } from "./summary";
+import { LatencyChart } from "./LatencyChart";
 import { useMonitorHistory } from "./useMonitorHistory";
 
 function parseMonitorId(value: string | undefined): number | null {
@@ -50,69 +51,14 @@ function CheckState({ state }: { state: string }) {
   </span>;
 }
 
-function LatencyChart({ rows }: { rows: readonly MonitorHistoryRow[] }) {
-  const ordered = chronologicalHistory(rows);
-  const measured = ordered.filter((row) => row.latency_ms !== null && Number.isFinite(row.latency_ms));
-  const hasUnavailableDown = ordered.some((row) =>
-    row.state === "unhealthy" && (row.latency_ms === null || !Number.isFinite(row.latency_ms)),
-  );
-  if (ordered.length === 0 || (measured.length === 0 && !hasUnavailableDown)) {
-    return <p className="rounded-control border border-dashed border-line-strong bg-canvas/30 p-6 text-center text-sm leading-6 text-muted">No latency data to chart.</p>;
-  }
-  const width = 640;
-  const height = 180;
-  const padX = 24;
-  const padY = 18;
-  const maxLatency = Math.max(1, ...measured.map((row) => row.latency_ms ?? 0));
-  const xFor = (index: number) => ordered.length === 1
-    ? width / 2
-    : padX + (index / (ordered.length - 1)) * (width - padX * 2);
-  const yFor = (latency: number) => height - padY - (latency / maxLatency) * (height - padY * 2);
-  const segments: string[] = [];
-  let segment: string[] = [];
-  ordered.forEach((row, index) => {
-    if (row.latency_ms === null || !Number.isFinite(row.latency_ms)) {
-      if (segment.length) segments.push(segment.join(" "));
-      segment = [];
-      return;
-    }
-    segment.push(`${xFor(index)},${yFor(row.latency_ms)}`);
-  });
-  if (segment.length) segments.push(segment.join(" "));
-  const points = ordered.map((row, index) => ({ row, x: xFor(index) }));
-  const summary = `${ordered.length} checks in chronological order. ${measured.length} measured latency values. ${ordered.filter((row) => row.state === "unhealthy" && row.latency_ms === null).length} down checks had no latency measurement.`;
-  return (
-    <svg role="img" aria-labelledby="latency-title" aria-describedby="latency-description" viewBox={`0 0 ${width} ${height}`} className="h-48 w-full overflow-visible rounded-control">
-      <title id="latency-title">Latency history</title>
-      <desc id="latency-description">{summary}</desc>
-      <line x1={padX} y1={height - padY} x2={width - padX} y2={height - padY} stroke="currentColor" className="text-line-strong" />
-      {segments.map((coordinates, index) => <polyline key={index} points={coordinates} fill="none" stroke="currentColor" strokeWidth="2" className="text-accent" />)}
-      {points.map(({ row, x }) => {
-        if (row.latency_ms === null || !Number.isFinite(row.latency_ms)) {
-          if (row.state !== "unhealthy") return null;
-          return <g key={row.id} aria-label="Down — latency unavailable">
-            <path d={`M ${x - 5} ${height - padY - 5} L ${x + 5} ${height - padY + 5} M ${x + 5} ${height - padY - 5} L ${x - 5} ${height - padY + 5}`} stroke="currentColor" strokeWidth="2" className="text-danger" />
-            <title>Down — latency unavailable</title>
-          </g>;
-        }
-        const y = yFor(row.latency_ms);
-        return row.state === "unhealthy"
-          ? <g key={row.id} aria-label={`Down — ${row.latency_ms} ms`}><rect x={x - 4} y={y - 4} width="8" height="8" fill="currentColor" className="text-danger" /><title>Down — {row.latency_ms} ms</title></g>
-          : <g key={row.id} aria-label={`${row.latency_ms} ms`}><circle cx={x} cy={y} r="4" fill="currentColor" className="text-accent" /><title>{row.latency_ms} ms</title></g>;
-      })}
-      <text x={padX} y={height - 2} className="fill-current font-mono text-[10px] text-muted">Oldest</text>
-      <text x={width - padX} y={height - 2} textAnchor="end" className="fill-current font-mono text-[10px] text-muted">Most recent</text>
-    </svg>
-  );
-}
-
 function HistoryTable({ rows }: { rows: readonly MonitorHistoryRow[] }) {
+  const newestFirst = [...rows].sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at) || b.id - a.id);
   return <div className="min-w-0 overflow-x-auto rounded-control border border-line">
     <table className="w-full min-w-[680px] border-collapse text-left">
       <thead><tr className="border-b border-line bg-raised/50 text-xs font-medium uppercase tracking-wider text-muted">
         <th className="px-3 py-3 font-medium">Checked at</th><th className="px-3 py-3 font-medium">State</th><th className="px-3 py-3 font-medium">HTTP code</th><th className="px-3 py-3 font-medium">Latency</th><th className="px-3 py-3 font-medium">Error</th>
       </tr></thead>
-      <tbody>{rows.map((row) => {
+      <tbody>{newestFirst.map((row) => {
         const date = parseApiDate(row.created_at);
         return <tr key={row.id} className="border-b border-line/70 text-sm text-ink transition-colors duration-150 last:border-b-0 hover:bg-raised/40">
           <td className="px-3 py-3"><time dateTime={row.created_at} title={row.created_at}>{date.toLocaleString()}</time></td>
@@ -200,7 +146,7 @@ export function MonitorHistoryPage() {
     <Section title="Latency over time">
       {historyData.historyIsLoading && !historyData.history && <p role="status" className="text-sm text-muted">Loading check history…</p>}
       {historyHasError && <FailureMessage error={historyData.historyError} hasData={Boolean(historyData.history)} onRetry={() => { void historyData.refetchHistory(); }} />}
-      {historyData.history && <LatencyChart rows={historyData.history} />}
+      {historyData.history && <LatencyChart rows={historyData.history} frequencySeconds={monitor?.frequency} />}
       {!historyData.historyIsLoading && !historyData.history && !historyHasError && <p role="status" className="text-sm text-muted">Loading check history…</p>}
     </Section>
     <Section title="Recent checks">

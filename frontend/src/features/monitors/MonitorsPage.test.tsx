@@ -4,6 +4,7 @@ import { http, HttpResponse } from "msw";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { server } from "../../test/mocks/server";
+import { fetchMonitors } from "../../app/api/endpoints";
 import type { components } from "../../lib/api/schema";
 import { MonitorsPage } from "./MonitorsPage";
 
@@ -29,13 +30,14 @@ function monitor(overrides: Partial<MonitorRead> = {}): MonitorRead {
 
 let failing = false;
 let monitorsResponse: MonitorRead[] = [monitor()];
+const visibilityDescriptor = Object.getOwnPropertyDescriptor(document, "visibilityState");
 
-function makeQueryClient(): QueryClient {
+function makeQueryClient(retry = 2): QueryClient {
   return new QueryClient({
     defaultOptions: {
       queries: {
         staleTime: 5_000,
-        retry: 2,
+        retry,
         retryDelay: (attemptIndex) => Math.min(1_000 * 2 ** attemptIndex, 4_000),
         refetchOnWindowFocus: true,
         refetchIntervalInBackground: false,
@@ -44,14 +46,16 @@ function makeQueryClient(): QueryClient {
   });
 }
 
-function renderPage(): void {
+function renderPage(retry = 2): QueryClient {
+  const client = makeQueryClient(retry);
   render(
     <MemoryRouter>
-      <QueryClientProvider client={makeQueryClient()}>
+      <QueryClientProvider client={client}>
         <MonitorsPage />
       </QueryClientProvider>
     </MemoryRouter>,
   );
+  return client;
 }
 
 async function settle(): Promise<void> {
@@ -70,6 +74,7 @@ beforeEach(() => {
   failing = false;
   monitorsResponse = [monitor()];
   vi.useFakeTimers();
+  Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
   server.use(
     http.get("*/api/v1/monitors/", () => {
       if (failing) {
@@ -82,9 +87,69 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
+  if (visibilityDescriptor) Object.defineProperty(document, "visibilityState", visibilityDescriptor);
 });
 
 describe("MonitorsPage", () => {
+  it("reevaluates identical monitor data exactly past the freshness threshold without extra requests", async () => {
+    vi.setSystemTime(new Date("2025-01-15T10:00:00.000Z"));
+    const lastChecked = new Date(Date.now()).toISOString();
+    monitorsResponse = [monitor({ last_checked_at: lastChecked })];
+    const responseBodies: string[] = [];
+    let requests = 0;
+    server.use(http.get("*/api/v1/monitors/", () => {
+      requests++;
+      responseBodies.push(JSON.stringify(monitorsResponse));
+      return HttpResponse.json(monitorsResponse);
+    }));
+    renderPage();
+    await settle();
+    expect(screen.queryByText(/No recent check/i)).not.toBeInTheDocument();
+    for (let interval = 0; interval < 12; interval++) await advance(10_000);
+    expect(screen.queryByText(/No recent check/i)).not.toBeInTheDocument();
+    expect(requests).toBe(13);
+    const cadenceRequests = requests;
+    await advance(1);
+    expect(screen.getByText(/No recent check/i)).toBeInTheDocument();
+    expect(requests).toBe(cadenceRequests);
+    expect(responseBodies).toHaveLength(13);
+    expect(new Set(responseBodies).size).toBe(1);
+    expect(screen.getByText("api")).toBeInTheDocument();
+  });
+
+  it("keeps API refresh errors separate from freshness through recovery", async () => {
+    vi.setSystemTime(new Date("2025-01-15T10:00:00.000Z"));
+    monitorsResponse = [monitor({ last_checked_at: new Date(Date.now()).toISOString() })];
+    server.use(http.get("*/api/v1/monitors/", () => failing
+      ? HttpResponse.json({ detail: "offline" }, { status: 500 })
+      : HttpResponse.json(monitorsResponse)));
+    const client = renderPage(0);
+    await settle();
+    expect(screen.queryByText(/No recent check/i)).not.toBeInTheDocument();
+
+    failing = true;
+    const failedRefresh = client.refetchQueries({ queryKey: ["monitors"], exact: true });
+    await failedRefresh;
+    await settle();
+    expect(screen.getByRole("alert")).toHaveTextContent("last known monitor list");
+    expect(screen.getByText("api")).toBeInTheDocument();
+    expect(screen.queryByText(/No recent check/i)).not.toBeInTheDocument();
+
+    await advance(120_001);
+    expect(screen.getByRole("alert")).toBeInTheDocument();
+    expect(screen.getByText(/No recent check/i)).toBeInTheDocument();
+    failing = false;
+    await act(async () => { await client.fetchQuery({ queryKey: ["monitors"], queryFn: fetchMonitors, staleTime: 0 }); });
+    await advance(1);
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.getByText(/No recent check/i)).toBeInTheDocument();
+
+    monitorsResponse = [monitor({ last_checked_at: new Date(Date.now()).toISOString() })];
+    await act(async () => { await client.fetchQuery({ queryKey: ["monitors"], queryFn: fetchMonitors, staleTime: 0 }); });
+    await advance(1);
+    expect(screen.queryByText(/No recent check/i)).not.toBeInTheDocument();
+  });
+
   it("starts with an Add monitor disclosure closed above the full-width monitor list", async () => {
     renderPage();
     await settle();
@@ -122,13 +187,13 @@ describe("MonitorsPage", () => {
     await settle();
 
     expect(screen.getByRole("group", { name: "Monitor counts" })).toHaveTextContent("Total 4");
-    expect(screen.getByRole("group", { name: "Monitor counts" })).toHaveTextContent("Healthy 1");
-    expect(screen.getByRole("group", { name: "Monitor counts" })).toHaveTextContent("Unhealthy 1");
-    expect(screen.getByRole("group", { name: "Monitor counts" })).toHaveTextContent("Pending 1");
+    expect(screen.getByRole("group", { name: "Monitor counts" })).toHaveTextContent("Last known healthy 1");
+    expect(screen.getByRole("group", { name: "Monitor counts" })).toHaveTextContent("Last known unhealthy 1");
+    expect(screen.getByRole("group", { name: "Monitor counts" })).toHaveTextContent("Never checked 1");
     expect(screen.getByText("Paused 1")).toBeInTheDocument();
     const pausedRow = screen.getByText("Paused").closest("li")!;
     expect(within(pausedRow).queryByText(/engine may be down/i)).not.toBeInTheDocument();
-    expect(screen.getByText("Last result: Unhealthy")).toBeInTheDocument();
+    expect(screen.getByText(/Previous result: Unhealthy/)).toBeInTheDocument();
   });
 
   it("opens inline, focuses Name, and Cancel or Escape restores Add monitor focus", async () => {

@@ -2,8 +2,9 @@ import type { ReactNode } from "react";
 import { useParams } from "react-router-dom";
 import type { MonitorHistoryRow } from "../../../app/api/endpoints";
 import { ApiError } from "../../../app/api/client";
-import { parseApiDate } from "../../../lib/datetime";
+import { formatDateTime, formatRelative, parseApiDate } from "../../../lib/datetime";
 import { StatusPill } from "../StatusPill";
+import { useMonitorFreshness } from "../useMonitorFreshness";
 import { summarizeMonitorHistory } from "./summary";
 import { LatencyChart } from "./LatencyChart";
 import { useMonitorHistory } from "./useMonitorHistory";
@@ -122,6 +123,8 @@ export function MonitorHistoryPage() {
   const { id: rawId } = useParams();
   const monitorId = parseMonitorId(rawId);
   const historyData = useMonitorHistory(monitorId ?? 0);
+  const freshnessMonitor = historyData.monitor;
+  const freshness = useMonitorFreshness(freshnessMonitor?.last_checked_at ?? null, freshnessMonitor?.frequency ?? 30, freshnessMonitor?.state === "Active");
   const terminal = terminalFailure(historyData.metadataError) || terminalFailure(historyData.historyError) || terminalFailure(historyData.alertsError);
   if (monitorId === null || terminal || (historyData.metadataLoaded && !historyData.monitor)) {
     return <main className="mx-auto w-full max-w-3xl min-w-0 py-8 sm:py-10">
@@ -149,9 +152,11 @@ export function MonitorHistoryPage() {
     {monitor && <header className="rounded-panel border border-line bg-surface p-5 shadow-panel sm:p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0"><h1 className="break-words font-serif text-3xl font-semibold tracking-tight text-ink sm:text-4xl">{monitor.name}</h1><p className="mt-2 break-all font-mono text-sm text-muted">{monitor.target}</p></div>
-        <StatusPill lastState={monitor.last_state} />
+        <StatusPill state={monitor.state} lastState={monitor.last_state} />
       </div>
-      <p className="mt-4 border-t border-line pt-4 text-sm leading-6 text-muted">Checks run every <span className="font-mono font-medium text-ink">{monitor.frequency} seconds</span>.</p>
+      <p className="mt-4 border-t border-line pt-4 text-sm leading-6 text-muted">{monitor.state === "Active" ? <>Checks run every <span className="font-mono font-medium text-ink">{monitor.frequency} seconds</span>.</> : "Checks are paused."}</p>
+      <p className="mt-2 text-sm text-muted">{monitor.last_checked_at ? <>Last checked <time dateTime={monitor.last_checked_at} title={formatDateTime(parseApiDate(monitor.last_checked_at))}>{formatRelative(parseApiDate(monitor.last_checked_at), freshness.now)}</time>. Last result: {monitor.last_state === "healthy" ? "Healthy" : monitor.last_state === "unhealthy" ? "Unhealthy" : "Unknown"}.</> : "Never checked."}</p>
+      {freshness.stale && <p role="status" className="mt-3 rounded-control border border-warning/30 bg-warning-soft px-3 py-2 text-sm text-warning">No recent check; the last result is not current. This does not confirm a worker failure.</p>}
     </header>}
     <section aria-label="Check summary" className="grid min-w-0 grid-cols-2 gap-3 lg:grid-cols-4">
       {[
@@ -171,7 +176,7 @@ export function MonitorHistoryPage() {
     <Section title="Recent checks">
       {historyData.historyIsLoading && !historyData.history && <p role="status" className="text-sm text-muted">Loading checks…</p>}
       {historyHasError && <FailureMessage error={historyData.historyError} hasData={Boolean(historyData.history)} onRetry={() => { void historyData.refetchHistory(); }} />}
-      {historyData.history && rows.length === 0 && <p className="text-sm text-muted">No checks yet. The worker checks this monitor every {monitor?.frequency ?? "configured"} seconds.</p>}
+      {historyData.history && rows.length === 0 && <p className="text-sm text-muted">No checks yet.{monitor?.state === "Active" ? ` The worker checks this monitor every ${monitor.frequency} seconds.` : monitor?.state === "Paused" ? " Checks are paused." : " Check schedule unavailable."}</p>}
       {historyData.history && rows.length > 0 && <HistoryTable rows={rows} />}
       {historyData.historyExhausted && <p className="mt-4 text-sm text-muted">No older checks available.</p>}
       {historyData.historyAtLimit && <p className="mt-4 text-sm text-muted">Showing the latest 200 checks.</p>}

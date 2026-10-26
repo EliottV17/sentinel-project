@@ -93,12 +93,9 @@ describe("MonitorList", () => {
     expect(screen.queryByText("GET")).not.toBeInTheDocument();
   });
 
-  it("shows the freshness hint when the engine is stale", () => {
-    // last check 5 min ago, frequency 60 → threshold 120 s → stale.
-    renderList([
-      monitor({ last_checked_at: "2025-01-15T09:55:00" }),
-    ]);
-    expect(screen.getByText(/engine may be down/i)).toBeInTheDocument();
+  it("shows a non-causal stale hint when the last check is old", () => {
+    renderList([monitor({ last_checked_at: "2025-01-15T09:55:00" })]);
+    expect(screen.getByText(/No recent check; last result is not current/i)).toBeInTheDocument();
   });
 
   it("shows no freshness hint while checks are fresh", () => {

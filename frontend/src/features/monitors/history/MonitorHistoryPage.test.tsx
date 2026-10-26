@@ -1,9 +1,10 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { Link, MemoryRouter, Route, Routes } from "react-router-dom";
 import { http, HttpResponse } from "msw";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { server } from "../../../test/mocks/server";
+import { fetchMonitors } from "../../../app/api/endpoints";
 import { MonitorHistoryPage } from "./MonitorHistoryPage";
 
 const monitor = {
@@ -54,9 +55,143 @@ function renderPage(id = "7") {
   return { ...view, client };
 }
 
-afterEach(() => server.resetHandlers());
+const visibilityDescriptor = Object.getOwnPropertyDescriptor(document, "visibilityState");
+
+beforeEach(() => {
+  Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
+});
+
+afterEach(() => {
+  server.resetHandlers();
+  vi.useRealTimers();
+  if (visibilityDescriptor) Object.defineProperty(document, "visibilityState", visibilityDescriptor);
+});
 
 describe("MonitorHistoryPage", () => {
+  it.each([
+    ["healthy", "Healthy"],
+    ["unhealthy", "Unhealthy"],
+  ] as const)("shows paused %s as historical context without claiming checks run", async (lastState, resultLabel) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2025-01-15T10:00:00Z"));
+    server.use(
+      http.get("/api/v1/monitors", () => HttpResponse.json([{ ...monitor, state: "Paused", last_state: lastState, last_checked_at: "2025-01-15T09:57:00Z" }])),
+      http.get("/api/v1/monitors/7/history", () => HttpResponse.json([])),
+      http.get("/api/v1/monitors/7/alerts", () => HttpResponse.json([])),
+    );
+    renderPage();
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(screen.getByText("Paused")).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(`Last result: ${resultLabel}`))).toBeInTheDocument();
+    expect(screen.getByText(/Last checked/)).toBeInTheDocument();
+    expect(screen.getByText("Checks are paused.")).toBeInTheDocument();
+    expect(screen.getByText(/No checks yet\. Checks are paused\./)).toBeInTheDocument();
+    expect(screen.queryByText(/No recent check/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Checks run every/)).not.toBeInTheDocument();
+  });
+
+  it("shows paused no-check state and never presents it as a running schedule", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2025-01-15T10:00:00Z"));
+    server.use(
+      http.get("/api/v1/monitors", () => HttpResponse.json([{ ...monitor, state: "Paused", last_state: null, last_checked_at: null }])),
+      http.get("/api/v1/monitors/7/history", () => HttpResponse.json([])),
+      http.get("/api/v1/monitors/7/alerts", () => HttpResponse.json([])),
+    );
+    renderPage();
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(screen.getByText("Paused")).toBeInTheDocument();
+    expect(screen.getByText("Never checked.")).toBeInTheDocument();
+    expect(screen.getByText(/No checks yet\. Checks are paused\./)).toBeInTheDocument();
+    expect(screen.queryByText(/No recent check/)).not.toBeInTheDocument();
+  });
+
+  it("reevaluates identical metadata past 120 seconds without changing the 30s API cadence", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2025-01-15T10:00:00Z"));
+    const checked = "2025-01-15T10:00:00Z";
+    const payloads: Record<string, string[]> = { metadata: [], history: [], alerts: [] };
+    let metadataRequests = 0;
+    let historyRequests = 0;
+    let alertRequests = 0;
+    server.use(
+      http.get("/api/v1/monitors", () => {
+        metadataRequests++;
+        const body = [{ ...monitor, last_checked_at: checked }];
+        payloads.metadata.push(JSON.stringify(body));
+        return HttpResponse.json(body);
+      }),
+      http.get("/api/v1/monitors/7/history", () => {
+        historyRequests++;
+        const body = [check()];
+        payloads.history.push(JSON.stringify(body));
+        return HttpResponse.json(body);
+      }),
+      http.get("/api/v1/monitors/7/alerts", () => {
+        alertRequests++;
+        const body: ReturnType<typeof alert>[] = [];
+        payloads.alerts.push(JSON.stringify(body));
+        return HttpResponse.json(body);
+      }),
+    );
+    renderPage();
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(screen.queryByText(/No recent check/)).not.toBeInTheDocument();
+    for (let interval = 0; interval < 4; interval++) {
+      await act(async () => { await vi.advanceTimersByTimeAsync(30_000); });
+    }
+    expect(screen.queryByText(/No recent check/)).not.toBeInTheDocument();
+    expect(metadataRequests).toBe(5);
+    expect(historyRequests).toBe(5);
+    expect(alertRequests).toBe(5);
+    const cadenceRequests = [metadataRequests, historyRequests, alertRequests];
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(screen.getByText(/No recent check/)).toBeInTheDocument();
+    expect([metadataRequests, historyRequests, alertRequests]).toEqual(cadenceRequests);
+    for (const payload of Object.values(payloads)) {
+      expect(payload).toHaveLength(5);
+      expect(new Set(payload).size).toBe(1);
+    }
+  });
+
+  it("keeps metadata API errors independent from stale data and recovery", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2025-01-15T10:00:00Z"));
+    let fail = false;
+    let metadataCalls = 0;
+    let lastChecked = "2025-01-15T10:00:00Z";
+    server.use(
+      http.get("/api/v1/monitors", () => { metadataCalls++; return fail
+        ? HttpResponse.json({ detail: "offline" }, { status: 500 })
+        : HttpResponse.json([{ ...monitor, last_checked_at: lastChecked }]); }),
+      http.get("/api/v1/monitors/7/history", () => HttpResponse.json([check()])),
+      http.get("/api/v1/monitors/7/alerts", () => HttpResponse.json([])),
+    );
+    const { client } = renderPage();
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    fail = true;
+    await act(async () => { await client.refetchQueries({ queryKey: ["monitor-history", "metadata", 7], exact: true }); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(screen.getByRole("alert")).toHaveTextContent("Previously loaded data is still shown");
+    expect(screen.queryByText(/No recent check/)).not.toBeInTheDocument();
+    await act(async () => { await vi.advanceTimersByTimeAsync(120_001); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(screen.getByRole("alert")).toBeInTheDocument();
+    expect(screen.getByText(/No recent check/)).toBeInTheDocument();
+
+    fail = false;
+    await act(async () => { await client.fetchQuery({ queryKey: ["monitor-history", "metadata", 7], queryFn: fetchMonitors, staleTime: 0 }); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.getByText(/No recent check/)).toBeInTheDocument();
+    lastChecked = new Date(Date.now()).toISOString();
+    await act(async () => { await client.fetchQuery({ queryKey: ["monitor-history", "metadata", 7], queryFn: fetchMonitors, staleTime: 0 }); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(metadataCalls).toBeGreaterThan(1);
+    expect(client.getQueryData(["monitor-history", "metadata", 7])).toEqual(expect.arrayContaining([expect.objectContaining({ last_checked_at: lastChecked })]));
+    expect(screen.queryByText(/No recent check/)).not.toBeInTheDocument();
+  });
+
   it("loads metadata, truthful check summary, table, alerts, and accessible chronological chart", async () => {
     server.use(
       http.get("/api/v1/monitors", () => HttpResponse.json([monitor])),
@@ -200,14 +335,16 @@ describe("MonitorHistoryPage", () => {
     expect(screen.queryByText("No older checks available.")).not.toBeInTheDocument();
   });
 
-  it("shows independent empty states and no-data metrics", async () => {
+  it("shows active never-checked state and independent empty states", async () => {
     server.use(
-      http.get("/api/v1/monitors", () => HttpResponse.json([monitor])),
+      http.get("/api/v1/monitors", () => HttpResponse.json([{ ...monitor, last_state: null, last_checked_at: null }])),
       http.get("/api/v1/monitors/7/history", () => HttpResponse.json([])),
       http.get("/api/v1/monitors/7/alerts", () => HttpResponse.json([])),
     );
     renderPage();
     expect(await screen.findByText("No checks yet. The worker checks this monitor every 60 seconds.")).toBeInTheDocument();
+    expect(screen.getByText("Never checked")).toBeInTheDocument();
+    expect(screen.getByText(/Checks run every/)).toBeInTheDocument();
     expect(screen.getAllByText("No data").length).toBeGreaterThanOrEqual(3);
     expect(screen.getByText("No older checks available.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /load 50 more/i })).not.toBeInTheDocument();

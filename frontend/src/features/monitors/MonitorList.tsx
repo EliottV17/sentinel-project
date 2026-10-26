@@ -5,7 +5,7 @@ type MonitorRead = components["schemas"]["MonitorRead"];
 
 export function MonitorList({
   monitors,
-  now = new Date(),
+  now,
   onDeleteSuccess,
 }: {
   monitors: MonitorRead[];

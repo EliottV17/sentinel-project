@@ -63,14 +63,24 @@ describe("MonitorRow", () => {
   it("does not report engine failure for a paused monitor and surfaces its previous result", () => {
     renderRow(monitor({ state: "Paused", last_state: "unhealthy", last_checked_at: "2025-01-15T09:50:00" }));
     expect(screen.getByText("Paused")).toBeInTheDocument();
-    expect(screen.getByText("Last result: Unhealthy")).toBeInTheDocument();
+    expect(screen.getByText(/Previous result: Unhealthy/)).toBeInTheDocument();
     expect(screen.queryByText(/engine may be down/i)).not.toBeInTheDocument();
   });
 
-  it("preserves active freshness warning and operational details", () => {
+  it("identifies the last result and check time without claiming the worker is down", () => {
     renderRow(monitor({ last_checked_at: "2025-01-15T09:55:00" }));
-    expect(screen.getByText(/engine may be down/i)).toBeInTheDocument();
+    expect(screen.getByText(/Last result: Healthy/)).toBeInTheDocument();
+    expect(screen.getByText("Last checked").parentElement).toHaveTextContent("5m ago");
+    expect(screen.getByText(/No recent check/i)).toBeInTheDocument();
+    expect(screen.queryByText(/engine may be down/i)).not.toBeInTheDocument();
     expect(screen.getByText("every 60s")).toBeInTheDocument();
     expect(screen.getByText(/2\s+consecutive/)).toBeInTheDocument();
+  });
+
+  it("marks a paused healthy result as previous context and keeps its check timestamp", () => {
+    renderRow(monitor({ state: "Paused", last_state: "healthy" }));
+    expect(screen.getByText("Paused")).toBeInTheDocument();
+    expect(screen.getByText("Previous result: Healthy")).toBeInTheDocument();
+    expect(screen.queryByText(/Checks run/)).not.toBeInTheDocument();
   });
 });

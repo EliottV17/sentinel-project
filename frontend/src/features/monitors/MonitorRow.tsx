@@ -1,8 +1,9 @@
 import { Link } from "react-router-dom";
 import type { components } from "../../lib/api/schema";
-import { formatDateTime, formatRelative, isEngineStale, parseApiDate } from "../../lib/datetime";
+import { formatDateTime, formatRelative, parseApiDate } from "../../lib/datetime";
 import { DeleteButton } from "./DeleteButton";
 import { StatusPill } from "./StatusPill";
+import { useMonitorFreshness } from "./useMonitorFreshness";
 
 type MonitorRead = components["schemas"]["MonitorRead"];
 
@@ -11,15 +12,17 @@ const SLOW_FREQUENCY_SECONDS = 30;
 
 export function MonitorRow({
   monitor,
-  now,
+  now: suppliedNow,
   onDeleteSuccess,
 }: {
   monitor: MonitorRead;
-  now: Date;
+  now?: Date;
   onDeleteSuccess?: (monitorId: number) => void;
 }) {
   const lastCheckedAt = monitor.last_checked_at;
-  const stale = monitor.state === "Active" && isEngineStale(lastCheckedAt, monitor.frequency, now);
+  const freshness = useMonitorFreshness(lastCheckedAt, monitor.frequency, monitor.state === "Active", suppliedNow);
+  const now = freshness.now;
+  const stale = freshness.stale;
   const parsed = lastCheckedAt !== null ? parseApiDate(lastCheckedAt) : null;
   const slow = monitor.frequency > SLOW_FREQUENCY_SECONDS;
 
@@ -48,14 +51,14 @@ export function MonitorRow({
           </p>
         </div>
       </div>
-      {monitor.state === "Paused" && (
+      {(monitor.state === "Paused" || monitor.last_state !== null) && (
         <p className="mt-4 text-xs text-muted">
-          Last result: {monitor.last_state === "healthy" ? "Healthy" : monitor.last_state === "unhealthy" ? "Unhealthy" : "No checks yet"}
+          {monitor.state === "Paused" ? "Previous result" : "Last result"}: {monitor.last_state === "healthy" ? "Healthy" : monitor.last_state === "unhealthy" ? "Unhealthy" : "No checks yet"}
         </p>
       )}
       {stale && (
         <p role="status" className="mt-4 inline-flex max-w-full items-center gap-2 rounded-control border border-warning/30 bg-warning-soft px-3 py-2 text-xs leading-5 text-warning">
-          <span aria-hidden="true">!</span> no recent check — engine may be down
+          <span aria-hidden="true">!</span> No recent check; last result is not current
         </p>
       )}
       <div className="mt-4 flex justify-end border-t border-line/70 pt-3">

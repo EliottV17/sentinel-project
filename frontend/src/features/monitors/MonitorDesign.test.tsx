@@ -43,10 +43,10 @@ describe("monitor dashboard design", () => {
 
     const counts = await screen.findByRole("group", { name: "Monitor counts" });
     expect(counts).toHaveTextContent("Total 3");
-    expect(counts).toHaveTextContent("Healthy 1");
-    expect(counts).toHaveTextContent("Unhealthy 1");
-    expect(counts).toHaveTextContent("Pending 1");
-    expect(screen.getByText("Never checked")).toBeInTheDocument();
+    expect(counts).toHaveTextContent("Last known healthy 1");
+    expect(counts).toHaveTextContent("Last known unhealthy 1");
+    expect(counts).toHaveTextContent("Never checked 1");
+    expect(screen.getByText("Unverified API").closest("li")).toHaveTextContent("Never checked");
     expect(screen.queryByText(/average uptime/i)).not.toBeInTheDocument();
   });
 

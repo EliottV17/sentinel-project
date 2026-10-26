@@ -105,9 +105,9 @@ export function MonitorsPage() {
       {monitors !== undefined && (
         <div role="group" aria-label="Monitor counts" className="flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-line pb-4 text-sm">
           <span><span className="text-muted">Total</span> <strong className="font-mono font-medium text-ink">{total}</strong></span>
-          <span><span className="text-muted">Healthy</span> <strong className="font-mono font-medium text-success">{healthy}</strong></span>
-          <span><span className="text-muted">Unhealthy</span> <strong className="font-mono font-medium text-danger">{unhealthy}</strong></span>
-          <span><span className="text-muted">Pending</span> <strong className="font-mono font-medium text-muted">{pending}</strong></span>
+          <span><span className="text-muted">Last known healthy</span> <strong className="font-mono font-medium text-success">{healthy}</strong></span>
+          <span><span className="text-muted">Last known unhealthy</span> <strong className="font-mono font-medium text-danger">{unhealthy}</strong></span>
+          <span><span className="text-muted">Never checked</span> <strong className="font-mono font-medium text-muted">{pending}</strong></span>
           {paused > 0 && <span className="text-muted">Paused {paused}</span>}
         </div>
       )}

@@ -1,0 +1,467 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-26T00:28:31Z",
+  "title": "Design System: Sentinel",
+  "extensions": {
+    "notes": [
+      "Tonal ramps are synthesized preview-only metadata: exact source sRGB colors were converted to OKLCH, then lightness was stepped from 15% to 95% at constant source chroma and hue. The ramps do not replace or modify the canonical palette."
+    ],
+    "colorMeta": {
+      "canvas": {
+        "role": "neutral",
+        "displayName": "Canvas",
+        "canonical": "#090e13",
+        "tonalRamp": [
+          "oklch(15% 0.013354 248.5152)",
+          "oklch(25% 0.013354 248.5152)",
+          "oklch(35% 0.013354 248.5152)",
+          "oklch(45% 0.013354 248.5152)",
+          "oklch(55% 0.013354 248.5152)",
+          "oklch(65% 0.013354 248.5152)",
+          "oklch(80% 0.013354 248.5152)",
+          "oklch(95% 0.013354 248.5152)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Surface",
+        "canonical": "#101820",
+        "tonalRamp": [
+          "oklch(15% 0.020010 248.8302)",
+          "oklch(25% 0.020010 248.8302)",
+          "oklch(35% 0.020010 248.8302)",
+          "oklch(45% 0.020010 248.8302)",
+          "oklch(55% 0.020010 248.8302)",
+          "oklch(65% 0.020010 248.8302)",
+          "oklch(80% 0.020010 248.8302)",
+          "oklch(95% 0.020010 248.8302)"
+        ]
+      },
+      "raised": {
+        "role": "neutral",
+        "displayName": "Raised",
+        "canonical": "#151e26",
+        "tonalRamp": [
+          "oklch(15% 0.020331 245.6684)",
+          "oklch(25% 0.020331 245.6684)",
+          "oklch(35% 0.020331 245.6684)",
+          "oklch(45% 0.020331 245.6684)",
+          "oklch(55% 0.020331 245.6684)",
+          "oklch(65% 0.020331 245.6684)",
+          "oklch(80% 0.020331 245.6684)",
+          "oklch(95% 0.020331 245.6684)"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Line",
+        "canonical": "#29343b",
+        "tonalRamp": [
+          "oklch(15% 0.019440 236.1485)",
+          "oklch(25% 0.019440 236.1485)",
+          "oklch(35% 0.019440 236.1485)",
+          "oklch(45% 0.019440 236.1485)",
+          "oklch(55% 0.019440 236.1485)",
+          "oklch(65% 0.019440 236.1485)",
+          "oklch(80% 0.019440 236.1485)",
+          "oklch(95% 0.019440 236.1485)"
+        ]
+      },
+      "line-strong": {
+        "role": "neutral",
+        "displayName": "Line Strong",
+        "canonical": "#34424a",
+        "tonalRamp": [
+          "oklch(15% 0.022786 233.2540)",
+          "oklch(25% 0.022786 233.2540)",
+          "oklch(35% 0.022786 233.2540)",
+          "oklch(45% 0.022786 233.2540)",
+          "oklch(55% 0.022786 233.2540)",
+          "oklch(65% 0.022786 233.2540)",
+          "oklch(80% 0.022786 233.2540)",
+          "oklch(95% 0.022786 233.2540)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#c5c9c7",
+        "tonalRamp": [
+          "oklch(15% 0.005181 164.9795)",
+          "oklch(25% 0.005181 164.9795)",
+          "oklch(35% 0.005181 164.9795)",
+          "oklch(45% 0.005181 164.9795)",
+          "oklch(55% 0.005181 164.9795)",
+          "oklch(65% 0.005181 164.9795)",
+          "oklch(80% 0.005181 164.9795)",
+          "oklch(95% 0.005181 164.9795)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted",
+        "canonical": "#a4a7a4",
+        "tonalRamp": [
+          "oklch(15% 0.005451 145.5190)",
+          "oklch(25% 0.005451 145.5190)",
+          "oklch(35% 0.005451 145.5190)",
+          "oklch(45% 0.005451 145.5190)",
+          "oklch(55% 0.005451 145.5190)",
+          "oklch(65% 0.005451 145.5190)",
+          "oklch(80% 0.005451 145.5190)",
+          "oklch(95% 0.005451 145.5190)"
+        ]
+      },
+      "subtle": {
+        "role": "neutral",
+        "displayName": "Subtle",
+        "canonical": "#747d7c",
+        "tonalRamp": [
+          "oklch(15% 0.010838 188.8588)",
+          "oklch(25% 0.010838 188.8588)",
+          "oklch(35% 0.010838 188.8588)",
+          "oklch(45% 0.010838 188.8588)",
+          "oklch(55% 0.010838 188.8588)",
+          "oklch(65% 0.010838 188.8588)",
+          "oklch(80% 0.010838 188.8588)",
+          "oklch(95% 0.010838 188.8588)"
+        ]
+      },
+      "accent": {
+        "role": "primary",
+        "displayName": "Accent",
+        "canonical": "#8ea4a2",
+        "tonalRamp": [
+          "oklch(15% 0.024802 189.9179)",
+          "oklch(25% 0.024802 189.9179)",
+          "oklch(35% 0.024802 189.9179)",
+          "oklch(45% 0.024802 189.9179)",
+          "oklch(55% 0.024802 189.9179)",
+          "oklch(65% 0.024802 189.9179)",
+          "oklch(80% 0.024802 189.9179)",
+          "oklch(95% 0.024802 189.9179)"
+        ]
+      },
+      "accent-strong": {
+        "role": "primary",
+        "displayName": "Accent Strong",
+        "canonical": "#8ba4b0",
+        "tonalRamp": [
+          "oklch(15% 0.032966 228.4233)",
+          "oklch(25% 0.032966 228.4233)",
+          "oklch(35% 0.032966 228.4233)",
+          "oklch(45% 0.032966 228.4233)",
+          "oklch(55% 0.032966 228.4233)",
+          "oklch(65% 0.032966 228.4233)",
+          "oklch(80% 0.032966 228.4233)",
+          "oklch(95% 0.032966 228.4233)"
+        ]
+      },
+      "accent-soft": {
+        "role": "primary",
+        "displayName": "Accent Soft",
+        "canonical": "#1c2b31",
+        "tonalRamp": [
+          "oklch(15% 0.022985 224.7428)",
+          "oklch(25% 0.022985 224.7428)",
+          "oklch(35% 0.022985 224.7428)",
+          "oklch(45% 0.022985 224.7428)",
+          "oklch(55% 0.022985 224.7428)",
+          "oklch(65% 0.022985 224.7428)",
+          "oklch(80% 0.022985 224.7428)",
+          "oklch(95% 0.022985 224.7428)"
+        ]
+      },
+      "success": {
+        "role": "success",
+        "displayName": "Success",
+        "canonical": "#8a9a7b",
+        "tonalRamp": [
+          "oklch(15% 0.048130 129.9031)",
+          "oklch(25% 0.048130 129.9031)",
+          "oklch(35% 0.048130 129.9031)",
+          "oklch(45% 0.048130 129.9031)",
+          "oklch(55% 0.048130 129.9031)",
+          "oklch(65% 0.048130 129.9031)",
+          "oklch(80% 0.048130 129.9031)",
+          "oklch(95% 0.048130 129.9031)"
+        ]
+      },
+      "success-soft": {
+        "role": "success",
+        "displayName": "Success Soft",
+        "canonical": "#202b25",
+        "tonalRamp": [
+          "oklch(15% 0.018794 161.0257)",
+          "oklch(25% 0.018794 161.0257)",
+          "oklch(35% 0.018794 161.0257)",
+          "oklch(45% 0.018794 161.0257)",
+          "oklch(55% 0.018794 161.0257)",
+          "oklch(65% 0.018794 161.0257)",
+          "oklch(80% 0.018794 161.0257)",
+          "oklch(95% 0.018794 161.0257)"
+        ]
+      },
+      "warning": {
+        "role": "warning",
+        "displayName": "Warning",
+        "canonical": "#c4b28a",
+        "tonalRamp": [
+          "oklch(15% 0.057795 86.5788)",
+          "oklch(25% 0.057795 86.5788)",
+          "oklch(35% 0.057795 86.5788)",
+          "oklch(45% 0.057795 86.5788)",
+          "oklch(55% 0.057795 86.5788)",
+          "oklch(65% 0.057795 86.5788)",
+          "oklch(80% 0.057795 86.5788)",
+          "oklch(95% 0.057795 86.5788)"
+        ]
+      },
+      "warning-soft": {
+        "role": "warning",
+        "displayName": "Warning Soft",
+        "canonical": "#302b21",
+        "tonalRamp": [
+          "oklch(15% 0.018832 84.4999)",
+          "oklch(25% 0.018832 84.4999)",
+          "oklch(35% 0.018832 84.4999)",
+          "oklch(45% 0.018832 84.4999)",
+          "oklch(55% 0.018832 84.4999)",
+          "oklch(65% 0.018832 84.4999)",
+          "oklch(80% 0.018832 84.4999)",
+          "oklch(95% 0.018832 84.4999)"
+        ]
+      },
+      "danger": {
+        "role": "danger",
+        "displayName": "Danger",
+        "canonical": "#c4746e",
+        "tonalRamp": [
+          "oklch(15% 0.101883 24.8553)",
+          "oklch(25% 0.101883 24.8553)",
+          "oklch(35% 0.101883 24.8553)",
+          "oklch(45% 0.101883 24.8553)",
+          "oklch(55% 0.101883 24.8553)",
+          "oklch(65% 0.101883 24.8553)",
+          "oklch(80% 0.101883 24.8553)",
+          "oklch(95% 0.101883 24.8553)"
+        ]
+      },
+      "danger-strong": {
+        "role": "danger",
+        "displayName": "Danger Strong",
+        "canonical": "#b96561",
+        "tonalRamp": [
+          "oklch(15% 0.108641 23.6713)",
+          "oklch(25% 0.108641 23.6713)",
+          "oklch(35% 0.108641 23.6713)",
+          "oklch(45% 0.108641 23.6713)",
+          "oklch(55% 0.108641 23.6713)",
+          "oklch(65% 0.108641 23.6713)",
+          "oklch(80% 0.108641 23.6713)",
+          "oklch(95% 0.108641 23.6713)"
+        ]
+      },
+      "danger-soft": {
+        "role": "danger",
+        "displayName": "Danger Soft",
+        "canonical": "#392523",
+        "tonalRamp": [
+          "oklch(15% 0.030923 25.5218)",
+          "oklch(25% 0.030923 25.5218)",
+          "oklch(35% 0.030923 25.5218)",
+          "oklch(45% 0.030923 25.5218)",
+          "oklch(55% 0.030923 25.5218)",
+          "oklch(65% 0.030923 25.5218)",
+          "oklch(80% 0.030923 25.5218)",
+          "oklch(95% 0.030923 25.5218)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Declared global display size; rendered headings are locally sized."
+      },
+      "heading": {
+        "displayName": "Heading",
+        "purpose": "Declared global heading size; section headings are often locally sized."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Declared global body token; rendered copy commonly uses local sizes."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "Declared global caption token."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Observed semibold 14px/20px monospace button text."
+      },
+      "control": {
+        "displayName": "Control Text",
+        "purpose": "Observed normal-weight 14px/20px monospace input text."
+      },
+      "status": {
+        "displayName": "Status Label",
+        "purpose": "Observed semibold 12px/16px monospace status text."
+      }
+    },
+    "shadows": [
+      {
+        "name": "panel",
+        "value": "0 18px 44px rgb(0 0 0 / 0.22)",
+        "purpose": "Ambient depth for cards and panels."
+      },
+      {
+        "name": "glow",
+        "value": "0 0 0 1px rgb(142 164 162 / 0.12), 0 12px 30px rgb(0 0 0 / 0.2)",
+        "purpose": "Primary hover emphasis and hovered monitor rows."
+      },
+      {
+        "name": "tailwind-shadow-sm",
+        "value": "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
+        "purpose": "Tailwind shadow-sm used by the shared primary button and sticky app header."
+      }
+    ],
+    "motion": [
+      {
+        "name": "global-control-transition",
+        "value": "160ms ease; color, background-color, border-color, box-shadow, opacity",
+        "purpose": "Unlayered global transition declarations on buttons, inputs, and links override layered Tailwind transition utilities for these properties."
+      },
+      {
+        "name": "button-press",
+        "value": "scale(0.98); not transitioned by the global property list",
+        "purpose": "Button active state; disabled buttons suppress the scale."
+      },
+      {
+        "name": "monitor-row-transition",
+        "value": "200ms; hover translateY(-2px)",
+        "purpose": "Row-local lift, border, and glow response."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "transition-duration and animation-duration 0.01ms; animation-iteration-count 1",
+        "purpose": "Global prefers-reduced-motion override."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Compact primary action with accent fill, built-in shadow-sm, and accent hover glow.",
+      "html": "<button class=\"ds-button-primary\" type=\"button\">Create monitor</button>",
+      "css": ".ds-button-primary { appearance: none; border: 0; border-radius: var(--radius-control, 0.625rem); padding: 0.625rem 1rem; background: var(--color-accent-strong, #8ba4b0); color: var(--color-canvas, #090e13); font: 600 14px/20px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace; box-shadow: var(--shadow-sm, 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)); cursor: pointer; transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, opacity 160ms ease; } .ds-button-primary:hover { background: var(--color-accent, #8ea4a2); box-shadow: var(--shadow-glow, 0 0 0 1px rgb(142 164 162 / 0.12), 0 12px 30px rgb(0 0 0 / 0.2)); } .ds-button-primary:focus-visible { outline: 2px solid var(--color-accent, #8ea4a2); outline-offset: 3px; box-shadow: 0 0 0 2px rgb(142 164 162 / 0.4), var(--shadow-sm, 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)); } .ds-button-primary:active { transform: scale(0.98); } .ds-button-primary:disabled { opacity: 0.5; cursor: not-allowed; } .ds-button-primary:disabled:active { transform: scale(1); } @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; } }"
+    },
+    {
+      "name": "Primary Button Hover",
+      "kind": "button",
+      "refersTo": "button-primary-hover",
+      "description": "The primary action hover state: accent fill and ambient glow.",
+      "html": "<button class=\"ds-button-primary-hover\" type=\"button\">Create monitor</button>",
+      "css": ".ds-button-primary-hover { appearance: none; border: 0; border-radius: var(--radius-control, 0.625rem); padding: 0.625rem 1rem; background: var(--color-accent, #8ea4a2); color: var(--color-canvas, #090e13); font: 600 14px/20px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace; box-shadow: var(--shadow-glow, 0 0 0 1px rgb(142 164 162 / 0.12), 0 12px 30px rgb(0 0 0 / 0.2)); cursor: pointer; transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, opacity 160ms ease; } .ds-button-primary-hover:focus-visible { outline: 2px solid var(--color-accent, #8ea4a2); outline-offset: 3px; box-shadow: 0 0 0 2px rgb(142 164 162 / 0.4), var(--shadow-glow, 0 0 0 1px rgb(142 164 162 / 0.12), 0 12px 30px rgb(0 0 0 / 0.2)); } .ds-button-primary-hover:active { transform: scale(0.98); } .ds-button-primary-hover:disabled { opacity: 0.5; cursor: not-allowed; } .ds-button-primary-hover:disabled:active { transform: scale(1); } @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; } }"
+    },
+    {
+      "name": "Danger Button",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "Destructive confirmation variant, with a separate danger hover treatment.",
+      "html": "<button class=\"ds-button-danger\" type=\"button\">Delete monitor</button>",
+      "css": ".ds-button-danger { appearance: none; border: 0; border-radius: var(--radius-control, 0.625rem); padding: 0.625rem 1rem; background: var(--color-danger-strong, #b96561); color: var(--color-canvas, #090e13); font: 600 14px/20px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace; cursor: pointer; transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, opacity 160ms ease; } .ds-button-danger:hover { background: var(--color-danger, #c4746e); } .ds-button-danger:focus-visible { outline: 2px solid var(--color-accent, #8ea4a2); outline-offset: 3px; box-shadow: 0 0 0 2px rgb(142 164 162 / 0.4); } .ds-button-danger:active { transform: scale(0.98); } .ds-button-danger:disabled { opacity: 0.5; cursor: not-allowed; } .ds-button-danger:disabled:active { transform: scale(1); } @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; } }"
+    },
+    {
+      "name": "Danger Button Hover",
+      "kind": "button",
+      "refersTo": "button-danger-hover",
+      "description": "Destructive button hover shifts to the danger state color.",
+      "html": "<button class=\"ds-button-danger-hover\" type=\"button\">Delete monitor</button>",
+      "css": ".ds-button-danger-hover { appearance: none; border: 0; border-radius: var(--radius-control, 0.625rem); padding: 0.625rem 1rem; background: var(--color-danger, #c4746e); color: var(--color-canvas, #090e13); font: 600 14px/20px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace; cursor: pointer; transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, opacity 160ms ease; } .ds-button-danger-hover:focus-visible { outline: 2px solid var(--color-accent, #8ea4a2); outline-offset: 3px; box-shadow: 0 0 0 2px rgb(142 164 162 / 0.4); } .ds-button-danger-hover:active { transform: scale(0.98); } .ds-button-danger-hover:disabled { opacity: 0.5; cursor: not-allowed; } .ds-button-danger-hover:disabled:active { transform: scale(1); } @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; } }"
+    },
+    {
+      "name": "Demo Button",
+      "kind": "button",
+      "refersTo": "button-demo",
+      "description": "Feature-local secondary action for demo access; distinct from the shared primary and danger variants.",
+      "html": "<button class=\"ds-button-demo\" type=\"button\">Try the demo</button>",
+      "css": ".ds-button-demo { appearance: none; border: 1px solid rgb(142 164 162 / 0.4); border-radius: var(--radius-control, 0.625rem); box-sizing: border-box; width: 100%; height: 2.75rem; padding: 0 1rem; background: var(--color-accent-soft, #1c2b31); color: var(--color-accent, #8ea4a2); font: 600 14px/20px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace; cursor: pointer; transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, opacity 160ms ease; } .ds-button-demo:hover { border-color: var(--color-accent, #8ea4a2); background: rgb(142 164 162 / 0.2); box-shadow: var(--shadow-glow, 0 0 0 1px rgb(142 164 162 / 0.12), 0 12px 30px rgb(0 0 0 / 0.2)); } .ds-button-demo:focus-visible { outline: 2px solid var(--color-accent, #8ea4a2); outline-offset: 3px; box-shadow: 0 0 0 2px rgb(142 164 162 / 0.4); } .ds-button-demo:active { transform: scale(0.98); } .ds-button-demo:disabled { opacity: 0.5; cursor: not-allowed; } .ds-button-demo:disabled:active { transform: scale(1); } @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; } }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Single-line text input with canvas fill and explicit focus and invalid states.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Monitor name\" aria-label=\"Monitor name\" />",
+      "css": ".ds-input { display: block; box-sizing: border-box; width: 100%; border: 1px solid var(--color-line-strong, #34424a); border-radius: var(--radius-control, 0.625rem); padding: 0.625rem 0.75rem; background: var(--color-canvas, #090e13); color: var(--color-ink, #c5c9c7); font: 400 14px/20px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace; transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, opacity 160ms ease; } .ds-input::placeholder { color: var(--color-subtle, #747d7c); } .ds-input:hover { border-color: rgb(142 164 162 / 0.4); } .ds-input:focus { border-color: var(--color-accent, #8ea4a2); outline: none; box-shadow: 0 0 0 2px rgb(142 164 162 / 0.3); } .ds-input:focus-visible { outline: 2px solid var(--color-accent, #8ea4a2); outline-offset: 3px; } .ds-input[aria-invalid=\"true\"] { border-color: var(--color-danger, #c4746e); color: var(--color-danger, #c4746e); } .ds-input:disabled { opacity: 0.5; cursor: not-allowed; } @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; } }"
+    },
+    {
+      "name": "App Header Navigation",
+      "kind": "nav",
+      "refersTo": "nav-header",
+      "description": "Sticky, wrapping brand-and-logout header with the actual inline Sentinel mark and serif wordmark.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Account\"><span class=\"ds-nav-brand\"><span class=\"ds-nav-mark\" aria-hidden=\"true\"><svg viewBox=\"0 0 32 32\" fill=\"none\" focusable=\"false\"><circle cx=\"16\" cy=\"16\" r=\"11.5\" stroke=\"currentColor\" stroke-width=\"1.5\"/><circle cx=\"16\" cy=\"16\" r=\"6.5\" stroke=\"currentColor\" stroke-width=\"1.5\" opacity=\"0.65\"/><path d=\"M16 4.5v23M4.5 16h23M16 16l7.5-7.5\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\"/><circle cx=\"23.5\" cy=\"8.5\" r=\"2\" fill=\"currentColor\"/></svg></span><span class=\"ds-nav-wordmark\">Sentinel</span></span><button class=\"ds-nav-action\" type=\"button\">Log out</button></nav>",
+      "css": ".ds-nav { display: flex; position: sticky; top: 0; z-index: 10; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; border-bottom: 1px solid rgb(41 52 59 / 0.8); padding: 1rem; background: rgb(9 14 19 / 0.8); color: var(--color-muted, #a4a7a4); box-shadow: var(--shadow-sm, 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)); backdrop-filter: blur(12px); font: 400 14px/20px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace; } .ds-nav-brand { display: inline-flex; align-items: center; gap: 0.75rem; } .ds-nav-mark { display: flex; width: 2rem; height: 2rem; flex: none; align-items: center; justify-content: center; border-radius: var(--radius-control, 0.625rem); background: var(--color-accent-soft, #1c2b31); color: var(--color-accent, #8ea4a2); box-shadow: 0 0 0 1px rgb(142 164 162 / 0.2), var(--shadow-sm, 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)); } .ds-nav-mark svg { width: 1.5rem; height: 1.5rem; } .ds-nav-wordmark { color: var(--color-ink, #c5c9c7); font: 600 20px/28px Georgia, 'Times New Roman', serif; letter-spacing: 0.025em; } .ds-nav-action { flex: none; white-space: nowrap; border: 1px solid var(--color-line-strong, #34424a); border-radius: var(--radius-control, 0.625rem); padding: 0.5rem 0.75rem; background: transparent; color: var(--color-muted, #a4a7a4); font: 400 14px/20px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace; cursor: pointer; transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, opacity 160ms ease; } .ds-nav-action:hover { border-color: var(--color-accent, #8ea4a2); background: var(--color-raised, #151e26); color: var(--color-ink, #c5c9c7); } .ds-nav-action:focus-visible { outline: 2px solid var(--color-accent, #8ea4a2); outline-offset: 3px; box-shadow: 0 0 0 2px rgb(142 164 162 / 0.4); } .ds-nav-action:active { transform: scale(0.98); } @media (min-width: 640px) { .ds-nav { padding-right: 1.5rem; padding-left: 1.5rem; } } @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; } }"
+    },
+    {
+      "name": "Healthy Status Pill",
+      "kind": "chip",
+      "refersTo": "status-pill-healthy",
+      "description": "Non-interactive healthy state label with explicit text and semantic tint.",
+      "html": "<span class=\"ds-status-pill-healthy\"><span aria-hidden=\"true\">✓</span> Healthy</span>",
+      "css": ".ds-status-pill-healthy { display: inline-flex; align-items: center; gap: 0.375rem; border: 1px solid rgb(138 154 123 / 0.3); border-radius: var(--radius-control, 0.625rem); padding: 0.25rem 0.625rem; background: var(--color-success-soft, #202b25); color: var(--color-success, #8a9a7b); font: 600 12px/16px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace; }"
+    },
+    {
+      "name": "Public Status Badge",
+      "kind": "chip",
+      "refersTo": "public-status-badge",
+      "description": "Capsule-shaped public status badge, distinct from the protected app's control-radius pill.",
+      "html": "<span class=\"ds-public-status-badge\"><span aria-hidden=\"true\">✓</span> Operational</span>",
+      "css": ".ds-public-status-badge { display: inline-flex; width: fit-content; align-items: center; gap: 0.5rem; border: 1px solid rgb(138 154 123 / 0.3); border-radius: 9999px; padding: 0.375rem 0.75rem; background: var(--color-success-soft, #202b25); color: var(--color-success, #8a9a7b); font: 600 12px/16px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace; } @media (min-width: 640px) { .ds-public-status-badge { font-size: 14px; line-height: 20px; } }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Tonal content container with quiet border and ambient panel shadow.",
+      "html": "<article class=\"ds-card\"><h2 class=\"ds-card-title\">Monitor overview</h2><p>Latest check recorded.</p></article>",
+      "css": ".ds-card { border: 1px solid var(--color-line, #29343b); border-radius: var(--radius-panel, 0.875rem); padding: 1.25rem; background: var(--color-surface, #101820); color: var(--color-ink, #c5c9c7); box-shadow: var(--shadow-panel, 0 18px 44px rgb(0 0 0 / 0.22)); font: 400 14px/20px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace; } .ds-card-title { margin: 0 0 0.75rem; color: var(--color-ink, #c5c9c7); font: 600 24px/30px Georgia, 'Times New Roman', serif; } .ds-card p { margin: 0; color: var(--color-muted, #a4a7a4); font: 400 14px/20px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace; } @media (min-width: 640px) { .ds-card { padding: 1.5rem; } }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Watchkeeper’s Log",
+    "overview": "Sentinel is a calm, instrumental interface for continuous observation. Dark tonal layers, muted contrast, and a restrained serif-and-monospace pairing give operational information a stable hierarchy; state colors remain moderate signals rather than decoration. The voice is **Calm and instrumental**: measured, legible, and oriented around what is happening now.",
+    "keyCharacteristics": [
+      "Dark, layered canvas and surfaces",
+      "Functional color names and explicit status labels",
+      "Serif headings alongside a monospace-led interface"
+    ],
+    "rules": [],
+    "dos": [
+      "**Do** use the frontmatter's functional color names and preserve explicit semantic status labels.",
+      "**Do** retain the serif-heading / monospace-interface contrast and the tonal layering of the dark surfaces.",
+      "**Do** treat shared `Button`, `Input`, and `Card` as primitives while honoring feature-local differences."
+    ],
+    "donts": [
+      "**Don't** assume every control has a 44px minimum height; 44px appears in feature-local examples such as login and monitor creation.",
+      "**Don't** turn status pills into interactive controls or communicate state through color alone.",
+      "**Don't** invent tab navigation, a light theme, or external font loading; none is present in the current implementation."
+    ]
+  }
+}

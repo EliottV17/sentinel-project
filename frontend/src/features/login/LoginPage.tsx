@@ -16,8 +16,9 @@ type LoginValues = z.infer<typeof loginSchema>;
 
 export function LoginPage() {
   const { isAuthenticated, login, demoLogin } = useAuth();
-  const [demoSubmitting, setDemoSubmitting] = useState(false);
+  const [activeOperation, setActiveOperation] = useState<"login" | "demo" | null>(null);
   const [demoError, setDemoError] = useState<string | null>(null);
+  const busyRef = useRef(false);
   const navigate = useNavigate();
   const location = useLocation();
   const accountCreated =
@@ -37,7 +38,7 @@ export function LoginPage() {
     register,
     handleSubmit,
     setError,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
   });
@@ -52,7 +53,9 @@ export function LoginPage() {
   }, [isAuthenticated, navigate]);
 
   const onDemoLogin = async () => {
-    setDemoSubmitting(true);
+    if (busyRef.current) return;
+    busyRef.current = true;
+    setActiveOperation("demo");
     setDemoError(null);
     ownsNavigationRef.current = true;
     try {
@@ -65,11 +68,15 @@ export function LoginPage() {
           : "Unable to sign in to the demo right now. Please try again.",
       );
     } finally {
-      setDemoSubmitting(false);
+      busyRef.current = false;
+      setActiveOperation(null);
     }
   };
 
   const onSubmit = handleSubmit(async (values) => {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    setActiveOperation("login");
     ownsNavigationRef.current = true;
     try {
       await login(values.username, values.password);
@@ -80,6 +87,9 @@ export function LoginPage() {
       } else {
         setError("root", { message: "API unreachable" });
       }
+    } finally {
+      busyRef.current = false;
+      setActiveOperation(null);
     }
   });
 
@@ -152,10 +162,10 @@ export function LoginPage() {
             )}
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={activeOperation !== null}
               className="mt-1 h-11 w-full rounded-control bg-accent-strong px-4 text-sm font-semibold text-canvas shadow-sm transition duration-150 hover:bg-accent hover:shadow-glow active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100"
             >
-              Sign in
+              {activeOperation === "login" ? "Signing in…" : "Sign in"}
             </button>
           </form>
 
@@ -171,11 +181,11 @@ export function LoginPage() {
           )}
           <button
             type="button"
-            disabled={demoSubmitting}
+            disabled={activeOperation !== null}
             onClick={onDemoLogin}
             className="h-11 w-full rounded-control border border-accent/40 bg-accent-soft px-4 text-sm font-semibold text-accent transition duration-150 hover:border-accent hover:bg-accent/20 hover:shadow-glow active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100"
           >
-            {demoSubmitting ? "Opening demo…" : "Try the demo"}
+            {activeOperation === "demo" ? "Opening demo…" : "Try the demo"}
           </button>
           <p className="mt-3 text-center text-xs text-muted">Explore the demo. Data resets every hour.</p>
           <div className="mt-7 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 border-t border-line pt-5 text-center text-sm text-muted">

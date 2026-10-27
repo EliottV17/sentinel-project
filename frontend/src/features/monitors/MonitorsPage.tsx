@@ -139,7 +139,7 @@ export function MonitorsPage() {
             </div>
           )
         ) : query.isError ? (
-          <div role="alert" className="rounded-panel border border-danger/30 bg-danger-soft p-5 text-sm leading-6 text-danger">
+          <div role="alert" className="rounded-panel border border-danger/30 bg-surface p-5 text-sm leading-6 text-danger">
             {initialErrorMessage(query.error)}
           </div>
         ) : null}

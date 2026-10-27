@@ -47,7 +47,7 @@ function CheckState({ state }: { state: string }) {
   const healthy = state === "healthy";
   const unhealthy = state === "unhealthy";
   const label = healthy ? "Healthy" : unhealthy ? "Down" : "Unknown";
-  return <span className={`inline-flex items-center gap-2 rounded-control border px-2.5 py-1 text-xs font-semibold ${healthy ? "border-success/30 bg-success-soft text-success" : unhealthy ? "border-danger/30 bg-danger-soft text-danger" : "border-line bg-raised text-muted"}`}>
+  return <span className={`inline-flex items-center gap-2 rounded-control border px-2.5 py-1 text-xs font-semibold ${healthy ? "border-success/30 bg-success-soft text-success" : unhealthy ? "border-danger/30 bg-surface text-danger" : "border-line bg-raised text-muted"}`}>
     <span aria-hidden="true">{healthy ? "✓" : unhealthy ? "×" : "?"}</span>{label}
   </span>;
 }

@@ -153,6 +153,7 @@ describe("RegisterPage", () => {
     fillRegistration();
     await submitRegistration();
     expect(await screen.findByRole("alert")).toHaveTextContent(expected);
+    expect(screen.getByRole("alert")).toHaveClass("bg-surface", "text-danger", "border-danger/30");
     if (status === 400) expect(screen.getByLabelText("Email")).toHaveAttribute("aria-invalid", "true");
     expect(loc()).toBe("/register");
     expect(screen.queryByText("Database password leaked")).not.toBeInTheDocument();
@@ -182,6 +183,15 @@ describe("RegisterPage", () => {
     await waitFor(() => expect(calls).toBe(1));
     await act(async () => release());
     await waitFor(() => expect(screen.getByTestId("loc")).toHaveTextContent("/login"));
+  });
+
+  it("keeps demo failure text on the passing danger/surface pair", async () => {
+    server.use(http.post("/api/v1/auth/demo-login", () => HttpResponse.error()));
+    renderRegisterPage();
+    fireEvent.click(screen.getByRole("button", { name: "Try the demo" }));
+    const error = await screen.findByRole("alert");
+    expect(error).toHaveTextContent("Unable to open the demo right now");
+    expect(error).toHaveClass("bg-surface", "text-danger", "border-danger/30");
   });
 
   it("routes demo access through the existing flow, with busy-state protection", async () => {

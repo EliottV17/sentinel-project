@@ -91,6 +91,15 @@ afterEach(() => {
 });
 
 describe("MonitorsPage", () => {
+  it("uses the passing danger/surface pair for an initial load error", async () => {
+    failing = true;
+    renderPage(0);
+    await settle();
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent("The monitor service is temporarily unavailable");
+    expect(alert).toHaveClass("bg-surface", "text-danger", "border-danger/30");
+  });
+
   it("reevaluates identical monitor data exactly past the freshness threshold without extra requests", async () => {
     vi.setSystemTime(new Date("2025-01-15T10:00:00.000Z"));
     const lastChecked = new Date(Date.now()).toISOString();

@@ -156,7 +156,7 @@ export function LoginPage() {
               )}
             </div>
             {errors.root !== undefined && (
-              <p role="alert" className="rounded-control border border-danger/30 bg-danger-soft px-3 py-2 text-sm text-danger">
+              <p role="alert" className="rounded-control border border-danger/30 bg-surface px-3 py-2 text-sm text-danger">
                 {errors.root.message}
               </p>
             )}
@@ -175,7 +175,7 @@ export function LoginPage() {
             <span className="h-px flex-1 bg-line" />
           </div>
           {demoError !== null && (
-            <p role="alert" className="mb-3 rounded-control border border-danger/30 bg-danger-soft px-3 py-2 text-center text-sm text-danger">
+            <p role="alert" className="mb-3 rounded-control border border-danger/30 bg-surface px-3 py-2 text-center text-sm text-danger">
               {demoError}
             </p>
           )}

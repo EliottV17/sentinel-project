@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 import { StatusPill } from "./StatusPill";
 
 describe("StatusPill", () => {
-  it("shows an active check result", () => {
+  it("shows an active check result with the passing danger/surface treatment", () => {
     render(<StatusPill state="Active" lastState="unhealthy" />);
+    const pill = screen.getByText("Unhealthy").closest("span.rounded-control")!;
+    expect(pill).toHaveClass("bg-surface", "text-danger", "border-danger/30");
     expect(screen.getByText("Unhealthy")).toBeInTheDocument();
   });
 

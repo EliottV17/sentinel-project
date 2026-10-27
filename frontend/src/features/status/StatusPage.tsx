@@ -15,7 +15,7 @@ const REFRESH_INTERVAL_MS = 30_000;
 const statusStyle: Record<StatusLabel, string> = {
   "Operational": "border-success/30 bg-success-soft text-success",
   "Degraded": "border-warning/30 bg-warning-soft text-warning",
-  "Down": "border-danger/30 bg-danger-soft text-danger",
+  "Down": "border-danger/30 bg-surface text-danger",
   "No data": "border-line bg-raised text-muted",
 };
 

@@ -210,6 +210,7 @@ describe("MonitorHistoryPage", () => {
 
     expect(await screen.findByRole("heading", { name: "Primary API" })).toBeInTheDocument();
     expect(screen.getByText("Unhealthy")).toBeInTheDocument();
+    expect(screen.getByText("Unhealthy").closest("span.rounded-control")).toHaveClass("bg-surface", "text-danger", "border-danger/30");
     expect(screen.getByText("In the last 3 checks")).toBeInTheDocument();
     expect(screen.getByText(/Metrics use 3 loaded checks/)).toBeInTheDocument();
     expect(screen.getByText(/Jan 15, 2025/)).toBeInTheDocument();
@@ -230,6 +231,7 @@ describe("MonitorHistoryPage", () => {
     expect(screen.getByText("<img src=x>plain text")).toBeInTheDocument();
     const rows = screen.getAllByRole("row");
     expect(within(rows[1]).getByText("503")).toBeInTheDocument();
+    expect(within(rows[1]).getByText("Down").closest("span.rounded-control")).toHaveClass("bg-surface", "text-danger", "border-danger/30");
     expect(rows[1].querySelector("time")?.title).toBeTruthy();
     expect(screen.queryByText(/response_sample/i)).not.toBeInTheDocument();
   });

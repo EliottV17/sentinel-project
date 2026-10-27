@@ -124,7 +124,7 @@ input {
 
 .status-badge.border-red-300 {
   border-color: rgb(196 116 110 / 0.3);
-  background-color: var(--color-danger-soft);
+  background-color: var(--color-surface);
   color: var(--color-danger);
 }
 
@@ -140,7 +140,7 @@ input {
 }
 
 .pill-status.bg-red-100 {
-  background-color: var(--color-danger-soft);
+  background-color: var(--color-surface);
   color: var(--color-danger);
 }
 

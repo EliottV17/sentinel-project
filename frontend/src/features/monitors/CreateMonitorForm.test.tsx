@@ -247,8 +247,8 @@ describe("CreateMonitorForm", () => {
     renderHarness();
     fillAndSubmit({ name: "x", target: "https://ok.example.com" });
     await settle();
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Target already exists",
-    );
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("Target already exists");
+    expect(alert).toHaveClass("bg-surface", "text-danger", "border-danger/30");
   });
 });

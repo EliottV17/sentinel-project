@@ -100,7 +100,9 @@ describe("DeleteButton", () => {
     renderHarness([monitor({ name })]);
     await settle();
 
-    fireEvent.click(screen.getByRole("button", { name: `Delete ${name}` }));
+    const trigger = screen.getByRole("button", { name: `Delete ${name}` });
+    expect(trigger).toHaveClass("text-danger", "hover:bg-surface");
+    fireEvent.click(trigger);
     expect(screen.getByText(`Delete monitor ${name}?`)).toBeInTheDocument();
     expect(deleteCalls).toBe(0);
 

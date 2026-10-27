@@ -86,7 +86,7 @@ export function DeleteButton({
           setMessage(null);
           setConfirming(true);
         }}
-        className="min-h-11 rounded-control border border-transparent px-2.5 py-1.5 text-xs font-medium text-danger transition duration-150 hover:border-danger/30 hover:bg-danger-soft active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+        className="min-h-11 rounded-control border border-transparent px-2.5 py-1.5 text-xs font-medium text-danger transition duration-150 hover:border-danger/30 hover:bg-surface active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
       >
         Delete{monitorName !== undefined ? ` ${monitorName}` : ""}
       </button>

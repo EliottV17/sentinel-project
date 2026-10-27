@@ -63,7 +63,7 @@ describe("MonitorList", () => {
   it("maps last_state only: unhealthy → red Unhealthy pill", () => {
     renderList([monitor({ last_state: "unhealthy", consecutive_failures: 3 })]);
     const pill = screen.getByText("Unhealthy");
-    expect(pill.className).toContain("bg-danger-soft");
+    expect(pill).toHaveClass("bg-surface", "text-danger");
   });
 
   it("maps last_state null → muted 'Never checked' pill", () => {

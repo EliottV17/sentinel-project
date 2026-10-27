@@ -10,7 +10,7 @@ interface PillStyle {
 
 const PILL_STYLES: Record<string, PillStyle> = {
   healthy: { label: "Healthy", className: "border-success/30 bg-success-soft text-success" },
-  unhealthy: { label: "Unhealthy", className: "border-danger/30 bg-danger-soft text-danger" },
+  unhealthy: { label: "Unhealthy", className: "border-danger/30 bg-surface text-danger" },
 };
 
 const MUTED_STYLE = "border-line bg-raised text-muted";

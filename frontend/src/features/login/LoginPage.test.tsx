@@ -223,6 +223,7 @@ describe("LoginPage", () => {
     await waitFor(() =>
       expect(screen.getByText("Invalid credentials or email")).toBeInTheDocument(),
     );
+    expect(screen.getByRole("alert")).toHaveClass("bg-surface", "text-danger", "border-danger/30");
     expect(loc()).toBe("/login");
     expect(screen.getByLabelText("Username or email")).toHaveValue("bad");
   });
@@ -286,6 +287,7 @@ describe("LoginPage", () => {
     });
 
     expect(await screen.findByText("Demo access is currently unavailable. Please try again later.")).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveClass("bg-surface", "text-danger", "border-danger/30");
     expect(loc()).toBe("/login");
     fireEvent.click(screen.getByRole("button", { name: "Try the demo" }));
     await waitFor(() => expect(calls).toBe(2));

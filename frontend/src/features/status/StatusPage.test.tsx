@@ -112,7 +112,11 @@ describe("public status page", () => {
     renderApp();
     expect(await screen.findAllByText("Down")).toHaveLength(2);
     expect(screen.getByRole("heading", { name: "System status" })).toBeInTheDocument();
-    expect(screen.getAllByRole("status", { name: /Down/ })).toHaveLength(2);
+    const downStatuses = screen.getAllByRole("status", { name: /Down/ });
+    expect(downStatuses).toHaveLength(2);
+    for (const status of downStatuses) {
+      expect(status).toHaveClass("bg-surface", "text-danger", "border-danger/30");
+    }
   });
 
   it("shows an explicit empty state", async () => {

@@ -232,7 +232,7 @@ export function CreateMonitorForm({
         )}
       </div>
       {errors.root !== undefined && (
-        <p role="alert" className="rounded-control border border-danger/30 bg-danger-soft px-3 py-2 text-sm text-danger">
+        <p role="alert" className="rounded-control border border-danger/30 bg-surface px-3 py-2 text-sm text-danger">
           {errors.root.message}
         </p>
       )}

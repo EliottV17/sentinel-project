@@ -101,7 +101,10 @@ describe("DeleteButton", () => {
     await settle();
 
     const trigger = screen.getByRole("button", { name: `Delete ${name}` });
-    expect(trigger).toHaveClass("text-danger", "hover:bg-surface");
+    expect(trigger).toHaveClass("text-danger", "hover:bg-surface", "min-h-11");
+    // The row already identifies the monitor. Keep its full name for assistive
+    // technology and confirmation without repeating it on a narrow action.
+    expect(trigger.textContent).toBe("Delete");
     fireEvent.click(trigger);
     expect(screen.getByText(`Delete monitor ${name}?`)).toBeInTheDocument();
     expect(deleteCalls).toBe(0);

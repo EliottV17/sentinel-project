@@ -147,11 +147,11 @@ export function MonitorHistoryPage() {
   const alertsHasError = historyData.alertsError !== null && historyData.alertsError !== undefined;
   const historyPending = historyData.historyIsLoading && !historyData.history;
   return <div className="min-w-0 space-y-6 sm:space-y-8">
-    <a href="/" className="inline-flex items-center gap-2 rounded-control text-sm font-medium text-muted transition duration-150 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"><span aria-hidden="true">←</span> All monitors</a>
+    <a href="/" className="inline-flex min-h-11 items-center gap-2 rounded-control text-sm font-medium text-muted transition duration-150 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"><span aria-hidden="true">←</span> All monitors</a>
     {Boolean(historyData.metadataError) && <FailureMessage error={historyData.metadataError} hasData={Boolean(monitor)} />}
     {monitor && <header className="rounded-panel border border-line bg-surface p-5 shadow-panel sm:p-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0"><h1 className="break-words font-serif text-3xl font-semibold tracking-tight text-ink sm:text-4xl">{monitor.name}</h1><p className="mt-2 break-all font-mono text-sm text-muted">{monitor.target}</p></div>
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:justify-between">
+        <div className="w-full min-w-0 sm:w-auto sm:flex-1"><h1 className="break-words font-serif text-3xl font-semibold tracking-tight text-ink sm:text-4xl">{monitor.name}</h1><p className="mt-2 break-all font-mono text-sm text-muted">{monitor.target}</p></div>
         <StatusPill state={monitor.state} lastState={monitor.last_state} />
       </div>
       <p className="mt-4 border-t border-line pt-4 text-sm leading-6 text-muted">{monitor.state === "Active" ? <>Checks run every <span className="font-mono font-medium text-ink">{monitor.frequency} seconds</span>.</> : "Checks are paused."}</p>

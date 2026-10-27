@@ -7,16 +7,16 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { user, isDemo, logout } = useAuth();
   return (
     <div className="min-h-screen bg-canvas text-ink">
-      <header className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 border-b border-line/80 bg-canvas/80 px-4 py-4 shadow-sm backdrop-blur-md sm:px-6">
+      <header className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-line/80 bg-canvas/80 px-4 py-2 shadow-sm backdrop-blur-md sm:px-6 sm:py-4">
         <SentinelBrand compact />
-        <div className="flex max-w-full flex-wrap items-center justify-end gap-3">
+        <div className="flex max-w-full min-w-[min(100%,14rem)] flex-wrap items-center justify-end gap-3">
           {user !== null && (
-            <span className="min-w-0 break-all text-sm font-medium text-muted">{user}</span>
+            <span className="min-w-0 flex-1 basis-28 break-all text-right text-sm font-medium text-muted">{user}</span>
           )}
           <button
             type="button"
             onClick={logout}
-            className="shrink-0 whitespace-nowrap rounded-control border border-line-strong px-3 py-2 text-sm text-muted transition duration-150 hover:border-accent hover:bg-raised hover:text-ink active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+            className="min-h-11 shrink-0 whitespace-nowrap rounded-control border border-line-strong px-3 py-2 text-sm text-muted transition duration-150 hover:border-accent hover:bg-raised hover:text-ink active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
           >
             Log out
           </button>

@@ -77,25 +77,26 @@ export function DeleteButton({
   };
 
   return (
-    <span className="inline-flex min-w-0 flex-col items-start gap-1">
+    <span className="inline-flex max-w-full min-w-0 flex-col items-start gap-1">
       <button
         ref={triggerRef}
         type="button"
         hidden={confirming}
+        aria-label={monitorName !== undefined ? `Delete ${monitorName}` : "Delete"}
         onClick={() => {
           setMessage(null);
           setConfirming(true);
         }}
         className="min-h-11 rounded-control border border-transparent px-2.5 py-1.5 text-xs font-medium text-danger transition duration-150 hover:border-danger/30 hover:bg-surface active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
       >
-        Delete{monitorName !== undefined ? ` ${monitorName}` : ""}
+        Delete
       </button>
       {confirming && (
         <span
-          className="inline-flex min-w-0 flex-wrap items-center gap-2"
+          className="inline-flex max-w-full min-w-0 flex-wrap items-center gap-2"
           aria-busy={deleteMonitor.isPending}
         >
-          <span role="status" aria-live="polite" className="text-xs text-muted">
+          <span role="status" aria-live="polite" className="min-w-0 break-words text-xs text-muted">
             Delete monitor {name}?
             {message !== null && <span className="block text-danger">{message}</span>}
           </span>

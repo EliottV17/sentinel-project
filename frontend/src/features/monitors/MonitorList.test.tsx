@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import type { components } from "../../lib/api/schema";
@@ -52,6 +52,27 @@ describe("MonitorList", () => {
     expect(screen.getByText("https://api.example.com")).toBeInTheDocument();
     expect(screen.getByText(/every 60s/)).toBeInTheDocument();
     expect(screen.getByText("Failures").parentElement?.parentElement).toHaveTextContent("Failures2 consecutive");
+  });
+
+  it("keeps long-name navigation separate from compact deletion and preserves stale context", () => {
+    const name = "ProductionPaymentsGatewayWithoutWordBreaksForRegionalFailoverMonitoring";
+    const target = "https://regional-payments.example.invalid/health/very-long-endpoint";
+    renderList([monitor({ name, target, last_state: "unhealthy", last_checked_at: "2025-01-15T09:55:00" })]);
+
+    expect(screen.getByRole("link", { name })).toHaveAttribute("href", "/monitors/1");
+    expect(screen.getByTitle(target)).toHaveTextContent(target);
+    expect(screen.getByText("Unhealthy")).toHaveClass("bg-surface", "text-danger");
+    expect(screen.getByText(/No recent check; last result is not current/)).toBeVisible();
+    expect(screen.getByText("Last result: Unhealthy")).toBeVisible();
+
+    const trigger = screen.getByRole("button", { name: `Delete ${name}` });
+    expect(trigger.textContent).toBe("Delete");
+    fireEvent.click(trigger);
+    expect(screen.getByText(`Delete monitor ${name}?`)).toBeVisible();
+    expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(trigger).toHaveFocus();
+    expect(screen.getByRole("link", { name })).toHaveAttribute("href", "/monitors/1");
   });
 
   it("maps last_state only: healthy → green Healthy pill", () => {

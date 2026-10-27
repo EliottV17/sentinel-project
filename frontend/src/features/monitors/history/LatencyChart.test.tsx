@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { MonitorHistoryRow } from "../../../app/api/endpoints";
 import { LatencyChart } from "./LatencyChart";
+import { buildLatencyChartGeometry } from "./chart-geometry";
 
 const rows: MonitorHistoryRow[] = [
   { id: 1, monitor_id: 7, state: "healthy", status_code: 200, latency_ms: 0, error_message: null, created_at: "2025-01-01T23:59:00Z" },
@@ -18,6 +19,8 @@ describe("LatencyChart", () => {
     selector.focus();
     fireEvent.keyDown(selector, { key: "ArrowRight" });
     expect(screen.getByText(/Down check, 8 ms/)).toBeInTheDocument();
+    fireEvent.keyDown(selector, { key: "ArrowLeft" });
+    expect(selector).toHaveValue("0");
     fireEvent.keyDown(selector, { key: "End" });
     expect(screen.getByText(/Healthy check, 15 ms/)).toBeInTheDocument();
     fireEvent.keyDown(selector, { key: "Home" });
@@ -36,12 +39,51 @@ describe("LatencyChart", () => {
     expect(screen.getByRole("img", { name: /latency history/i }).querySelector('[data-marker="failed-measured"]')).toBeInTheDocument();
   });
 
-  it("explains the exact threshold and avoids schedules for invalid frequency", () => {
+  it("keeps task guidance brief and the missing-samples caveat outside collapsed calculation details", () => {
     const view = render(<LatencyChart rows={rows} frequencySeconds={60} />);
-    expect(screen.getByText(/Use the plot or the 44-pixel-high/)).toHaveTextContent(/differ by more than 3× the current frequency \(frequency: 60 s; split threshold: > 180 s\)/);
+    const instructions = screen.getByText("Select a check using the plot or the slider below.");
+    expect(instructions.closest("details")).toBeNull();
+    expect(screen.queryByText(/44-pixel-high/)).not.toBeInTheDocument();
+    const caveat = screen.getByText("Gaps mean missing samples, not confirmed downtime.");
+    expect(caveat.closest("details")).toBeNull();
+    const summary = screen.getByText("How to read this chart");
+    expect(summary.tagName).toBe("SUMMARY");
+    const details = summary.closest("details")!;
+    expect(details).not.toHaveAttribute("open");
+    expect(details).toHaveTextContent(/differ by more than 3× the current frequency \(frequency: 60 s; split threshold: > 180 s\)/);
+    expect(details).toHaveTextContent(/historical frequency changes are unknown/);
+    expect(details).toHaveTextContent(/table below lists all checks, newest first/);
     expect(screen.getByRole("img", { name: /latency history/i })).toHaveAccessibleDescription(/does not indicate downtime/i);
     view.rerender(<LatencyChart rows={rows} frequencySeconds={null} />);
-    expect(screen.getByText(/Use the plot or the 44-pixel-high/)).toHaveTextContent(/No gap schedule is applied because the current frequency is unavailable or invalid/);
+    expect(details).toHaveTextContent(/No gap schedule is applied because the current frequency is unavailable or invalid/);
+    expect(caveat).toBeInTheDocument();
+  });
+
+  it.each([320, 390, 960])("reserves SVG space above the top tick at width %i without changing samples or segments", (width) => {
+    vi.stubGlobal("ResizeObserver", class {
+      constructor(private callback: ResizeObserverCallback) {}
+      observe() { this.callback([{ contentRect: { width } } as ResizeObserverEntry], this as unknown as ResizeObserver); }
+      disconnect() {}
+    });
+    const view = render(<LatencyChart rows={rows} frequencySeconds={60} />);
+    const svg = screen.getByRole("img", { name: /latency history/i });
+    const [, originY, , height] = svg.getAttribute("viewBox")!.split(" ").map(Number);
+    const unit = screen.getByText("ms");
+    const geometry = buildLatencyChartGeometry(rows, 60, width);
+    const topTick = screen.getByText(geometry.yTicks.at(-1)!.label, { selector: "text" });
+    const unitBaseline = Number(unit.getAttribute("y"));
+    expect(unitBaseline - 10).toBeGreaterThanOrEqual(originY);
+    expect(Number(topTick.getAttribute("y")) - unitBaseline).toBeGreaterThanOrEqual(16);
+    expect(originY + height).toBeGreaterThanOrEqual(220);
+    expect([...svg.querySelectorAll("polyline")].map(line => line.getAttribute("points"))).toEqual(
+      geometry.segments.map(segment => segment.map(point => `${point.x},${point.y}`).join(" ")),
+    );
+    expect([...svg.querySelectorAll('[data-marker="healthy-measured"]')].map(marker => [Number(marker.getAttribute("cx")), Number(marker.getAttribute("cy"))])).toEqual(
+      geometry.points.filter(point => point.row.state === "healthy").map(point => [point.x, point.y]),
+    );
+    expect(svg.querySelector('[data-marker="failed-measured"]')).toHaveAttribute("y", String(geometry.points[1].y! - 4.5));
+    view.unmount();
+    vi.unstubAllGlobals();
   });
 
   it("observes the stable chart container when initially empty and later populated", () => {
@@ -59,7 +101,7 @@ describe("LatencyChart", () => {
     act(() => resize([{ contentRect: { width: 320 } } as ResizeObserverEntry], {} as ResizeObserver));
     view.rerender(<LatencyChart rows={rows} frequencySeconds={60} />);
     expect(observed).toBe(container);
-    expect(screen.getByRole("img", { name: /latency history/i })).toHaveAttribute("viewBox", "0 0 320 220");
+    expect(screen.getByRole("img", { name: /latency history/i })).toHaveAttribute("viewBox", "0 -24 320 244");
     vi.unstubAllGlobals();
   });
 

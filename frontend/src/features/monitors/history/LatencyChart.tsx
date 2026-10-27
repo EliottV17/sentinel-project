@@ -80,12 +80,14 @@ export function LatencyChart({ rows, frequencySeconds }: Props) {
   return <div ref={container} className="min-w-0">
     {rows.length === 0 ? <p className="rounded-control border border-dashed border-line-strong bg-canvas/30 p-6 text-center text-sm leading-6 text-muted">No checks are available to chart.</p> : <>
     {measuredCount === 0 && <p className="mb-2 rounded-control border border-dashed border-line-strong bg-canvas/30 p-3 text-sm leading-6 text-muted">Checks are available, but none has a measured latency. Their status and timestamps remain selectable and are listed in the table.</p>}
-    <p id={`${descriptionId}-instructions`} className="mb-2 text-xs leading-5 text-muted">Use the plot or the 44-pixel-high selection control to select a check. {gapGuidance} The table below lists all checks, newest first.</p>
+    <p id={`${descriptionId}-instructions`} className="text-xs leading-5 text-muted">Select a check using the plot or the slider below.</p>
+    <p className="mb-2 text-xs leading-5 text-muted">Gaps mean missing samples, not confirmed downtime.</p>
     <div className="overflow-x-auto">
+      {/* Reserve a heading band without changing the plot's data coordinates. */}
       <svg
         role="img" aria-labelledby={titleId} aria-describedby={descriptionId}
-        viewBox={`0 0 ${width} ${LATENCY_CHART_HEIGHT}`} preserveAspectRatio="none"
-        className="h-56 min-w-[320px] w-full overflow-visible rounded-control"
+        viewBox={`0 -24 ${width} ${LATENCY_CHART_HEIGHT + 24}`} preserveAspectRatio="none"
+        className="h-[244px] min-w-[320px] w-full overflow-visible rounded-control"
         onPointerUp={selectNearest} onClick={selectNearest}
       >
         <title id={titleId}>Latency history</title>
@@ -98,7 +100,7 @@ export function LatencyChart({ rows, frequencySeconds }: Props) {
           <line x1={tick.position} x2={tick.position} y1={geometry.top} y2={geometry.bottom} stroke="currentColor" className="text-line/30" />
           <text x={tick.position} y={LATENCY_CHART_HEIGHT - 8} textAnchor="middle" className="fill-current font-mono text-[10px] text-muted">{tick.label}</text>
         </g>)}
-        {measuredCount > 0 && <text x={geometry.left - 8} y={geometry.top} textAnchor="end" className="fill-current font-mono text-[10px] text-muted">ms</text>}
+        {measuredCount > 0 && <text x={geometry.left - 8} y={geometry.top - 16} textAnchor="end" className="fill-current font-mono text-[10px] text-muted">ms</text>}
         {geometry.segments.map((segment, index) => <polyline key={index} points={segment.map((point) => `${point.x},${point.y}`).join(" ")} fill="none" stroke="currentColor" strokeWidth="2" className="text-accent" />)}
         {geometry.gaps.map((gap, index) => <g key={`gap-${index}`}>
           <line x1={gap.x} x2={gap.x} y1={geometry.top} y2={geometry.bottom} stroke="currentColor" strokeDasharray="3 3" className="text-muted" />
@@ -128,6 +130,11 @@ export function LatencyChart({ rows, frequencySeconds }: Props) {
       />
     </label>
     {current && <p aria-live="polite" className="mt-2 text-sm text-ink">{selectionValue}</p>}
+    <details className="mt-3 text-xs leading-5 text-muted">
+      <summary className="w-fit cursor-pointer rounded-control text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40">How to read this chart</summary>
+      <p className="mt-2">{gapGuidance}</p>
+      <p className="mt-2">The table below lists all checks, newest first.</p>
+    </details>
     </>}
   </div>;
 }

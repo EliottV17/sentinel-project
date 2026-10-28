@@ -11,6 +11,7 @@ import (
 type Config struct {
 	DatabaseURL              string
 	Concurrency              int
+	FailureThreshold         int
 	AllowedPorts             string
 	DemoUserEmail            string
 	DemoManifestPath         string
@@ -66,7 +67,14 @@ func boundedPositiveEnv(key string, fallback, maximum int) (int, error) {
 }
 
 func Load() (Config, error) {
-	concurrency := 10
+	concurrency, err := boundedPositiveEnv("WORKER_CONCURRENCY", 100, 500)
+	if err != nil {
+		return Config{}, err
+	}
+	failureThreshold, err := boundedPositiveEnv("WORKER_FAILURE_THRESHOLD", 3, 100)
+	if err != nil {
+		return Config{}, err
+	}
 	url := os.Getenv("DATABASE_URL")
 	if url == "" {
 		url = "postgres://postgres:postgres@127.0.0.1:5432/sentinel_db"
@@ -121,6 +129,7 @@ func Load() (Config, error) {
 	return Config{
 		DatabaseURL:              url,
 		Concurrency:              concurrency,
+		FailureThreshold:         failureThreshold,
 		AllowedPorts:             allowedPorts,
 		DemoUserEmail:            os.Getenv("DEMO_USER_EMAIL"),
 		DemoManifestPath:         os.Getenv("DEMO_MONITORS_MANIFEST_PATH"),

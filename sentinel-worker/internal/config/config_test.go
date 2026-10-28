@@ -102,6 +102,54 @@ func TestRetentionConfigurationRejectsInvalidBounds(t *testing.T) {
 	}
 }
 
+func TestWorkerScalingConfig(t *testing.T) {
+	unsetEnv(t, "WORKER_CONCURRENCY")
+	unsetEnv(t, "WORKER_FAILURE_THRESHOLD")
+	got, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Concurrency != 100 || got.FailureThreshold != 3 {
+		t.Fatalf("defaults concurrency=%d failure threshold=%d", got.Concurrency, got.FailureThreshold)
+	}
+	t.Setenv("WORKER_CONCURRENCY", "500")
+	t.Setenv("WORKER_FAILURE_THRESHOLD", "100")
+	got, err = Load()
+	if err != nil || got.Concurrency != 500 || got.FailureThreshold != 100 {
+		t.Fatalf("boundary values config=%#v err=%v", got, err)
+	}
+	for _, tt := range []struct{ key, value string }{
+		{"WORKER_CONCURRENCY", "0"}, {"WORKER_CONCURRENCY", "-1"}, {"WORKER_CONCURRENCY", "501"}, {"WORKER_CONCURRENCY", "many"},
+		{"WORKER_FAILURE_THRESHOLD", "0"}, {"WORKER_FAILURE_THRESHOLD", "-1"}, {"WORKER_FAILURE_THRESHOLD", "101"}, {"WORKER_FAILURE_THRESHOLD", "many"},
+	} {
+		t.Run(tt.key+"="+tt.value, func(t *testing.T) {
+			t.Setenv(tt.key, tt.value)
+			if _, err := Load(); err == nil {
+				t.Fatalf("Load accepted %s=%q", tt.key, tt.value)
+			}
+		})
+	}
+}
+
+func TestScalingConfigPreservesHealthConfiguration(t *testing.T) {
+	for _, key := range []string{"WORKER_HEALTH_DB_TIMEOUT_SECONDS", "WORKER_HEARTBEAT_PATH", "WORKER_HEARTBEAT_MAX_AGE_SECONDS", "WORKER_DB_TIMEOUT_SECONDS"} {
+		unsetEnv(t, key)
+	}
+	baseline, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("WORKER_CONCURRENCY", "250")
+	t.Setenv("WORKER_FAILURE_THRESHOLD", "7")
+	got, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.HealthDBTimeout != baseline.HealthDBTimeout || got.HeartbeatPath != baseline.HeartbeatPath || got.HeartbeatMaxAge != baseline.HeartbeatMaxAge {
+		t.Fatalf("scaling env altered health configuration: before=%#v after=%#v", baseline, got)
+	}
+}
+
 func TestDemoConfigFromEnvironment(t *testing.T) {
 	t.Setenv("DEMO_USER_EMAIL", "demo@example.test")
 	t.Setenv("DEMO_MONITORS_MANIFEST_PATH", "/data/monitors.json")

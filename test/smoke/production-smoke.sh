@@ -379,10 +379,39 @@ smoke_production_cases() {
   smoke_retention_http_case "$base"
 }
 
+smoke_private_probe_sql() {
+  cat <<'SQL'
+SELECT COUNT(*)
+FROM monitor m
+JOIN users u ON u.id = m.user_id
+WHERE m.last_checked_at IS NOT NULL
+  AND m.consecutive_failures >= 1
+  AND (
+    (m.consecutive_failures < 3 AND m.last_state IS NULL AND NOT EXISTS (
+      SELECT 1 FROM alert a WHERE a.monitor_id = m.id
+    ))
+    OR
+    (m.consecutive_failures >= 3 AND m.last_state = 'unhealthy' AND EXISTS (
+      SELECT 1 FROM alert a WHERE a.monitor_id = m.id AND a.alert_type = 'down'
+    ))
+  )
+  AND (
+    (u.email = 'phase4-demo@example.test' AND m.seed_key = 'smoke-demo-primary')
+    OR
+    (u.email = 'phase4-status-owner@example.test' AND m.seed_key = 'smoke-status-primary')
+  )
+  AND EXISTS (
+    SELECT 1 FROM check_result cr WHERE cr.monitor_id = m.id AND cr.state = 'unhealthy'
+  )
+SQL
+}
+
 smoke_wait_private_probe_results() {
-  local deadline=$((SECONDS + 30)) count
+  local wait_seconds=${1:-30} deadline count sql
+  deadline=$((SECONDS + wait_seconds))
+  sql=$(smoke_private_probe_sql)
   while :; do
-    count=$(compose exec -T db psql -U sentinel -d sentinel_db -Atqc "SELECT COUNT(*) FROM monitor m JOIN users u ON u.id=m.user_id WHERE m.last_state='unhealthy' AND ((u.email='phase4-demo@example.test' AND m.seed_key='smoke-demo-primary') OR (u.email='phase4-status-owner@example.test' AND m.seed_key='smoke-status-primary')) AND EXISTS (SELECT 1 FROM check_result cr WHERE cr.monitor_id=m.id AND cr.state='unhealthy')")
+    count=$(compose exec -T db psql -U sentinel -d sentinel_db -Atqc "$sql")
     [[ $count == 2 ]] && break
     ((SECONDS < deadline)) || { printf 'private Docker-alias probes did not persist unhealthy results before deadline\n' >&2; return 1; }
     sleep 1

@@ -19,27 +19,28 @@ import (
 
 const defaultDBOperationTimeout = 10 * time.Second
 
-func boundedDBOperation(ctx context.Context, timeout time.Duration, operation func(context.Context) error) error {
-	dbCtx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
-	return operation(dbCtx)
-}
-
 func Run(ctx context.Context, pool *pgxpool.Pool, concurrency int, demoEmail, manifestPath string, resetMinutes int) {
 	RunWithHealth(ctx, pool, concurrency, demoEmail, manifestPath, resetMinutes, "/tmp/sentinel-worker.heartbeat", defaultDBOperationTimeout)
 }
 
 func RunWithHealth(ctx context.Context, pool *pgxpool.Pool, concurrency int, demoEmail, manifestPath string, resetMinutes int, heartbeatPath string, dbTimeout time.Duration) {
-	runWithHealth(ctx, pool, concurrency, demoEmail, manifestPath, resetMinutes, heartbeatPath, dbTimeout, nil, 0)
+	runWithHealth(ctx, pool, concurrency, demoEmail, manifestPath, resetMinutes, heartbeatPath, dbTimeout, nil, 0, 3)
 }
 
 func RunWithRetention(ctx context.Context, pool *pgxpool.Pool, concurrency int, demoEmail, manifestPath string, resetMinutes int, heartbeatPath string, dbTimeout time.Duration, retention RetentionConfig, retentionInterval time.Duration) {
-	runWithHealth(ctx, pool, concurrency, demoEmail, manifestPath, resetMinutes, heartbeatPath, dbTimeout, &retention, retentionInterval)
+	RunWithRetentionAndThreshold(ctx, pool, concurrency, 3, demoEmail, manifestPath, resetMinutes, heartbeatPath, dbTimeout, retention, retentionInterval)
 }
 
-func runWithHealth(ctx context.Context, pool *pgxpool.Pool, concurrency int, demoEmail, manifestPath string, resetMinutes int, heartbeatPath string, dbTimeout time.Duration, retention *RetentionConfig, retentionInterval time.Duration) {
+func RunWithRetentionAndThreshold(ctx context.Context, pool *pgxpool.Pool, concurrency, failureThreshold int, demoEmail, manifestPath string, resetMinutes int, heartbeatPath string, dbTimeout time.Duration, retention RetentionConfig, retentionInterval time.Duration) {
+	runWithHealth(ctx, pool, concurrency, demoEmail, manifestPath, resetMinutes, heartbeatPath, dbTimeout, &retention, retentionInterval, failureThreshold)
+}
+
+func runWithHealth(ctx context.Context, pool *pgxpool.Pool, concurrency int, demoEmail, manifestPath string, resetMinutes int, heartbeatPath string, dbTimeout time.Duration, retention *RetentionConfig, retentionInterval time.Duration, failureThreshold int) {
 	if concurrency <= 0 {
-		concurrency = 10
+		concurrency = 100
+	}
+	if failureThreshold <= 0 {
+		failureThreshold = 3
 	}
 	if dbTimeout <= 0 {
 		dbTimeout = defaultDBOperationTimeout
@@ -78,7 +79,7 @@ func runWithHealth(ctx context.Context, pool *pgxpool.Pool, concurrency int, dem
 					return fetchDueMonitors(cycleCtx, pgxPoolMonitorQuerier{pool}, dbTimeout)
 				},
 				func(workCtx context.Context, monitor checker.Monitor) error {
-					return checkAndPersist(workCtx, pool, monitor, dbTimeout)
+					return checkAndPersist(workCtx, pgxPoolPersistenceDB{pool}, monitor, dbTimeout, failureThreshold)
 				},
 				func() {
 					if err := health.WriteHeartbeat(heartbeatPath, time.Now()); err != nil {
@@ -164,42 +165,6 @@ func isMonitorCheckError(err error) bool {
 	return errors.As(err, &checkErr)
 }
 
-type insertOutcome int
-
-const (
-	insertSucceeded insertOutcome = iota
-	insertMonitorDeleted
-	insertFailed
-)
-
-type insertResultValue struct {
-	outcome insertOutcome
-	err     error
-}
-
-type resultExecer interface {
-	Exec(context.Context, string, ...any) (pgconn.CommandTag, error)
-}
-
-func insertResult(ctx context.Context, exec resultExecer, query string, args []any) insertResultValue {
-	_, err := exec.Exec(ctx, query, args...)
-	return classifyInsertError(err)
-}
-
-func classifyInsertError(err error) insertResultValue {
-	if err == nil {
-		return insertResultValue{outcome: insertSucceeded}
-	}
-	if isConcurrentDeleteForeignKey(err) {
-		return insertResultValue{outcome: insertMonitorDeleted}
-	}
-	return insertResultValue{outcome: insertFailed, err: err}
-}
-
-func insertAlert(ctx context.Context, exec resultExecer, query string, args []any) insertResultValue {
-	return insertResult(ctx, exec, query, args)
-}
-
 func isConcurrentDeleteForeignKey(err error) bool {
 	var pgErr *pgconn.PgError
 	return errors.As(err, &pgErr) && pgErr.Code == "23503"
@@ -255,100 +220,131 @@ func fetchDueMonitors(ctx context.Context, pool monitorQuerier, timeout time.Dur
 	return monitors, rows.Err()
 }
 
-func checkAndPersist(ctx context.Context, pool resultExecer, m checker.Monitor, timeout time.Duration) error {
+type persistenceTx interface {
+	Exec(context.Context, string, ...any) (pgconn.CommandTag, error)
+	Commit(context.Context) error
+	Rollback(context.Context) error
+}
+type persistenceDB interface {
+	Begin(context.Context) (persistenceTx, error)
+}
+type pgxPoolPersistenceDB struct{ pool *pgxpool.Pool }
+
+func (d pgxPoolPersistenceDB) Begin(ctx context.Context) (persistenceTx, error) {
+	return d.pool.Begin(ctx)
+}
+
+type fsmEvaluation struct {
+	state               *string
+	consecutiveFailures int
+	alertType           string
+}
+
+func evaluateFSM(oldState *string, prevFailures int, probe string, failureThreshold int) fsmEvaluation {
+	if failureThreshold <= 0 {
+		failureThreshold = 3
+	}
+	if probe == "healthy" {
+		state := "healthy"
+		alert := ""
+		if oldState != nil && *oldState == "unhealthy" {
+			alert = "recovery"
+		}
+		return fsmEvaluation{state: &state, alertType: alert}
+	}
+	if prevFailures < 0 {
+		prevFailures = 0
+	}
+	next := prevFailures + 1
+	if oldState != nil && *oldState == "unhealthy" {
+		state := "unhealthy"
+		return fsmEvaluation{state: &state, consecutiveFailures: next}
+	}
+	if next >= failureThreshold {
+		state := "unhealthy"
+		return fsmEvaluation{state: &state, consecutiveFailures: next, alertType: "down"}
+	}
+	var state *string
+	if oldState != nil {
+		value := *oldState
+		state = &value
+	}
+	return fsmEvaluation{state: state, consecutiveFailures: next}
+}
+
+func checkAndPersist(ctx context.Context, db persistenceDB, m checker.Monitor, timeout time.Duration, thresholds ...int) error {
 	c, err := checker.Get(m.CheckType)
 	if err != nil {
 		slog.Error("unknown checker type", "check_type", m.CheckType, "monitor_id", m.ID)
 		return monitorCheckError{err: err}
 	}
-
 	result, err := c.Check(ctx, m)
 	if err != nil {
 		slog.Error("check error", "monitor_id", m.ID, "target", m.Target, "err", err)
 		return monitorCheckError{err: err}
 	}
-
+	threshold := 3
+	if len(thresholds) > 0 && thresholds[0] > 0 {
+		threshold = thresholds[0]
+	}
+	evaluation := evaluateFSM(m.LastState, m.ConsecutiveFailures, result.State, threshold)
 	now := time.Now().UTC()
-	inserted := insertResultWithTimeout(ctx, pool, timeout, `
-		INSERT INTO check_result (monitor_id, state, status_code, latency_ms, response_sample, error_message, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
-	`, []any{m.ID, result.State, result.StatusCode, result.LatencyMs, result.ResponseSample, result.ErrorMessage, now})
-	if inserted.outcome != insertSucceeded {
-		if inserted.outcome == insertMonitorDeleted {
-			slog.Warn("check result ignored because monitor was deleted during check", "monitor_id", m.ID)
+	dbCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	tx, err := db.Begin(dbCtx)
+	if err != nil {
+		slog.Error("begin monitor check transaction", "monitor_id", m.ID, "err", err)
+		return err
+	}
+	defer func() {
+		cleanupCtx, cleanupCancel := context.WithTimeout(context.WithoutCancel(ctx), timeout)
+		defer cleanupCancel()
+		if err := tx.Rollback(cleanupCtx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			slog.Error("rollback monitor check", "err", err)
+		}
+	}()
+	if _, err = tx.Exec(dbCtx, `INSERT INTO check_result (monitor_id, state, status_code, latency_ms, response_sample, error_message, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)`, m.ID, result.State, result.StatusCode, result.LatencyMs, result.ResponseSample, result.ErrorMessage, now); err != nil {
+		if isConcurrentDeleteForeignKey(err) {
+			slog.Warn("check ignored because monitor was deleted during check", "monitor_id", m.ID)
 			return nil
 		}
-		slog.Error("insert check_result error", "monitor_id", m.ID, "err", inserted.err)
-		return inserted.err
+		slog.Error("insert check_result error", "monitor_id", m.ID, "err", err)
+		return err
 	}
-
-	slog.Info("check completed",
-		"monitor_id", m.ID,
-		"target", m.Target,
-		"state", result.State,
-		"status_code", result.StatusCode,
-		"latency_ms", result.LatencyMs)
-	newState := result.State
-	var oldState *string
-	if m.LastState != nil {
-		oldState = m.LastState
+	var state any
+	if evaluation.state != nil {
+		state = *evaluation.state
 	}
-	consecutiveFailures := m.ConsecutiveFailures
-	if newState == "healthy" {
-		consecutiveFailures = 0
-	} else {
-		consecutiveFailures++
-	}
-
-	var updateErr error
-	if err := boundedDBOperation(ctx, timeout, func(dbCtx context.Context) error {
-		_, updateErr = pool.Exec(dbCtx, `
-			UPDATE monitor
-			SET last_state = $1, last_checked_at = $4, consecutive_failures = $2
-			WHERE id = $3
-		`, newState, consecutiveFailures, m.ID, now)
-		return updateErr
-	}); err != nil {
+	tag, err := tx.Exec(dbCtx, `UPDATE monitor SET last_state = $1, last_checked_at = $4, consecutive_failures = $2 WHERE id = $3`, state, evaluation.consecutiveFailures, m.ID, now)
+	if err != nil {
 		slog.Error("update monitor error", "monitor_id", m.ID, "err", err)
 		return err
 	}
-	if oldState == nil || *oldState == newState {
+	if tag.RowsAffected() == 0 {
+		slog.Warn("check ignored because monitor was deleted during check", "monitor_id", m.ID)
 		return nil
 	}
-
-	alertType := "down"
-	message := m.Name + " esta caído"
-	if newState == "healthy" {
-		alertType = "recovery"
-		message = m.Name + " se recuperó"
-	}
-	alertInsert := insertResultWithTimeout(ctx, pool, timeout, `
-		INSERT INTO alert (monitor_id, alert_type, message, created_at)
-		VALUES ($1, $2, $3, $4)
-	`, []any{m.ID, alertType, message, now})
-	if alertInsert.outcome != insertSucceeded {
-		if alertInsert.outcome == insertMonitorDeleted {
-			slog.Warn("alert ignored because monitor was deleted during check", "monitor_id", m.ID)
-			return nil
+	if evaluation.alertType != "" {
+		message := m.Name + " esta caído"
+		if evaluation.alertType == "recovery" {
+			message = m.Name + " se recuperó"
 		}
-		slog.Error("insert alert error", "monitor_id", m.ID, "err", alertInsert.err)
-		return alertInsert.err
+		if _, err = tx.Exec(dbCtx, `INSERT INTO alert (monitor_id, alert_type, message, created_at) VALUES ($1, $2, $3, $4)`, m.ID, evaluation.alertType, message, now); err != nil {
+			if isConcurrentDeleteForeignKey(err) {
+				slog.Warn("alert ignored because monitor was deleted during check", "monitor_id", m.ID)
+				return nil
+			}
+			slog.Error("insert alert error", "monitor_id", m.ID, "err", err)
+			return err
+		}
 	}
-	slog.Info("state transition alert emitted",
-		"monitor_id", m.ID,
-		"alertType", alertType,
-		"old_state", *oldState,
-		"new_state", newState)
+	if err := tx.Commit(dbCtx); err != nil {
+		slog.Error("commit monitor check transaction", "monitor_id", m.ID, "err", err)
+		return err
+	}
+	slog.Info("check completed", "monitor_id", m.ID, "target", m.Target, "state", result.State, "status_code", result.StatusCode, "latency_ms", result.LatencyMs)
+	if evaluation.alertType != "" {
+		slog.Info("state transition alert emitted", "monitor_id", m.ID, "alertType", evaluation.alertType, "new_state", *evaluation.state, "consecutive_failures", evaluation.consecutiveFailures)
+	}
 	return nil
-}
-
-func insertResultWithTimeout(ctx context.Context, exec resultExecer, timeout time.Duration, query string, args []any) insertResultValue {
-	var result insertResultValue
-	if err := boundedDBOperation(ctx, timeout, func(dbCtx context.Context) error {
-		result = insertResult(dbCtx, exec, query, args)
-		return result.err
-	}); err != nil && result.err == nil {
-		result = classifyInsertError(err)
-	}
-	return result
 }

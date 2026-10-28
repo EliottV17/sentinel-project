@@ -51,7 +51,7 @@ func main() {
 	checker.Register("http", checker.NewHTTPChecker(allowedPorts))
 
 	slog.Info("Sentinel worker started")
-	worker.RunWithRetention(ctx, pool, cfg.Concurrency, cfg.DemoUserEmail, cfg.DemoManifestPath, cfg.DemoResetInterval, cfg.HeartbeatPath, cfg.DBOperationTimeout, worker.RetentionConfig{
+	worker.RunWithRetentionAndThreshold(ctx, pool, cfg.Concurrency, cfg.FailureThreshold, cfg.DemoUserEmail, cfg.DemoManifestPath, cfg.DemoResetInterval, cfg.HeartbeatPath, cfg.DBOperationTimeout, worker.RetentionConfig{
 		CheckResultDays:   cfg.CheckResultRetentionDays,
 		AlertDays:         cfg.AlertRetentionDays,
 		BatchSize:         cfg.RetentionBatchSize,

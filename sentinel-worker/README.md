@@ -14,9 +14,9 @@ sentinel/
 Every 2 seconds the worker loop queries `monitor` for rows where `state = 'Active'` and `last_checked_at + frequency` has passed, then for each due monitor it:
 
 1. Runs the registered checker (`check_type`) against `monitor.target`.
-2. Inserts a `check_result` row.
-3. Updates `monitor.last_state`, `last_checked_at`, and `consecutive_failures`.
-4. Inserts an `alert` row **only on state transitions** (`healthy → unhealthy` = "down", `unhealthy → healthy` = "recovery").
+2. Runs the network probe before opening a database transaction.
+3. Atomically inserts the raw probe state in `check_result` and updates `monitor.last_state`, `last_checked_at`, and `consecutive_failures` in one `pgx.Tx`.
+4. Inserts an `alert` row only for confirmed thresholded transitions (`healthy → unhealthy` = "down", `unhealthy → healthy` = "recovery").
 
 This is the only checking engine; the API performs no checks. Alerts fire only on state transitions.
 
@@ -43,7 +43,7 @@ go build ./cmd/worker/
 DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/sentinel_db?sslmode=disable go run ./cmd/worker/
 ```
 
-Without `DATABASE_URL`, it defaults to `postgres://postgres:postgres@127.0.0.1:5432/sentinel_db`. Concurrency is set to 10 workers.
+Without `DATABASE_URL`, it defaults to `postgres://postgres:postgres@127.0.0.1:5432/sentinel_db`. `WORKER_CONCURRENCY` controls concurrent monitor checks (default `100`, maximum `500`); `WORKER_FAILURE_THRESHOLD` controls consecutive failures before a down alert (default `3`, maximum `100`). Check results, monitor state, and any transition alert are persisted atomically in one `pgx.Tx`. Transient failures below the threshold do not alert; a confirmed recovery emits one recovery alert.
 
 ## Docker
 

@@ -135,4 +135,52 @@ MOCK_DOCKER_FAILURE=none MOCK_COMPOSE_STATUS=0 MOCK_COMPOSE_CALLS=0
 if smoke_cleanup_owned_resources "$PROJECT" 0 >"$MOCK_OUTPUT" 2>&1; then result=0; else result=$?; fi
 [[ $result == 0 && $MOCK_COMPOSE_CALLS == 1 ]]
 grep -q 'removed only owned project sentinel-smoke-unique-123456789abc' "$MOCK_OUTPUT"
+
+# Thresholded FSM regression: initial Check #1 persists unhealthy check_result with
+# consecutive_failures = 1 and last_state IS NULL (below default threshold 3), while
+# >= 3 consecutive failures transition last_state = 'unhealthy' with a 'down' alert.
+PROBE_SQL=$(smoke_private_probe_sql)
+grep -q "m.consecutive_failures < 3 AND m.last_state IS NULL" <<<"$PROBE_SQL" || {
+  printf 'FAIL: private probe SQL does not accept pre-threshold NULL monitor state\n' >&2
+  exit 1
+}
+grep -q "m.consecutive_failures >= 3 AND m.last_state = 'unhealthy'" <<<"$PROBE_SQL" || {
+  printf 'FAIL: private probe SQL does not verify thresholded unhealthy transition\n' >&2
+  exit 1
+}
+
+MOCK_PSQL_COUNT=2
+MOCK_WAIT_WORKER_CALLED=0
+compose() {
+  if [[ ${1:-} == exec && ${3:-} == db && ${4:-} == psql ]]; then
+    printf '%s\n' "$MOCK_PSQL_COUNT"
+    return 0
+  fi
+  printf 'unexpected compose call: %s\n' "$*" >&2
+  return 99
+}
+smoke_wait_worker() {
+  MOCK_WAIT_WORKER_CALLED=$((MOCK_WAIT_WORKER_CALLED + 1))
+  return 0
+}
+smoke_wait_private_probe_results 0 >"$MOCK_OUTPUT" 2>&1
+[[ $MOCK_WAIT_WORKER_CALLED == 1 ]]
+grep -q 'private alias probes persisted unhealthy check results' "$MOCK_OUTPUT"
+
+MOCK_PSQL_COUNT=1
+MOCK_WAIT_WORKER_CALLED=0
+if smoke_wait_private_probe_results 0 >"$MOCK_OUTPUT" 2>&1; then result=0; else result=$?; fi
+[[ $result != 0 && $MOCK_WAIT_WORKER_CALLED == 0 ]]
+grep -q 'private Docker-alias probes did not persist unhealthy results before deadline' "$MOCK_OUTPUT"
+
+grep -q 'WORKER_CONCURRENCY: \${WORKER_CONCURRENCY:-100}' "$SCRIPT_DIR/../../docker-compose.prod.yml" || {
+  printf 'FAIL: docker-compose.prod.yml missing WORKER_CONCURRENCY forwarding\n' >&2
+  exit 1
+}
+grep -q 'WORKER_FAILURE_THRESHOLD: \${WORKER_FAILURE_THRESHOLD:-3}' "$SCRIPT_DIR/../../docker-compose.prod.yml" || {
+  printf 'FAIL: docker-compose.prod.yml missing WORKER_FAILURE_THRESHOLD forwarding\n' >&2
+  exit 1
+}
+
+rm -f "$MOCK_OUTPUT"
 printf 'production-smoke helper and cleanup regression tests passed\n'

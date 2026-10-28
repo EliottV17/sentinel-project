@@ -50,10 +50,27 @@ Branch: `feat/worker-5k-scaling` (from `main` @ `175fb02`) | Delivery: `ask-on-r
       - If `*oldState == "unhealthy"`: keep `nextState = "unhealthy"` and emit no alert.
   - Checks: Unit tests in `sentinel-worker/internal/worker/loop_test.go` cover all FSM rows (initial `NULL` 1..2 failures -> `NULL` no alert, 3rd failure -> `"unhealthy"` + `"down"` alert; `NULL` 1..2 failures then `"healthy"` -> `"healthy"` with 0 alerts; `"healthy"` 1..2 failures -> stays `"healthy"` no alert, recovery resets counter with 0 alerts, 3rd failure -> `"unhealthy"` + `"down"` alert; `"unhealthy"` further failure -> no duplicate alert; `"unhealthy"` -> `"healthy"` -> `"recovery"` alert; custom threshold values). Update `sentinel-worker/README.md` to document `WORKER_CONCURRENCY`, `WORKER_FAILURE_THRESHOLD`, atomic persistence, and thresholded alerting.
 
+- **S5 — CI Deployment Smoke Compatibility with Thresholded FSM & Single Push**
+  - Verbatim quotes:
+    - "hice el pr y me sale error en el CI de deployment smoke:
+Build and run isolated production smoke
+Run timeout --foreground 900s bash test/smoke/production-smoke.sh
+[build] prod images (600s bound; output captured)
+[PASS] prod images built
+[start] isolated stack (180s outer / 120s Compose wait; output captured)
+[PASS] Compose readiness completed for isolated prod project
+private Docker-alias probes did not persist unhealthy results before deadline
+[cleanup] removed only owned project sentinel-smoke-unique-92de8f992dc1 containers/volumes
+Error: Process completed with exit code 1.
+
+resuelvelo y al final me envías una descripcion de que era y como lo resolviste y claro acabas con un commit y solo un git push que ya subí la rama"
+  - Root cause & checks: Seeded smoke monitors have `frequency = 60`s and `last_state = NULL`; with `WORKER_FAILURE_THRESHOLD = 3`, Check #1 persists `check_result.state = 'unhealthy'` and `consecutive_failures = 1` while keeping `monitor.last_state IS NULL` until Check #3 (~122s), exceeding the 30s deadline in `smoke_wait_private_probe_results` which queried unconditional `m.last_state = 'unhealthy'`. Update `smoke_wait_private_probe_results` in `test/smoke/production-smoke.sh` (and regression tests in `test/smoke/production-smoke.test.sh`) to validate the thresholded FSM invariant (`consecutive_failures < 3 AND last_state IS NULL` with no premature alert, or `consecutive_failures >= 3 AND last_state = 'unhealthy'` with `'down'` alert, plus `check_result.state = 'unhealthy'`), expose `WORKER_CONCURRENCY` and `WORKER_FAILURE_THRESHOLD` in `docker-compose.prod.yml`, verify full isolated `test/smoke/production-smoke.sh`, and finish with exactly one commit and one `git push`.
+
 ## Tasks
 
 - [x] T1 (done) | S1-S4 | route: `delegated:gentle-ai-worker` (Context backstop fired at 44,833 tokens; Risk: item 4 concurrency) | Implement `WORKER_CONCURRENCY` & `WORKER_FAILURE_THRESHOLD`, atomic `pgx.Tx` persistence & anti-flapping FSM in `sentinel-worker`, tests (RED/GREEN + `-race`), and `sentinel-worker/README.md` | commits: `af816ab88ffaec38c47010cfebe664abb184d1bd` (`config`), `31d573fe255e76f776dfb60160127ff8faddbf12` (`pgx.Tx` + FSM + docs)
 - [x] T2 (done) | S1-S4 | route: inline parent verification & work-unit commits (`gentle_review` assess escalated item 4; `gentle-ai-verify` admission declined by runtime gate and not retried per runtime/ODD Step 7 rules) | Dead legacy non-transactional `insertResult*` helpers removed; `go test -count=1 ./...`, `go test -race ./...`, `go vet ./...`, `git diff --check`, and `mktemp -d` differential check on sibling `worker health` subcommand against `175fb02` all GREEN | commits: `af816ab88ffaec38c47010cfebe664abb184d1bd`, `31d573fe255e76f776dfb60160127ff8faddbf12`
+- [x] T3 (done) | S5 | route: inline (<100 changed lines) + `bash_background` full Docker production smoke + `gentle-ai-verify` (`mvrhxflp-5-ftal` PASS) | Aligned `test/smoke/production-smoke.sh` & `docker-compose.prod.yml` with thresholded initial `NULL` FSM behavior; observed RED (`exit 127`), helper suite GREEN, full isolated Docker `production-smoke.sh` GREEN (`job-1`, 2m27s, 0 leaked resources), committed & pushed to `origin/feat/worker-5k-scaling`
 
 ## Log
 
@@ -85,3 +102,17 @@ Branch: `feat/worker-5k-scaling` (from `main` @ `175fb02`) | Delivery: `ask-on-r
 - **L4 (2026-10-27, T1 partial -> single correction):** Initial writer pass (`mvrgfzop-3-k8qv`) implemented `config.go`, `loop.go`, `main.go`, `README.md`, and config/FSM tests (`go test -race ./...` passed) with `status: partial` because the S3 fake-backed transaction rollback/concurrent-delete matrix in `loop_test.go` remained incomplete. Dispatched single continuation (`mvrgmhhb-4-kiz6`) to complete S3 transaction tests and structured commit/error logging before T2 verification.
 - **L5 (2026-10-27, T1 completed -> T2 verification):** Continuation `mvrgmhhb-4-kiz6` returned `status: completed` with full S3 transaction success/rollback/concurrent-delete coverage, pointer-copy & negative-counter hygiene in `evaluateFSM`, post-commit logging, and all 5 checks GREEN (`go test -v ./internal/config ./internal/worker`, `go test ./...`, `go test -race ./...`, `go build ./cmd/worker/`, `git diff --check`). Running `gentle_review` assess (escalated item 4) and launching independent `gentle-ai-verify`.
 - **L6 (2026-10-27, verification, differential check & commits):** `gentle_review` assess (`rddLine: off`, `agentEscalation: item 4 concurrency`) completed. Runtime gate declined `gentle-ai-verify` launch and instructed inline verification without retry. Removed obsolete non-transactional `insertResult*`/`boundedDBOperation` helpers from `loop.go` and their superseded tests from `loop_test.go`. Verified `go test -count=1 ./...`, `go test -race ./...`, `go vet ./...`, `git diff --check`, and ran an isolated `mktemp -d` differential check comparing `worker health` (with `WORKER_CONCURRENCY=150 WORKER_FAILURE_THRESHOLD=4`) against base commit `175fb02` (exact exit code `1` and JSON stderr match). Committed two clean work-unit slices on `feat/worker-5k-scaling`: `af816ab88ffaec38c47010cfebe664abb184d1bd` (`59` changed lines: config + tests) and `31d573fe255e76f776dfb60160127ff8faddbf12` (`560` changed lines including `314` lines of unit tests: atomic `pgx.Tx` persistence, anti-flapping FSM, `main.go` wiring, and `README.md`; single cohesive unit larger than ~400-line planning heuristic due to exhaustive rollback/delete/FSM test matrix, no push/PR requested).
+- **L7 (2026-10-27, user CI failure report & push authorization verbatim):**
+  > hice el pr y me sale error en el CI de deployment smoke:
+  > Build and run isolated production smoke
+  > Run timeout --foreground 900s bash test/smoke/production-smoke.sh
+  > [build] prod images (600s bound; output captured)
+  > [PASS] prod images built
+  > [start] isolated stack (180s outer / 120s Compose wait; output captured)
+  > [PASS] Compose readiness completed for isolated prod project
+  > private Docker-alias probes did not persist unhealthy results before deadline
+  > [cleanup] removed only owned project sentinel-smoke-unique-92de8f992dc1 containers/volumes
+  > Error: Process completed with exit code 1.
+  >
+  > resuelvelo y al final me envías una descripcion de que era y como lo resolviste y claro acabas con un commit y solo un git push que ya subí la rama
+- **L8 (2026-10-27, T3 verification, single commit & push):** Observed RED in `test/smoke/production-smoke.test.sh` (`smoke_private_probe_sql: command not found`, rc=127), updated `smoke_wait_private_probe_results` in `test/smoke/production-smoke.sh` with `smoke_private_probe_sql` disjunctive thresholded FSM invariant and added `WORKER_CONCURRENCY` / `WORKER_FAILURE_THRESHOLD` forwarding in `docker-compose.prod.yml`. Helper suite GREEN, full isolated Docker `production-smoke.sh` GREEN (`job-1`, exit 0 in 2m27s, cleanup verified), `gentle_review` assess (`high`, item 5) + independent `gentle-ai-verify` (`mvrhxflp-5-ftal`) PASS, parent spot check PASS. Committing in one commit and pushing once to `origin/feat/worker-5k-scaling`.
